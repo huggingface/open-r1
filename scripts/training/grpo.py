@@ -13,11 +13,10 @@
 # limitations under the License.
 
 import argparse
+import re
 from dataclasses import dataclass, field
-from typing import Optional
 
 from datasets import load_dataset
-from transformers import AutoModelForCausalLM, AutoModelForSequenceClassification, AutoTokenizer
 
 from trl import GRPOConfig, GRPOTrainer, ModelConfig, ScriptArguments, TrlParser, get_peft_config
 
@@ -28,51 +27,63 @@ class GRPOScriptArguments(ScriptArguments):
     Script arguments for the GRPO training script.
 
     Args:
-        reward_model_name_or_path (`str` or `None`):
-            Reward model id of a pretrained model hosted inside a model repo on huggingface.co or local path to a
-            directory containing model weights saved using [`~transformers.PreTrainedModel.save_pretrained`].
+        reward_funcs (`list[str]`)
     """
 
     reward_funcs: list[str] = field(
-        default_factory=lambda: [],
-        metadata={
-            "help": "A list of reward functions to use for the GRPO training. "
-            "Each reward function should be a pretrained model id of a model hosted inside a model repo on huggingface.co or "
-            "local path to a directory containing model weights saved using `PreTrainedModel.save_pretrained`."
-        },
+        default_factory=lambda: ["accuracy", "format"],
+        metadata={"help": "List of reward functions. Possible values: 'accuracy', 'format'"},
     )
-    reward_model_name_or_path: Optional[str] = field(
-        default=None,
-        metadata={
-            "help": "Reward model id of a pretrained model hosted inside a model repo on huggingface.co or "
-            "local path to a directory containing model weights saved using `PreTrainedModel.save_pretrained`."
-        },
-    )
+
+
+def accuracy_reward(completions, ground_truth, **kwargs):
+    """Reward function that checks if the completion is the same as the ground truth."""
+    # Regular expression to capture content inside \boxed{}
+    matches = [re.search(r"\\boxed\{(.*)\}", completion) for completion in completions]
+    contents = [match.group(1) if match else "" for match in matches]
+    # Reward 1 if the content is the same as the ground truth, 0 otherwise
+    return [1.0 if c == gt else 0.0 for c, gt in zip(contents, ground_truth)]
+
+
+def format_reward_func(completions, **kwargs):
+    """Reward function that checks if the completion has a specific format."""
+    pattern = r"^<think>.*?</think><answer>.*?</answer>$"
+    completion_contents = [completion[0]["content"] for completion in completions]
+    matches = [re.match(pattern, content) for content in completion_contents]
+    return [1.0 if match else 0.0 for match in matches]
+
+
+reward_funcs_registry = {
+    "accuracy": accuracy_reward,
+    "format": format_reward_func,
+}
 
 
 def main(script_args, training_args, model_args):
-    # Load a pretrained model
-    model = AutoModelForCausalLM.from_pretrained(
-        model_args.model_name_or_path, trust_remote_code=model_args.trust_remote_code
-    )
-    tokenizer = AutoTokenizer.from_pretrained(
-        model_args.model_name_or_path, trust_remote_code=model_args.trust_remote_code
-    )
-    reward_model = AutoModelForSequenceClassification.from_pretrained(
-        script_args.reward_model_name_or_path, trust_remote_code=model_args.trust_remote_code, num_labels=1
-    )
+    # Get reward functions
+    reward_funcs = [reward_funcs_registry[func] for func in script_args.reward_funcs]
 
     # Load the dataset
     dataset = load_dataset(script_args.dataset_name, name=script_args.dataset_config)
 
+    # Format into conversation
+    def make_conversation(example):
+        match = re.search(r"\\boxed\{(.*)\}", example["solution"], re.DOTALL)
+        ground_truth = match.group(1)
+        return {
+            "prompt": [{"role": "user", "content": example["problem"]}],
+            "ground_truth": ground_truth,
+        }
+    
+    dataset = dataset.map(make_conversation)
+
     # Initialize the GRPO trainer
     trainer = GRPOTrainer(
-        model=model,
-        reward_funcs=reward_model,
+        model=model_args.model_name_or_path,
+        reward_funcs=reward_funcs,
         args=training_args,
         train_dataset=dataset[script_args.dataset_train_split],
         eval_dataset=dataset[script_args.dataset_test_split] if training_args.eval_strategy != "no" else None,
-        processing_class=tokenizer,
         peft_config=get_peft_config(model_args),
     )
 
@@ -85,16 +96,8 @@ def main(script_args, training_args, model_args):
         trainer.push_to_hub(dataset_name=script_args.dataset_name)
 
 
-def make_parser(subparsers: argparse._SubParsersAction = None):
-    dataclass_types = (GRPOScriptArguments, GRPOConfig, ModelConfig)
-    if subparsers is not None:
-        parser = subparsers.add_parser("grpo", help="Run the GRPO training script", dataclass_types=dataclass_types)
-    else:
-        parser = TrlParser(dataclass_types)
-    return parser
-
-
 if __name__ == "__main__":
-    parser = make_parser()
+    parser = TrlParser((GRPOScriptArguments, GRPOConfig, ModelConfig))
     script_args, training_args, model_args = parser.parse_args_and_config()
+    print(script_args)
     main(script_args, training_args, model_args)
