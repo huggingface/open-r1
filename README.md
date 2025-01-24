@@ -53,3 +53,17 @@ If it isn't installed, run:
 ```shell
 sudo apt-get install git-lfs
 ```
+
+## Evaluating models (internal)
+For small models use `--data_parallel=$NUM_GPUS`, for large models shard with `--tensor_parallel=$NUM_GPUS`
+Example for evaluating `deepseek-ai/DeepSeek-R1-Distill-Qwen-7B `
+```
+NUM_GPUS=1
+MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-7B
+MODEL_ARGS="pretrained=$MODEL_ID,dtype=bfloat16,data_parallel=$NUM_GPUS,max_model_length=32768,gpu_memory_utilisation=0.8"
+TASK=aime24 # or math
+OUTPUT_DIR=evals/$MODEL
+
+lighteval $MODEL_ARGS $TASK --use-chat-template --custom-tasks src/open_r1/eval/$TASK.py --output-dir $OUTPUT_DIR --system-prompt="Please reason step by step, and put your final answer within \boxed{}."
+```
+
