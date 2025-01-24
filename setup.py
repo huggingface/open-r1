@@ -51,6 +51,7 @@ _deps = [
     "hf_transfer>=0.1.4",
     "huggingface-hub[cli]>=0.19.2,<1.0",
     "isort>=5.12.0",
+    "latex2sympy2_extended>=0.9.1",  # Need for math parsing
     "lighteval @ git+https://github.com/huggingface/lighteval.git@4f381b352c0e467b5870a97d41cb66b487a2c503#egg=lighteval[math]",
     "packaging>=23.0",
     "parameterized>=0.9.0",
@@ -81,7 +82,8 @@ extras = {}
 extras["tests"] = deps_list("pytest", "parameterized")
 extras["torch"] = deps_list("torch")
 extras["quality"] = deps_list("black", "isort", "flake8")
-extras["dev"] = extras["quality"] + extras["tests"]
+extras["eval"] = deps_list("lighteval", "latex2sympy2_extended")
+extras["dev"] = extras["quality"] + extras["tests"] + extras["eval"]
 
 # core dependencies shared across the whole project - keep this to a bare minimum :)
 install_requires = [
