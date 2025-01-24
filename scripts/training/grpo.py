@@ -36,13 +36,44 @@ class GRPOScriptArguments(ScriptArguments):
     )
 
 
+def extract_boxed_content(text):
+    start = text.find("boxed{")  # Find the starting index of "\boxed{"
+    if start == -1:
+        return None  # No match found
+
+    # Start reading from the first '{' after "boxed{"
+    start += len("boxed{")
+    brace_count = 1
+    content = []
+
+    for i in range(start, len(text)):
+        char = text[i]
+        if char == "{":
+            brace_count += 1
+        elif char == "}":
+            brace_count -= 1
+
+        # Add the character to the content
+        if brace_count > 0:
+            content.append(char)
+        else:
+            # We've matched all opening braces
+            break
+
+    # If the braces didn't balance, it's malformed
+    if brace_count != 0:
+        raise ValueError("Mismatched braces in input.")
+
+    return "".join(content)
+
+
 def accuracy_reward(completions, ground_truth, **kwargs):
     """Reward function that checks if the completion is the same as the ground truth."""
     # Regular expression to capture content inside \boxed{}
-    matches = [re.search(r"\\boxed\{(.*)\}", completion) for completion in completions]
-    contents = [match.group(1) if match else "" for match in matches]
+    contents = [completion[0]["content"] for completion in completions]
+    answers = [extract_boxed_content(content) for content in contents]
     # Reward 1 if the content is the same as the ground truth, 0 otherwise
-    return [1.0 if c == gt else 0.0 for c, gt in zip(contents, ground_truth)]
+    return [1.0 if answer == gt else 0.0 for answer, gt in zip(answers, ground_truth)]
 
 
 def format_reward_func(completions, **kwargs):
@@ -68,14 +99,13 @@ def main(script_args, training_args, model_args):
 
     # Format into conversation
     def make_conversation(example):
-        match = re.search(r"\\boxed\{(.*)\}", example["solution"], re.DOTALL)
-        ground_truth = match.group(1)
+        ground_truth = extract_boxed_content(example["solution"])
         return {
             "prompt": [{"role": "user", "content": example["problem"]}],
             "ground_truth": ground_truth,
         }
-    
-    dataset = dataset.map(make_conversation)
+
+    dataset = dataset.map(make_conversation, load_from_cache_file=False)
 
     # Initialize the GRPO trainer
     trainer = GRPOTrainer(
