@@ -12,7 +12,9 @@
 
 set -x -e
 
-# don't forget to modify the header for non hf clusters, maybe with use submitit at some point
+# DON'T FORGET TO MODIFY THE HEADER WITH YOUR PATH 
+# @todo:eliebak maybe with use submitit at some point
+
 source ~/.bashrc
 conda activate openr1
 module load cuda/12.1

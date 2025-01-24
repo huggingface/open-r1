@@ -20,7 +20,7 @@ gradient_accumulation_steps: 1
 gradient_checkpointing: true
 gradient_checkpointing_kwargs:
   use_reentrant: False
-hub_model_id: eliebak/test-1
+hub_model_id: HuggingFaceH4/qwen-test
 hub_strategy: every_save
 hub_private_repo: true
 learning_rate: 2.0e-05
