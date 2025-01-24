@@ -15,13 +15,14 @@ set -x -e
 # don't forget to modify the header for non hf clusters, maybe with use submitit at some point
 source ~/.bashrc
 conda activate openr1
+module load cuda/12.1
 echo "START TIME: $(date)"
 echo "PYTHON ENV: $(which python)"
 
 MODEL=Qwen2.5-1.5B-Instruct
 TASK=sft
 PRECISION=v00.00
-ACCELERATOR=multi_gpu
+ACCELERATOR=deepspeed_zero3
 
 # Training setup
 NUM_NODES=$SLURM_NNODES
