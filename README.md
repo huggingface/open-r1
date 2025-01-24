@@ -55,6 +55,10 @@ If it isn't installed, run:
 sudo apt-get install git-lfs
 ```
 
+## Training models
+
+
+
 ## Evaluating models
 
 For small models use `--data_parallel=$NUM_GPUS`, for large models shard with `--tensor_parallel=$NUM_GPUS`
