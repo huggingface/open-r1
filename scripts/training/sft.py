@@ -169,9 +169,7 @@ def main():
     ########################
 
     # Adding packing and dataset_text_field to the config
-    setattr(training_args, "packing", False)
     setattr(training_args, "model_init_kwargs", model_kwargs)
-    setattr(training_args, "dataset_text_field", "text")
 
     trainer = SFTTrainer(
         model=model,
