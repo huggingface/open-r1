@@ -1,22 +1,30 @@
 #!/bin/bash
+#SBATCH --job-name=default
+#SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --exclusive
 #SBATCH --gres=gpu:8
-#SBATCH --partition=hopper-prod  # Adjust this for your cluster
-#SBATCH --output=/fsx/h4/logs/%x-%j.out # Adjust this for your cluster
-#SBATCH --err=/fsx/h4/logs/%x-%j.err    # Adjust this for your cluster
+#SBATCH --partition=hopper-prod 
+#SBATCH --qos=high
+#SBATCH --time=01:59:00
+#SBATCH --output=/fsx/elie_bakouch/open-r1/logs/%x-%j.out 
+#SBATCH --err=/fsx/elie_bakouch/open-r1/logs/%x-%j.err
 
 set -x -e
 
+# DON'T FORGET TO MODIFY THE HEADER WITH YOUR PATH 
+# @todo:eliebak maybe with use submitit at some point
+
 source ~/.bashrc
 conda activate openr1
+module load cuda/12.1
 echo "START TIME: $(date)"
+echo "PYTHON ENV: $(which python)"
 
-MODEL=$1
-TASK=$2
-PRECISION=$3
-ACCELERATOR=$4
-OPTIONAL_ARGS=$5
+MODEL=Qwen2.5-1.5B-Instruct
+TASK=sft
+PRECISION=v00.00
+ACCELERATOR=deepspeed_zero3
 
 # Training setup
 NUM_NODES=$SLURM_NNODES
@@ -24,10 +32,10 @@ GPUS_PER_NODE=8
 WORLD_SIZE=$(($NUM_NODES*$GPUS_PER_NODE))
 # Due to conflicts between Accelerate's DeepSpeed configs and Transformers' TrainingArguments, we need to parse the gradient accumulation steps from the config file to ensure they match
 CONFIG_FILE=recipes/$MODEL/$TASK/config_$PRECISION.yaml
+
+echo "CONFIG_FILE: $CONFIG_FILE"
 GRAD_ACC_STEPS=$(grep 'gradient_accumulation_steps' $CONFIG_FILE | awk '{print $2}')
 
-# Split the string into individual arguments
-IFS=' ' read -ra ARGS <<< "$OPTIONAL_ARGS"
 
 # Loop through the arguments and find the one with "--gradient_accumulation_steps"
 for arg in "${ARGS[@]}"; do
@@ -44,7 +52,7 @@ MASTER_ADDR=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)
 MASTER_PORT=6000
 
 export CMD=" \
-    scripts/run_$TASK.py $CONFIG_FILE $OPTIONAL_ARGS
+    scripts/training/$TASK.py $CONFIG_FILE $OPTIONAL_ARGS
     "
 
 export LAUNCHER="HF_HUB_ENABLE_HF_TRANSFER=1 ACCELERATE_LOG_LEVEL=info TRANSFORMERS_VERBOSITY=info accelerate launch \
