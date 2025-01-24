@@ -40,7 +40,7 @@ from open_r1 import (
     get_quantization_config,
     get_tokenizer,
 )
-from trl import SFTTrainer, SFTConfig, setup_chat_format
+from trl import SFTConfig, SFTTrainer, setup_chat_format
 
 
 logger = logging.getLogger(__name__)
@@ -91,7 +91,6 @@ def main():
         configs=data_args.dataset_configs,
         columns_to_keep=["messages", "chosen", "rejected", "prompt", "completion", "label"],
     )
-
 
     logger.info(
         f"Training on the following datasets and their proportions: {[split + ' : ' + str(dset.num_rows) for split, dset in raw_datasets.items()]}"
@@ -163,7 +162,6 @@ def main():
         for index in random.sample(range(len(raw_datasets["train"])), 3):
             logger.info(f"Sample {index} of the processed training set:\n\n{raw_datasets['train'][index]['text']}")
 
-
     ########################
     # Initialize the Trainer
     ########################
@@ -220,7 +218,6 @@ def main():
         # Restore k,v cache for fast inference
         trainer.model.config.use_cache = True
         trainer.model.config.save_pretrained(training_args.output_dir)
-
 
     ##########
     # Evaluate (to change or supress?)

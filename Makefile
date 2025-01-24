@@ -15,30 +15,6 @@ quality:
 	flake8 --max-line-length 119 $(check_dirs) setup.py
 
 
-# Release stuff
+# Evaluation
 
-pre-release:
-	python src/open_r1/release.py
-
-pre-patch:
-	python src/open_r1/release.py --patch
-
-post-release:
-	python src/open_r1/release.py --post_release
-
-post-patch:
-	python src/open_r1/release.py --post_release --patch
-
-wheels:
-	python setup.py bdist_wheel && python setup.py sdist
-
-wheels_clean:
-	rm -rf build && rm -rf dist
-
-pypi_upload:
-	python -m pip install twine
-	twine upload dist/* -r pypi
-
-pypi_test_upload:
-	python -m pip install twine
-	twine upload dist/* -r pypitest --repository-url=https://test.pypi.org/legacy/
+evaluate:

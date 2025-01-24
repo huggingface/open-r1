@@ -3,9 +3,10 @@
 *A fully open reproduction of DeepSeek-R1. This repo is work in progress, let's build it together!*
 
 ## Overview
+
 The goal of this repo is to build the missing pieces of the R1 pipeline such that everybody can reproduce and build on top of it. The project is simple by design and mostly consists of:
 
-- `src/open_r1` contains the script to train and evaluate models as well a generate synthetic data:
+- `src/open_r1` contains the scripts to train and evaluate models as well generate synthetic data:
     - `grpo.py`: trains a model with GRPO on a given dataset
     - `sft.py`: simple SFT of a model on a dataset
     - `evaluate.py`: evaluates a model on the R1 benchmarks
@@ -54,16 +55,18 @@ If it isn't installed, run:
 sudo apt-get install git-lfs
 ```
 
-## Evaluating models (internal)
+## Evaluating models
+
 For small models use `--data_parallel=$NUM_GPUS`, for large models shard with `--tensor_parallel=$NUM_GPUS`
 Example for evaluating `deepseek-ai/DeepSeek-R1-Distill-Qwen-7B `
+
 ```
 NUM_GPUS=1
-MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-7B
-MODEL_ARGS="pretrained=$MODEL_ID,dtype=bfloat16,data_parallel=$NUM_GPUS,max_model_length=32768,gpu_memory_utilisation=0.8"
-TASK=aime24 # or math
-OUTPUT_DIR=evals/$MODEL
+MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B
+MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,data_parallel=$NUM_GPUS,max_model_length=32768,gpu_memory_utilisation=0.8"
+TASK=aime24 # or math_500
+OUTPUT_DIR=data/$MODEL
 
-lighteval $MODEL_ARGS $TASK --use-chat-template --custom-tasks src/open_r1/eval/$TASK.py --output-dir $OUTPUT_DIR --system-prompt="Please reason step by step, and put your final answer within \boxed{}."
+lighteval vllm $MODEL_ARGS "custom|$TASK|0|0" --use-chat-template --custom-tasks src/open_r1/evaluate.py --output-dir $OUTPUT_DIR --system-prompt="Please reason step by step, and put your final answer within \boxed{}."
 ```
 
