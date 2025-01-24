@@ -66,7 +66,7 @@ _deps = [
     "tensorboard",
     "torch>=2.1.2",
     "transformers>=4.39.3",
-    "trl>=0.9.6",
+    "trl @ git+https://github.com/huggingface/trl.git",
     "jinja2>=3.0.0",
     "tqdm>=4.64.1",
 ]
