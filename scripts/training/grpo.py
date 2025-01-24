@@ -39,7 +39,7 @@ class GRPOScriptArguments(ScriptArguments):
 def extract_boxed_content(text):
     start = text.find("boxed{")  # Find the starting index of "\boxed{"
     if start == -1:
-        return None  # No match found
+        return ""  # No match found
 
     # Start reading from the first '{' after "boxed{"
     start += len("boxed{")
@@ -62,7 +62,7 @@ def extract_boxed_content(text):
 
     # If the braces didn't balance, it's malformed
     if brace_count != 0:
-        raise ValueError("Mismatched braces in input.")
+        return ""
 
     return "".join(content)
 
@@ -105,7 +105,8 @@ def main(script_args, training_args, model_args):
             "ground_truth": ground_truth,
         }
 
-    dataset = dataset.map(make_conversation, load_from_cache_file=False)
+    dataset = dataset.map(make_conversation)
+    dataset = dataset.remove_columns("messages")
 
     # Initialize the GRPO trainer
     trainer = GRPOTrainer(
@@ -129,5 +130,4 @@ def main(script_args, training_args, model_args):
 if __name__ == "__main__":
     parser = TrlParser((GRPOScriptArguments, GRPOConfig, ModelConfig))
     script_args, training_args, model_args = parser.parse_args_and_config()
-    print(script_args)
     main(script_args, training_args, model_args)
