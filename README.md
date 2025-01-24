@@ -48,7 +48,7 @@ Example for evaluating `deepseek-ai/DeepSeek-R1-Distill-Qwen-7B `
 ```
 NUM_GPUS=1
 MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-7B
-MODEL_ARGS="pretrained=$MODEL_ID,dtype=bfloat16,data_parallel=$NUM_GPUS,max_model_length=4096,gpu_memory_utilisation=0.8"
+MODEL_ARGS="pretrained=$MODEL_ID,dtype=bfloat16,data_parallel=$NUM_GPUS,max_model_length=32768,gpu_memory_utilisation=0.8"
 TASK=aime24 # or math
 OUTPUT_DIR=evals/$MODEL
 

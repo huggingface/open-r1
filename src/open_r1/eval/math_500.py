@@ -67,7 +67,7 @@ task = LightevalTaskConfig(
     evaluation_splits=["test"],
     few_shots_split=None,
     few_shots_select=None,
-    generation_size=2048,
+    generation_size=32768,
     metric=[metric],
     version=1,
 )
