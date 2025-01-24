@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # coding=utf-8
-# Copyright 2023 The HuggingFace Inc. team. All rights reserved.
+# Copyright 2024 The HuggingFace Inc. team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -204,7 +204,7 @@ def main():
         "finetuned_from": model_args.model_name_or_path,
         "dataset": list(data_args.dataset_mixer.keys()),
         "dataset_tags": list(data_args.dataset_mixer.keys()),
-        "tags": ["alignment-handbook"],
+        "tags": ["open-r1"],
     }
     if trainer.accelerator.is_main_process:
         trainer.create_model_card(**kwargs)

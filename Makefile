@@ -3,7 +3,7 @@
 # make sure to test the local checkout in scripts and not the pre-installed one (don't use quotes!)
 export PYTHONPATH = src
 
-check_dirs := src tests scripts
+check_dirs := src scripts
 
 style:
 	black --line-length 119 --target-version py310 $(check_dirs) setup.py
@@ -18,16 +18,16 @@ quality:
 # Release stuff
 
 pre-release:
-	python src/alignment/release.py
+	python src/open_r1/release.py
 
 pre-patch:
-	python src/alignment/release.py --patch
+	python src/open_r1/release.py --patch
 
 post-release:
-	python src/alignment/release.py --post_release
+	python src/open_r1/release.py --post_release
 
 post-patch:
-	python src/alignment/release.py --post_release --patch
+	python src/open_r1/release.py --post_release --patch
 
 wheels:
 	python setup.py bdist_wheel && python setup.py sdist

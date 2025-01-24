@@ -38,7 +38,7 @@ REPLACE_PATTERNS = {
 README_FILE = "README.md"
 
 REPLACE_FILES = {
-    "init": "src/alignment/__init__.py",
+    "init": "src/open_r1/__init__.py",
     "setup": "setup.py",
     "citation": "CITATION.cff",
     "readme": README_FILE,

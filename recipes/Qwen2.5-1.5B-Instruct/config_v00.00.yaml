@@ -1,0 +1,45 @@
+# Model arguments
+model_name_or_path: Qwen/Qwen2.5-1.5B-Instruct
+model_revision: main
+torch_dtype: bfloat16
+attn_implementation: flash_attention_2
+
+# Data training arguments
+dataset_mixer:
+  HuggingFaceH4/Bespoke-Stratos-17k: 1.0
+dataset_splits:
+- train
+- test
+preprocessing_num_workers: 12
+
+# SFT trainer config
+bf16: true
+do_eval: true
+eval_strategy: epoch
+gradient_accumulation_steps: 1
+gradient_checkpointing: true
+gradient_checkpointing_kwargs:
+  use_reentrant: False
+hub_model_id: HuggingFaceH4/Qwen2.5-1.5B-R1-v00.00
+hub_strategy: every_save
+learning_rate: 2.0e-05
+log_level: info
+logging_steps: 5  
+logging_strategy: steps
+lr_scheduler_type: cosine
+max_seq_length: 2048
+max_steps: -1
+num_train_epochs: 1
+output_dir: data/Qwen2.5-1.5B-Distill-R1-v00.00
+overwrite_output_dir: true
+per_device_eval_batch_size: 8
+per_device_train_batch_size: 16
+push_to_hub: true
+remove_unused_columns: true
+report_to:
+- wandb
+save_strategy: "steps"
+save_steps: 100
+save_total_limit: 1
+seed: 42
+warmup_ratio: 0.1

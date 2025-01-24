@@ -41,34 +41,27 @@ if stale_egg_info.exists():
 # IMPORTANT: all dependencies should be listed here with their version requirements, if any.
 #   * If a dependency is fast-moving (e.g. transformers), pin to the exact version
 _deps = [
-    "accelerate>=0.29.2",
+    "accelerate>=1.2.1",
     "bitsandbytes>=0.43.0",
     "black>=24.4.2",
-    "datasets>=2.18.0",
-    "deepspeed>=0.14.4",
-    "einops>=0.6.1",
-    "evaluate==0.4.0",
+    "datasets>=3.2.0",
+    "deepspeed==0.15.4",
+    "einops>=0.8.0",
     "flake8>=6.0.0",
-    "hf-doc-builder>=0.4.0",
     "hf_transfer>=0.1.4",
-    "huggingface-hub>=0.19.2,<1.0",
+    "huggingface-hub[cli]>=0.19.2,<1.0",
     "isort>=5.12.0",
-    "ninja>=1.11.1",
-    "numpy>=1.24.2",
+    "lighteval @ git+https://github.com/huggingface/lighteval.git@4f381b352c0e467b5870a97d41cb66b487a2c503#egg=lighteval[math]",
     "packaging>=23.0",
     "parameterized>=0.9.0",
-    "peft>=0.9.0",
-    "protobuf<=3.20.2",  # Needed to avoid conflicts with `transformers`
     "pytest",
     "safetensors>=0.3.3",
     "sentencepiece>=0.1.99",
-    "scipy",
-    "tensorboard",
-    "torch>=2.1.2",
-    "transformers>=4.39.3",
-    "trl @ git+https://github.com/huggingface/trl.git",
-    "jinja2>=3.0.0",
-    "tqdm>=4.64.1",
+    "torch>=2.5.1",
+    "transformers==4.48.1",
+    "trl @ git+https://github.com/huggingface/trl.git@6f99f42f724123409422f2fad42bf56fa91f366f",  # Bump when this is merged: https://github.com/huggingface/trl/pull/2650
+    "vllm==0.6.6.post1",
+    "wandb>=0.19.1",
 ]
 
 # this is a lookup table with items like:
@@ -88,45 +81,35 @@ extras = {}
 extras["tests"] = deps_list("pytest", "parameterized")
 extras["torch"] = deps_list("torch")
 extras["quality"] = deps_list("black", "isort", "flake8")
-extras["docs"] = deps_list("hf-doc-builder")
-extras["dev"] = extras["docs"] + extras["quality"] + extras["tests"]
+extras["dev"] = extras["quality"] + extras["tests"]
 
 # core dependencies shared across the whole project - keep this to a bare minimum :)
 install_requires = [
     deps["accelerate"],
     deps["bitsandbytes"],
     deps["einops"],
-    deps["evaluate"],
     deps["datasets"],
     deps["deepspeed"],
     deps["hf_transfer"],
     deps["huggingface-hub"],
-    deps["jinja2"],
-    deps["ninja"],
-    deps["numpy"],
     deps["packaging"],  # utilities from PyPA to e.g., compare versions
-    deps["peft"],
-    deps["protobuf"],
     deps["safetensors"],
     deps["sentencepiece"],
-    deps["scipy"],
-    deps["tensorboard"],
-    deps["tqdm"],  # progress bars in model download and training scripts
     deps["transformers"],
     deps["trl"],
 ]
 
 setup(
-    name="open_r1",
+    name="open-r1",
     version="0.1.0.dev0",  # expected format is one of x.y.z.dev0, or x.y.z.rc1 or x.y.z (no to dashes, yes to dots)
     author="The Hugging Face team (past and future)",
     author_email="lewis@huggingface.co",
     description="Open R1",
     long_description=open("README.md", "r", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
-    keywords="nlp deep learning rlhf llm",
+    keywords="llm inference-time compute reasoning",
     license="Apache",
-    url="https://github.com/huggingface/open_r1",
+    url="https://github.com/huggingface/open-r1",
     package_dir={"": "src"},
     packages=find_packages("src"),
     zip_safe=False,
