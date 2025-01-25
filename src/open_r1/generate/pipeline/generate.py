@@ -25,9 +25,7 @@ def build_distilabel_pipeline(
                     "max_new_tokens": max_new_tokens,
                 },
             ),
-            input_mappings={"instruction": prompt_column}
-            if prompt_column is not None
-            else {},
+            input_mappings={"instruction": prompt_column} if prompt_column is not None else {},
         )
 
     return pipeline
@@ -37,9 +35,7 @@ if __name__ == "__main__":
     import argparse
     from datasets import load_dataset
 
-    parser = argparse.ArgumentParser(
-        description="Run distilabel pipeline for generating responses with DeepSeek R1"
-    )
+    parser = argparse.ArgumentParser(description="Run distilabel pipeline for generating responses with DeepSeek R1")
     parser.add_argument(
         "--hf-dataset",
         type=str,
@@ -108,9 +104,7 @@ if __name__ == "__main__":
         print(f"  {arg}: {value}")
     print()
 
-    print(
-        f"Loading '{args.hf_dataset}' (config: {args.hf_dataset_config}, split: {args.hf_dataset_split}) dataset..."
-    )
+    print(f"Loading '{args.hf_dataset}' (config: {args.hf_dataset_config}, split: {args.hf_dataset_split}) dataset...")
     dataset = load_dataset(args.hf_dataset, split=args.hf_dataset_split).select(range(50))
     print("Dataset loaded!")
 
