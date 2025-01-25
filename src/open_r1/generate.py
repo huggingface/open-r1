@@ -26,6 +26,7 @@ def build_distilabel_pipeline(
     temperature: Optional[float] = None,
     top_p: Optional[float] = None,
     max_new_tokens: int = 8192,
+    num_generations: int = 1,
 ) -> Pipeline:
     generation_kwargs = {"max_new_tokens": max_new_tokens}
 
@@ -47,6 +48,7 @@ def build_distilabel_pipeline(
             ),
             input_mappings={"instruction": prompt_column} if prompt_column is not None else {},
             input_batch_size=10,
+            num_generations=num_generations,
         )
 
     return pipeline
@@ -106,6 +108,12 @@ if __name__ == "__main__":
         help="Maximum number of new tokens to generate",
     )
     parser.add_argument(
+        "--num-generations",
+        type=int,
+        default=1,
+        help="Number of generations per problem",
+    )
+    parser.add_argument(
         "--hf-output-dataset",
         type=str,
         required=False,
@@ -135,6 +143,7 @@ if __name__ == "__main__":
         temperature=args.temperature,
         top_p=args.top_p,
         max_new_tokens=args.max_new_tokens,
+        num_generations=args.num_generations,
     )
 
     print("Running generation pipeline...")
