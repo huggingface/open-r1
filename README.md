@@ -7,10 +7,10 @@
 The goal of this repo is to build the missing pieces of the R1 pipeline such that everybody can reproduce and build on top of it. The project is simple by design and mostly consists of:
 
 - `src/open_r1` contains the scripts to train and evaluate models as well generate synthetic data:
-    - `grpo.py`: trains a model with GRPO on a given dataset
-    - `sft.py`: simple SFT of a model on a dataset
-    - `evaluate.py`: evaluates a model on the R1 benchmarks
-    - `generate`: contains the Slurm and Distilabel scripts to generate synthetic data with a model
+    - `grpo.py`: trains a model with GRPO on a given dataset.
+    - `sft.py`: simple SFT of a model on a dataset.
+    - `evaluate.py`: evaluates a model on the R1 benchmarks.
+    - `generate.py`: generate synthetic data from a model using [Distilabel](https://github.com/argilla-io/distilabel).
 - `Makefile` contains an easy to run command for each step in the R1 pipeline leveraging the scipts above.
 
 ### Plan of attack
@@ -22,7 +22,7 @@ We will use the DeepSeek-R1 [tech report](https://github.com/deepseek-ai/DeepSee
 * Step 3: show we can go from base model to RL-tuned via multi-stage training.
 
 <center>
-    <img src="assets/plan-of-attack.png" width="600">
+    <img src="assets/plan-of-attack.png" width="500">
 </center>
 
 
@@ -70,13 +70,18 @@ sudo apt-get install git-lfs
 
 ## Training models
 
+We support training models with either DDP or DeepSpeed ZeRO-2 and ZeRO-3. To switch between methods, simply change the path to the `accelrate` YAML config in `configs`.
+
+> [!NOTE]
+> The training commands below are configured for a node of 8 x H100s (80GB). For different hardware and topologies, you may need to tune the batch size and number of gradient accumulation steps.
+
 ### SFT
 
-To run SFT on a dataset distilled from DeepSeek-R1 with reasoning traces such as [Bespoke-Stratos-17k](https://huggingface.co/datasets/bespokelabs/Bespoke-Stratos-17k), use this command, or edit `launch.slurm`.
+To run SFT on a dataset distilled from DeepSeek-R1 with reasoning traces such as [Bespoke-Stratos-17k](https://huggingface.co/datasets/bespokelabs/Bespoke-Stratos-17k), run:
 
 ```
 accelerate launch --config_file=configs/zero3.yaml src/open_r1/sft.py \
-    --model_name_or_path Qwen/Qwen2.5-Math-1.5B \
+    --model_name_or_path Qwen/Qwen2.5-Math-1.5B-Instruct \
     --dataset_name HuggingFaceH4/Bespoke-Stratos-17k \
     --learning_rate 2.0e-5 \
     --num_train_epochs 1 \
@@ -90,8 +95,16 @@ accelerate launch --config_file=configs/zero3.yaml src/open_r1/sft.py \
     --logging_steps 5 \
     --eval_strategy steps \
     --eval_steps 100 \
-    --output_dir data/Qwen2.5-1.5B-Distill-R1
+    --output_dir data/Qwen2.5-1.5B-Open-R1-Distill
 ```
+
+To launch a Slurm job, run:
+
+```shell
+sbatch --output=/path/to/logs/%x-%j.out --err=/path/to/logs/%x-%j.err slurm/sft.slurm {model} {dataset} {accelerator}
+```
+
+Here `{model}` and `{dataset}` refer to the model and dataset IDs on the Hugging Face Hub, while `{accelerator}` refers to the choice of 🤗 Accelerate config in `configs`. 
 
 ### GRPO
 
@@ -107,10 +120,25 @@ accelerate launch src/open_r1/grpo.py \
 
 ## Evaluating models
 
-We use `lighteval` to evaluate models, with custom tasks defined in `src/open_r1/evaluate.py`. For models which fit on a single GPU, use data parallel to maximise throughput and run:
+We use `lighteval` to evaluate models, with custom tasks defined in `src/open_r1/evaluate.py`. For models which fit on a single GPU, run:
 
 ```shell
-NUM_GPUS=1
+MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B
+MODEL_ARGS="pretrained=$MODEL,dtype=float16,max_model_length=32768,gpu_memory_utilisation=0.8"
+TASK=aime24
+OUTPUT_DIR=data/evals/$MODEL
+
+lighteval vllm $MODEL_ARGS "custom|$TASK|0|0" \
+    --custom-tasks src/open_r1/evaluate.py \
+    --use-chat-template \
+    --system-prompt="Please reason step by step, and put your final answer within \boxed{}." \
+    --output-dir $OUTPUT_DIR 
+```
+
+To increase throughput across multiple GPUs, use _data parallel_ as follows:
+
+```shell
+NUM_GPUS=8
 MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B
 MODEL_ARGS="pretrained=$MODEL,dtype=float16,data_parallel_size=$NUM_GPUS,max_model_length=32768,gpu_memory_utilisation=0.8"
 TASK=aime24
@@ -123,7 +151,7 @@ lighteval vllm $MODEL_ARGS "custom|$TASK|0|0" \
     --output-dir $OUTPUT_DIR 
 ```
 
-For models which require sharding across GPUs, use tensor parallel and run:
+For large models which require sharding across GPUs, use _tensor parallel_ and run:
 
 ```shell
 NUM_GPUS=8
@@ -132,6 +160,7 @@ MODEL_ARGS="pretrained=$MODEL,dtype=float16,tensor_parallel_size=$NUM_GPUS,max_m
 TASK=aime24
 OUTPUT_DIR=data/evals/$MODEL
 
+export VLLM_WORKER_MULTIPROC_METHOD=spawn
 lighteval vllm $MODEL_ARGS "custom|$TASK|0|0" \
     --custom-tasks src/open_r1/evaluate.py \
     --use-chat-template \

@@ -1,18 +1,20 @@
 #!/bin/bash
-#SBATCH --job-name=default
+#SBATCH --job-name=open-r1-sft
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --exclusive
 #SBATCH --gres=gpu:8
 #SBATCH --partition=hopper-prod 
-#SBATCH --qos=high
 #SBATCH --time=01:59:00
-#SBATCH --output=/fsx/elie_bakouch/open-r1/logs/%x-%j.out 
-#SBATCH --err=/fsx/elie_bakouch/open-r1/logs/%x-%j.err
+#SBATCH --output=/fsx/h4/logs/%x-%j.out
+#SBATCH --err=/fsx/h4/logs/%x-%j.err
+"""Usage:
+
+"""
+
+sbatch 
 
 set -x -e
-
-# DON'T FORGET TO MODIFY THE HEADER WITH YOUR PATH 
 
 source ~/.bashrc
 conda activate openr1
@@ -20,9 +22,9 @@ module load cuda/12.1
 echo "START TIME: $(date)"
 echo "PYTHON ENV: $(which python)"
 
-MODEL_PATH=Qwen/Qwen2.5-1.5B-Instruct
-DATASET_PATH=HuggingFaceH4/Bespoke-Stratos-17k
-ACCELERATOR=zero3
+MODEL_PATH=$1
+DATASET_PATH=$2
+ACCELERATOR=$3
 
 # Training setup
 NUM_NODES=$SLURM_NNODES
@@ -37,25 +39,25 @@ export CMD=" \
     src/open_r1/sft.py \
     --model_name_or_path $MODEL_PATH \
     --dataset_name $DATASET_PATH \
-    -- use_liger_kernel True \
+    --use_liger_kernel true \
     --learning_rate 2.0e-5 \
     --num_train_epochs 1 \
     --packing \
     --max_seq_length 4096 \
     --per_device_train_batch_size 4 \
     --per_device_eval_batch_size 4 \
-    --gradient_accumulation_steps 1 \
+    --gradient_accumulation_steps 4 \
     --gradient_checkpointing \
     --bf16 \
     --logging_steps 5 \
     --eval_strategy steps \
     --eval_steps 100 \
-    --output_dir data/Qwen2.5-1.5B-Distill-R1
+    --output_dir data/Qwen2.5-1.5B-Open-R1-Distill
     "
 
 export LAUNCHER="HF_HUB_ENABLE_HF_TRANSFER=1 ACCELERATE_LOG_LEVEL=info TRANSFORMERS_VERBOSITY=info accelerate launch \
     --config_file configs/$ACCELERATOR.yaml  \
-    --gradient_accumulation_steps 1 \
+    --gradient_accumulation_steps 4 \
     --num_machines $NUM_NODES \
     --num_processes $WORLD_SIZE \
     --main_process_ip $MASTER_ADDR \
