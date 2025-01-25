@@ -18,7 +18,7 @@ The goal of this repo is to build the missing pieces of the R1 pipeline such tha
 We will use the DeepSeek-R1 [tech report](https://github.com/deepseek-ai/DeepSeek-R1) as a guide, which can roughly be broken down into three main steps:
 
 * Step 1: replicate the R1-Distill models by distilling a high-quality corpus from DeepSeek-R1.
-* Step 2: replicate the pure RL pipeline that DeepSeek used to create R1-Zero. This will likely involve curatint new, large-scale datasets for math, reasoning, and code.
+* Step 2: replicate the pure RL pipeline that DeepSeek used to create R1-Zero. This will likely involve curating new, large-scale datasets for math, reasoning, and code.
 * Step 3: show we can go from base model to RL-tuned via multi-stage training.
 
 <center>
