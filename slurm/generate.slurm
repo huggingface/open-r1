@@ -44,6 +44,10 @@ while [[ $# -gt 0 ]]; do
             MAX_NEW_TOKENS="$2"
             shift 2
             ;;
+        --num-generations)
+            NUM_GENERATIONS="$2"
+            shift 2
+            ;;
         --hf-output-dataset)
             HF_OUTPUT_DATASET="$2"
             shift 2
@@ -68,6 +72,7 @@ fi
 HF_DATASET_SPLIT=${HF_DATASET_SPLIT:-"train"}
 PROMPT_COLUMN=${PROMPT_COLUMN:-"prompt"}
 MAX_NEW_TOKENS=${MAX_NEW_TOKENS:-8192}
+NUM_GENERATIONS=${NUM_GENERATIONS:-1}
 PRIVATE=${PRIVATE:-"false"}
 
 # Print all input arguments
@@ -80,6 +85,7 @@ echo "PROMPT_COLUMN: $PROMPT_COLUMN"
 echo "TEMPERATURE: $TEMPERATURE"
 echo "TOP_P: $TOP_P"
 echo "MAX_NEW_TOKENS: $MAX_NEW_TOKENS"
+echo "NUM_GENERATIONS: $NUM_GENERATIONS"
 echo "HF_OUTPUT_DATASET: $HF_OUTPUT_DATASET"
 echo "PRIVATE: $PRIVATE"
 echo "-------------------"
@@ -188,6 +194,7 @@ RAY_ADDRESS="http://$head_node_ip:8265" ray job submit \
     ${TEMPERATURE:+--temperature "$TEMPERATURE"} \
     ${TOP_P:+--top-p "$TOP_P"} \
     --max-new-tokens "$MAX_NEW_TOKENS" \
+    --num-generations "$NUM_GENERATIONS" \
     ${HF_OUTPUT_DATASET:+--hf-output-dataset "$HF_OUTPUT_DATASET"} \
     ${PRIVATE:+--private} \
     --vllm-server-url "http://$head_node_ip:8000/v1"
