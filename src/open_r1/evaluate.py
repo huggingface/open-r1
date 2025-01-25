@@ -44,12 +44,29 @@ expr_gold_metric = multilingual_extractive_match_metric(
     aggregation_function=max,
 )
 
+expr_gold_metric = multilingual_extractive_match_metric(
+    language=Language.ENGLISH,
+    fallback_mode="first_match",
+    precision=5,
+    gold_extraction_target=(ExprExtractionConfig(),),
+    pred_extraction_target=(ExprExtractionConfig(), LatexExtractionConfig()),
+    aggregation_function=max,
+)
+
 
 def prompt_fn(line, task_name: str = None):
     """Assumes the model is either prompted to emit \\boxed{answer} or does so automatically"""
     return Doc(
         task_name=task_name,
         query=line["problem"],
+        choices=[line["solution"]],
+        gold_index=0,
+    )
+
+def aime_prompt_fn(line, task_name: str = None):
+    return Doc(
+        task_name=task_name,
+        query=line["answer"],
         choices=[line["solution"]],
         gold_index=0,
     )

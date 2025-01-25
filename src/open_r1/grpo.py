@@ -21,7 +21,7 @@ from latex2sympy2_extended import NormalizationConfig
 from math_verify import LatexExtractionConfig, parse, verify
 from open_r1.configs import GRPOConfig
 from open_r1.utils.callbacks import get_callbacks
-from trl import GRPOTrainer, ModelConfig, ScriptArguments, TrlParser, get_peft_config
+from trl import GRPOConfig, GRPOTrainer, ModelConfig, ScriptArguments, TrlParser, get_peft_config
 
 
 @dataclass
@@ -71,7 +71,7 @@ def accuracy_reward(completions, solution, **kwargs):
             reward = float(verify(answer_parsed, gold_parsed))
         else:
             # If the gold solution is not parseable, we reward 1 to skip this example
-            reward = 1.0
+            reward = 1
             print("Failed to parse gold solution: ", sol)
         rewards.append(reward)
 

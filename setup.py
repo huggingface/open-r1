@@ -42,7 +42,7 @@ if stale_egg_info.exists():
 #   * If a dependency is fast-moving (e.g. transformers), pin to the exact version
 _deps = [
     "accelerate>=1.2.1",
-    "bitsandbytes>=0.43.0",
+    "bitsandbytes",
     "black>=24.4.2",
     "datasets>=3.2.0",
     "deepspeed==0.15.4",
@@ -53,8 +53,8 @@ _deps = [
     "huggingface-hub[cli]>=0.19.2,<1.0",
     "isort>=5.12.0",
     "liger_kernel==0.5.2",
-    "lighteval @ git+https://github.com/huggingface/lighteval.git@0e462692436e1f0575bdb4c6ef63453ad9bde7d4#egg=lighteval[math]",
-    "math-verify>=0.3.3",  # Used for math verification in grpo
+    "lighteval @ git+https://github.com/huggingface/lighteval.git@4f381b352c0e467b5870a97d41cb66b487a2c503#egg=lighteval[math]",
+    "math-verify>=0.3.2",  # Used for math verification in grpo
     "packaging>=23.0",
     "parameterized>=0.9.0",
     "pytest",
