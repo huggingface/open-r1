@@ -16,7 +16,7 @@ import re
 from dataclasses import dataclass, field
 
 from datasets import load_dataset
-
+from math_verify import parse, verify
 from trl import GRPOConfig, GRPOTrainer, ModelConfig, ScriptArguments, TrlParser, get_peft_config
 
 
@@ -36,44 +36,12 @@ class GRPOScriptArguments(ScriptArguments):
     )
 
 
-def extract_boxed_content(text):
-    start = text.find("boxed{")  # Find the starting index of "\boxed{"
-    if start == -1:
-        return ""  # No match found
-
-    # Start reading from the first '{' after "boxed{"
-    start += len("boxed{")
-    brace_count = 1
-    content = []
-
-    for i in range(start, len(text)):
-        char = text[i]
-        if char == "{":
-            brace_count += 1
-        elif char == "}":
-            brace_count -= 1
-
-        # Add the character to the content
-        if brace_count > 0:
-            content.append(char)
-        else:
-            # We've matched all opening braces
-            break
-
-    # If the braces didn't balance, it's malformed
-    if brace_count != 0:
-        return ""
-
-    return "".join(content)
-
-
 def accuracy_reward(completions, ground_truth, **kwargs):
     """Reward function that checks if the completion is the same as the ground truth."""
-    # Regular expression to capture content inside \boxed{}
     contents = [completion[0]["content"] for completion in completions]
-    answers = [extract_boxed_content(content) for content in contents]
+    answers = [parse(content)[0] for content in contents]
     # Reward 1 if the content is the same as the ground truth, 0 otherwise
-    return [1.0 if answer == gt else 0.0 for answer, gt in zip(answers, ground_truth)]
+    return [float(verify(answer, parse(gt)[0])) for answer, gt in zip(answers, ground_truth)]
 
 
 def format_reward_func(completions, **kwargs):

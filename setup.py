@@ -64,6 +64,7 @@ _deps = [
     "vllm==0.6.6.post1",
     "wandb>=0.19.1",
     "distilabel[vllm,ray,openai]>=1.5.2",
+    "math-verify"  # Used for math verification in grpo
 ]
 
 # this is a lookup table with items like:
