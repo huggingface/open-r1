@@ -10,7 +10,7 @@ The goal of this repo is to build the missing pieces of the R1 pipeline such tha
     - `grpo.py`: trains a model with GRPO on a given dataset
     - `sft.py`: simple SFT of a model on a dataset
     - `evaluate.py`: evaluates a model on the R1 benchmarks
-    - `generate.py`: use a model to generate syntehtic data
+    - `generate`: contains the slurm and distilabel scripts to generate synthetic data with a model
 - `Makefile` contains an easy to run command for each step in the R1 pipeline leveraging the scipts above.
 
 ## Installation

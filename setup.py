@@ -63,6 +63,7 @@ _deps = [
     "trl @ git+https://github.com/huggingface/trl.git@6f99f42f724123409422f2fad42bf56fa91f366f",  # Bump when this is merged: https://github.com/huggingface/trl/pull/2650
     "vllm==0.6.6.post1",
     "wandb>=0.19.1",
+    "distilabel[vllm,ray,openai]>=1.5.2",
 ]
 
 # this is a lookup table with items like:
