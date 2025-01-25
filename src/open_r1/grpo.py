@@ -79,7 +79,6 @@ def main(script_args, training_args, model_args):
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": example["problem"]},
             ],
-            "ground_truth": example["solution"],
         }
 
     dataset = dataset.map(make_conversation)
