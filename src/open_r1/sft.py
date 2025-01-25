@@ -35,8 +35,6 @@ accelerate launch --config_file=configs/zero3.yaml src/open_r1/sft.py \
     --output_dir data/Qwen2.5-1.5B-Open-R1-Distill
 """
 
-import argparse
-
 from datasets import load_dataset
 from transformers import AutoTokenizer
 
@@ -97,16 +95,7 @@ def main(script_args, training_args, model_args):
         trainer.push_to_hub(dataset_name=script_args.dataset_name)
 
 
-def make_parser(subparsers: argparse._SubParsersAction = None):
-    dataclass_types = (ScriptArguments, SFTConfig, ModelConfig)
-    if subparsers is not None:
-        parser = subparsers.add_parser("sft", help="Run the SFT training script", dataclass_types=dataclass_types)
-    else:
-        parser = TrlParser(dataclass_types)
-    return parser
-
-
 if __name__ == "__main__":
-    parser = make_parser()
+    parser = TrlParser((ScriptArguments, SFTConfig, ModelConfig))
     script_args, training_args, model_args = parser.parse_args_and_config()
     main(script_args, training_args, model_args)
