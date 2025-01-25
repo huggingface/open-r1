@@ -107,16 +107,35 @@ accelerate launch src/open_r1/grpo.py \
 
 ## Evaluating models
 
-For small models use `--data_parallel=$NUM_GPUS`, for large models shard with `--tensor_parallel=$NUM_GPUS`
-Example for evaluating `deepseek-ai/DeepSeek-R1-Distill-Qwen-7B `
+We use `lighteval` to evaluate models, with custom tasks defined in `src/open_r1/evaluate.py`. For models which fit on a single GPU, use data parallel to maximise throughput and run:
 
-```
+```shell
 NUM_GPUS=1
 MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B
-MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,data_parallel=$NUM_GPUS,max_model_length=32768,gpu_memory_utilisation=0.8"
-TASK=aime24 # or math_500
-OUTPUT_DIR=data/$MODEL
+MODEL_ARGS="pretrained=$MODEL,dtype=float16,data_parallel_size=$NUM_GPUS,max_model_length=32768,gpu_memory_utilisation=0.8"
+TASK=aime24
+OUTPUT_DIR=data/evals/$MODEL
 
-lighteval vllm $MODEL_ARGS "custom|$TASK|0|0" --use-chat-template --custom-tasks src/open_r1/evaluate.py --output-dir $OUTPUT_DIR --system-prompt="Please reason step by step, and put your final answer within \boxed{}."
+lighteval vllm $MODEL_ARGS "custom|$TASK|0|0" \
+    --custom-tasks src/open_r1/evaluate.py \
+    --use-chat-template \
+    --system-prompt="Please reason step by step, and put your final answer within \boxed{}." \
+    --output-dir $OUTPUT_DIR 
+```
+
+For models which require sharding across GPUs, use tensor parallel and run:
+
+```shell
+NUM_GPUS=8
+MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-32B
+MODEL_ARGS="pretrained=$MODEL,dtype=float16,tensor_parallel_size=$NUM_GPUS,max_model_length=32768,gpu_memory_utilisation=0.8"
+TASK=aime24
+OUTPUT_DIR=data/evals/$MODEL
+
+lighteval vllm $MODEL_ARGS "custom|$TASK|0|0" \
+    --custom-tasks src/open_r1/evaluate.py \
+    --use-chat-template \
+    --system-prompt="Please reason step by step, and put your final answer within \boxed{}." \
+    --output-dir $OUTPUT_DIR 
 ```
 
