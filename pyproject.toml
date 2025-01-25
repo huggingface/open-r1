@@ -37,13 +37,13 @@ dependencies = [
   "packaging>=23.0",
   "safetensors>=0.3.3",
   "sentencepiece>=0.1.99",
+  "torch>=2.5.1",
   "vllm==0.6.6.post1",
   "wandb>=0.19.1",
 ]
 
 [project.optional-dependencies]
 tests = ["pytest>=7.0.0", "parameterized>=0.9.0"]
-torch = ["torch>=2.5.1"]
 quality = ["black>=24.4.2", "isort>=5.12.0", "flake8>=6.0.0"]
 eval = ["lighteval>=0.1.0", "math-verify>=0.1.0"]
 quantization = ["bitsandbytes==0.43.0"]
