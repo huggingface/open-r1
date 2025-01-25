@@ -170,3 +170,83 @@ lighteval vllm $MODEL_ARGS "custom|$TASK|0|0" \
     --output-dir $OUTPUT_DIR 
 ```
 
+## Data generation
+
+### Generate data from a smol distilled R1 model
+
+The following example can be run in 1xH100. 
+First install the following dependencies:
+
+```shell
+pip install "distilabel[vllm]>=1.5.2"
+```
+
+Now save the following snippet into a file named `pipeline.py` and run with `python pipeline.py`. It will generate for each of the 10 examples 4 generations (change the username for the repository to your org/user name):
+
+```python
+from datasets import load_dataset
+from distilabel.models import vLLM
+from distilabel.pipeline import Pipeline
+from distilabel.steps.tasks import TextGeneration
+
+
+prompt_template = """\
+You will be given a problem. Please reason step by step, and put your final answer within \boxed{}:
+{{ instruction }}"""
+
+dataset = load_dataset("AI-MO/NuminaMath-TIR", split="train").select(range(10))
+
+model_id = "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B"  # Exchange with another smol distilled r1
+
+with Pipeline(
+    name="distill-qwen-7b-r1",
+    description="A pipeline to generate data from a distilled r1 model",
+) as pipeline:
+
+    llm = vLLM(
+        model=model_id,
+        tokenizer=model_id,
+        extra_kwargs={
+            "tensor_parallel_size": 1,
+            "max_model_len": 8192,
+        },
+        generation_kwargs={
+            "temperature": 0.6,
+            "max_new_tokens": 8192,
+        },
+    )
+    prompt_column = "problem"
+    text_generation = TextGeneration(
+        llm=llm, 
+        template=prompt_template,
+        num_generations=4,
+        input_mappings={"instruction": prompt_column} if prompt_column is not None else {}
+    )
+
+
+if __name__ == "__main__":
+    distiset = pipeline.run(dataset=dataset)
+    distiset.push_to_hub(repo_id="username/numina-deepseek-r1-qwen-7b")
+```
+
+Take a look at the sample dataset at [HuggingFaceH4/numina-deepseek-r1-qwen-7b](https://huggingface.co/datasets/HuggingFaceH4/numina-deepseek-r1-qwen-7b).
+
+
+### Generate data from DeepSeek-R1
+
+To run the bigger DeepSeek-R1, we used 2 nodes of 8xH100 each one, using the slurm file present in this repo at `slurm/generate.slurm`. First, install the dependencies:
+
+```shell
+pip install "distilabel[vllm,ray,openai]>=1.5.2"
+```
+
+And then, place the `generate.slurm` file at the same level as `src/open_r1/generate.py` (it will try to run the file in the relative path), and run the following command:
+
+```shell
+sbatch generate.slurm \
+    --hf-dataset AI-MO/NuminaMath-TIR \
+    --temperature 0.6 \
+    --prompt-column problem \
+    --model deepseek-ai/DeepSeek-R1 \
+    --hf-output-dataset username/r1-dataset
+```
