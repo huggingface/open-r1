@@ -92,8 +92,6 @@ def main(script_args, training_args, model_args):
     dataset = dataset.map(make_conversation)
     dataset = dataset.remove_columns("messages")
 
-    training_args.gradient_checkpointing_kwargs = dict(use_reentrant=False)
-
     # Initialize the GRPO trainer
     trainer = GRPOTrainer(
         model=model_args.model_name_or_path,
