@@ -1,0 +1,84 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "open-r1"
+version = "0.1.0.dev0"
+description = "Open R1"
+readme = "README.md"
+requires-python = ">=3.10.9"
+license = { text = "Apache-2.0" }
+authors = [
+  { name = "The Hugging Face team (past and future)", email = "lewis@huggingface.co" },
+]
+keywords = ["llm", "inference-time", "compute", "reasoning"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Education",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+  "accelerate>=1.2.1",
+  "datasets>=3.2.0",
+  "deepspeed==0.15.4",
+  "distilabel[vllm,ray,openai]>=1.5.2",
+  "einops>=0.8.0",
+  "hf_transfer>=0.1.4",
+  "huggingface-hub[cli]>=0.19.2,<1.0",
+  "liger_kernel==0.5.2",
+  "math-verify>=0.1.0",
+  "packaging>=23.0",
+  "safetensors>=0.3.3",
+  "sentencepiece>=0.1.99",
+  "vllm==0.6.6.post1",
+  "wandb>=0.19.1",
+]
+
+[project.optional-dependencies]
+tests = ["pytest>=7.0.0", "parameterized>=0.9.0"]
+torch = ["torch>=2.5.1"]
+quality = ["black>=24.4.2", "isort>=5.12.0", "flake8>=6.0.0"]
+eval = ["lighteval>=0.1.0", "math-verify>=0.1.0"]
+quantization = ["bitsandbytes==0.43.0"]
+dev = [
+  "black>=24.4.2",
+  "isort>=5.12.0",
+  "flake8>=6.0.0",
+  "pytest>=7.0.0",
+  "parameterized>=0.9.0",
+  "lighteval>=0.1.0",
+  "math-verify>=0.1.0",
+]
+
+[tool.hatch.build]
+packages = ["src/open_r1"]
+
+[tool.uv.sources]
+transformers = { git = "https://github.com/huggingface/transformers.git", branch = "main" }
+trl = { git = "https://github.com/huggingface/trl.git", branch = "grpo_vllm" }
+lighteval = { git = "https://github.com/huggingface/lighteval.git", rev = "4f381b352c0e467b5870a97d41cb66b487a2c503" }
+torch = [
+  { index = "pytorch-cpu", marker = "platform_system == 'Windows'" },
+  { index = "pytorch-cu124", marker = "platform_system == 'Linux'" },
+]
+torchvision = [
+  { index = "pytorch-cpu", marker = "platform_system == 'Windows'" },
+  { index = "pytorch-cu124", marker = "platform_system == 'Linux'" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cu124"
+url = "https://download.pytorch.org/whl/cu124"
+explicit = true
