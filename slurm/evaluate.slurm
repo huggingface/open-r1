@@ -9,6 +9,7 @@
 #SBATCH --output=./logs/evaluate/%x-%j.out
 #SBATCH --err=./logs/evaluate/%x-%j.err
 
+# Usage: sbatch slurm/evaluate.slurm deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B aime24
 
 set -x -e
 
@@ -20,9 +21,9 @@ echo "PYTHON ENV: $(which python)"
 
 
 NUM_GPUS=8
-MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B
+MODEL=$1
+TASK=$2
 MODEL_ARGS="pretrained=$MODEL,dtype=float16,data_parallel_size=$NUM_GPUS,max_model_length=32768,gpu_memory_utilisation=0.8"
-TASK=aime24,math_500
 OUTPUT_DIR=data/evals/$MODEL
 
 
