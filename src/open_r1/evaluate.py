@@ -11,6 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Custom evaluation tasks for LightEval."""
+
 from lighteval.metrics.dynamic_metrics import (
     ExprExtractionConfig,
     LatexExtractionConfig,
@@ -41,8 +43,7 @@ def prompt_fn(line, task_name: str = None):
     )
 
 
-# STORE YOUR EVALS
-TASKS_TABLE = []
+# Define tasks
 aime24 = LightevalTaskConfig(
     name="aime24",
     suite=["custom"],
@@ -71,6 +72,9 @@ math_500 = LightevalTaskConfig(
     metric=[metric],
     version=1,
 )
+
+# Add tasks to the table
+TASKS_TABLE = []
 TASKS_TABLE.append(aime24)
 TASKS_TABLE.append(math_500)
 
