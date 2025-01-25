@@ -82,3 +82,40 @@ explicit = true
 name = "pytorch-cu124"
 url = "https://download.pytorch.org/whl/cu124"
 explicit = true
+
+[tool.isort]
+default_section = "FIRSTPARTY"
+ensure_newline_before_comments = true
+force_grid_wrap = 0
+include_trailing_comma = true
+known_first_party = ["open_r1"]
+known_third_party = [
+    "transformers",
+    "datasets",
+    "fugashi",
+    "git",
+    "h5py",
+    "matplotlib",
+    "nltk",
+    "numpy",
+    "packaging",
+    "pandas",
+    "psutil",
+    "pytest",
+    "rouge_score",
+    "sacrebleu",
+    "seqeval",
+    "sklearn",
+    "streamlit",
+    "torch",
+    "tqdm"
+]
+line_length = 119
+lines_after_imports = 2
+multi_line_output = 3
+use_parentheses = true
+
+[tool.flake8]
+ignore = ["E203", "E501", "E741", "W503", "W605"]
+max-line-length = 119
+per-file-ignores = { "__init__.py" = ["F401"] }
