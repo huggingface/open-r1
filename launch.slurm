@@ -13,7 +13,6 @@
 set -x -e
 
 # DON'T FORGET TO MODIFY THE HEADER WITH YOUR PATH 
-# @todo:eliebak maybe with use submitit at some point
 
 source ~/.bashrc
 conda activate openr1
@@ -21,9 +20,8 @@ module load cuda/12.1
 echo "START TIME: $(date)"
 echo "PYTHON ENV: $(which python)"
 
-MODEL=Qwen2.5-1.5B-Instruct
-TASK=sft
-PRECISION=v00.00
+MODEL_PATH=Qwen/Qwen2.5-1.5B-Instruct
+DATASET_PATH=HuggingFaceH4/Bespoke-Stratos-17k
 ACCELERATOR=zero3
 
 # Training setup
@@ -36,12 +34,27 @@ MASTER_ADDR=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)
 MASTER_PORT=6000
 
 export CMD=" \
-    scripts/training/$TASK.py $CONFIG_FILE $OPTIONAL_ARGS
+    src/open_r1/sft.py \
+    --model_name_or_path $MODEL_PATH \
+    --dataset_name $DATASET_PATH \
+    --learning_rate 2.0e-5 \
+    --num_train_epochs 1 \
+    --packing \
+    --max_seq_length 4096 \
+    --per_device_train_batch_size 4 \
+    --per_device_eval_batch_size 4 \
+    --gradient_accumulation_steps 1 \
+    --gradient_checkpointing \
+    --bf16 \
+    --logging_steps 5 \
+    --eval_strategy steps \
+    --eval_steps 100 \
+    --output_dir data/Qwen2.5-1.5B-Distill-R1
     "
 
 export LAUNCHER="HF_HUB_ENABLE_HF_TRANSFER=1 ACCELERATE_LOG_LEVEL=info TRANSFORMERS_VERBOSITY=info accelerate launch \
     --config_file configs/$ACCELERATOR.yaml  \
-    --gradient_accumulation_steps $GRAD_ACC_STEPS \
+    --gradient_accumulation_steps 1 \
     --num_machines $NUM_NODES \
     --num_processes $WORLD_SIZE \
     --main_process_ip $MASTER_ADDR \
