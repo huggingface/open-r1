@@ -36,7 +36,7 @@ class GRPOScriptArguments(ScriptArguments):
     )
 
 
-def accuracy_reward(completions, ground_truth, **kwargs):
+def accuracy_reward(completions, solution, **kwargs):
     """Reward function that checks if the completion is the same as the ground truth."""
     contents = [completion[0]["content"] for completion in completions]
     answers = [parse(content)[0] for content in contents]
