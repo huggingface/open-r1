@@ -46,13 +46,15 @@ _deps = [
     "black>=24.4.2",
     "datasets>=3.2.0",
     "deepspeed==0.15.4",
+    "distilabel[vllm,ray,openai]>=1.5.2",
     "einops>=0.8.0",
     "flake8>=6.0.0",
     "hf_transfer>=0.1.4",
     "huggingface-hub[cli]>=0.19.2,<1.0",
     "isort>=5.12.0",
-    "latex2sympy2_extended>=0.9.1",  # Need for math parsing
+    "liger_kernel==0.5.2",
     "lighteval @ git+https://github.com/huggingface/lighteval.git@4f381b352c0e467b5870a97d41cb66b487a2c503#egg=lighteval[math]",
+    "math-verify",  # Used for math verification in grpo
     "packaging>=23.0",
     "parameterized>=0.9.0",
     "pytest",
@@ -63,8 +65,6 @@ _deps = [
     "trl @ git+https://github.com/huggingface/trl.git@main",
     "vllm==0.6.6.post1",
     "wandb>=0.19.1",
-    "distilabel[vllm,ray,openai]>=1.5.2",
-    "math-verify",  # Used for math verification in grpo
 ]
 
 # this is a lookup table with items like:
@@ -84,7 +84,7 @@ extras = {}
 extras["tests"] = deps_list("pytest", "parameterized")
 extras["torch"] = deps_list("torch")
 extras["quality"] = deps_list("black", "isort", "flake8")
-extras["eval"] = deps_list("lighteval", "latex2sympy2_extended")
+extras["eval"] = deps_list("lighteval", "math-verify")
 extras["dev"] = extras["quality"] + extras["tests"] + extras["eval"]
 
 # core dependencies shared across the whole project - keep this to a bare minimum :)
@@ -96,6 +96,7 @@ install_requires = [
     deps["deepspeed"],
     deps["hf_transfer"],
     deps["huggingface-hub"],
+    deps["liger_kernel"],
     deps["packaging"],  # utilities from PyPA to e.g., compare versions
     deps["safetensors"],
     deps["sentencepiece"],
