@@ -153,7 +153,7 @@ curl http://localhost:8000/v1/models
 # Finally submit the job to the cluster
 echo "Submitting job to ray cluster..."
 RAY_ADDRESS="http://$head_node_ip:8265" ray job submit \
-    --working-dir pipelines \
+    --working-dir pipeline \
     -- python -u generate.py \
     --model "$MODEL" \
     --hf-dataset "$HF_DATASET" \
@@ -164,4 +164,5 @@ RAY_ADDRESS="http://$head_node_ip:8265" ray job submit \
     --top-p "$TOP_P" \
     --max-new-tokens "$MAX_NEW_TOKENS" \
     ${HF_OUTPUT_DATASET:+--hf-output-dataset "$HF_OUTPUT_DATASET"} \
-    ${PRIVATE:+--private}
+    ${PRIVATE:+--private} \
+    --vllm-server-url "http://$head_node_ip:8000/v1"
