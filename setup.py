@@ -84,7 +84,7 @@ extras = {}
 extras["tests"] = deps_list("pytest", "parameterized")
 extras["torch"] = deps_list("torch")
 extras["quality"] = deps_list("black", "isort", "flake8")
-extras["eval"] = deps_list("lighteval", "latex2sympy2_extended")
+extras["eval"] = deps_list("lighteval", "math-verify")
 extras["dev"] = extras["quality"] + extras["tests"] + extras["eval"]
 
 # core dependencies shared across the whole project - keep this to a bare minimum :)
