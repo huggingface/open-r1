@@ -45,7 +45,7 @@ def accuracy_reward(completions, solution, **kwargs):
         try:
             answer = parse(content)
             reward = float(verify(answer, parse(sol)))
-        except:  # if it fails for any reason, return 0.0
+        except Exception:  # if it fails for any reason, return 0.0
             reward = 0.0
         rewards.append(reward)
     # Reward 1 if the content is the same as the ground truth, 0 otherwise
