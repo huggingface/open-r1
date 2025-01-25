@@ -40,12 +40,19 @@ class GRPOScriptArguments(ScriptArguments):
 def accuracy_reward(completions, solution, **kwargs):
     """Reward function that checks if the completion is the same as the ground truth."""
     contents = [completion[0]["content"] for completion in completions]
-    answers = [parse(content) for content in contents]
+    rewards = []
+    for content, sol in zip(contents, solution):
+        try:
+            answer = parse(content)
+            reward = float(verify(answer, parse(sol)))
+        except Exception:  # if it fails for any reason, return 0.0
+            reward = 0.0
+        rewards.append(reward)
     # Reward 1 if the content is the same as the ground truth, 0 otherwise
-    return [float(verify(answer, parse(sol))) for answer, sol in zip(answers, solution)]
+    return rewards
 
 
-def format_reward_func(completions, **kwargs):
+def format_reward(completions, **kwargs):
     """Reward function that checks if the completion has a specific format."""
     pattern = r"^<think>.*?</think><answer>.*?</answer>$"
     completion_contents = [completion[0]["content"] for completion in completions]
@@ -55,7 +62,7 @@ def format_reward_func(completions, **kwargs):
 
 reward_funcs_registry = {
     "accuracy": accuracy_reward,
-    "format": format_reward_func,
+    "format": format_reward,
 }
 
 SYSTEM_PROMPT = (

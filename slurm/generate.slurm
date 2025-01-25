@@ -123,7 +123,7 @@ sleep 60
 
 # Run vllm
 RAY_ADDRESS="http://$head_node_ip:8265" ray job submit \
-    --working-dir pipeline \
+    --working-dir src/open_r1 \
     --no-wait \
     -- vllm serve $MODEL \
     --tensor-parallel-size 8 \
