@@ -98,7 +98,7 @@ accelerate launch --config_file=configs/zero3.yaml src/open_r1/sft.py \
 ```
 accelerate launch --config_file configs/zero2.yaml src/open_r1/grpo.py \
     --output_dir Qwen2.5-3B-GRPO \
-    --model_name_or_path Qwen/Qwen2.5-3B \
+    --model_name_or_path deepseek-ai/DeepSeek-R1-Distill-Qwen-7B \
     --dataset_name AI-MO/NuminaMath-TIR \
     --max_prompt_length 256 \
     --per_device_train_batch_size 2 \
