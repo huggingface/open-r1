@@ -10,8 +10,21 @@ The goal of this repo is to build the missing pieces of the R1 pipeline such tha
     - `grpo.py`: trains a model with GRPO on a given dataset
     - `sft.py`: simple SFT of a model on a dataset
     - `evaluate.py`: evaluates a model on the R1 benchmarks
-    - `generate`: contains the slurm and distilabel scripts to generate synthetic data with a model
+    - `generate`: contains the Slurm and Distilabel scripts to generate synthetic data with a model
 - `Makefile` contains an easy to run command for each step in the R1 pipeline leveraging the scipts above.
+
+### Plan of attack
+
+We will use the DeepSeek-R1 [tech report](https://github.com/deepseek-ai/DeepSeek-R1) as a guide, which can roughly be broken down into three main steps:
+
+* Step 1: replicate the R1-Distill models by distilling a high-quality corpus from DeepSeek-R1.
+* Step 2: replicate the pure RL pipeline that DeepSeek used to create R1-Zero. This will likely involve curatint new, large-scale datasets for math, reasoning, and code.
+* Step 3: show we can go from base model to RL-tuned via multi-stage training.
+
+<center>
+    <img src="assets/plan-of-attack.png" width="400">
+</center>
+
 
 ## Installation
 
@@ -58,6 +71,7 @@ sudo apt-get install git-lfs
 ## Training models
 
 ### SFT
+
 To run SFT on a dataset distilled from DeepSeek-R1 with reasoning traces such as [Bespoke-Stratos-17k](https://huggingface.co/datasets/bespokelabs/Bespoke-Stratos-17k), use this command, or edit `launch.slurm`.
 
 ```
