@@ -37,12 +37,12 @@ class GRPOScriptArguments(ScriptArguments):
     )
 
 
-def accuracy_reward(completions, ground_truth, **kwargs):
+def accuracy_reward(completions, solution, **kwargs):
     """Reward function that checks if the completion is the same as the ground truth."""
     contents = [completion[0]["content"] for completion in completions]
     answers = [parse(content)[0] for content in contents]
     # Reward 1 if the content is the same as the ground truth, 0 otherwise
-    return [float(verify(answer, parse(gt)[0])) for answer, gt in zip(answers, ground_truth)]
+    return [float(verify(answer, parse(sol)[0])) for answer, sol in zip(answers, solution)]
 
 
 def format_reward_func(completions, **kwargs):
@@ -80,7 +80,6 @@ def main(script_args, training_args, model_args):
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": example["problem"]},
             ],
-            "ground_truth": example["solution"],
         }
 
     dataset = dataset.map(make_conversation)
