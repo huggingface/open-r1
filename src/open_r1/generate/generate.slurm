@@ -134,12 +134,12 @@ RAY_ADDRESS="http://$head_node_ip:8265" ray job submit \
     --distributed-executor-backend ray
 
 # wait for vllm to load the model
-echo "Waiting for vLLM (http://localhost:8000) server to be up..."
+echo "Waiting for vLLM (http://$head_node_ip:8000) server to be up..."
 
 # wait for vllm to load and serve the model
 while true; do
-    if curl -s -o /dev/null -w "%{http_code}" http://localhost:8000 >/dev/null 2>&1; then
-        echo "Received response from http://localhost:8000"
+    if curl -s -o /dev/null -w "%{http_code}" http://$head_node_ip:8000 >/dev/null 2>&1; then
+        echo "Received response from http://$head_node_ip:8000"
         break
     else
         echo "Still waiting... (Press Ctrl+C to cancel)"
@@ -148,7 +148,17 @@ while true; do
 done
 
 echo "Checking available models..."
-curl http://localhost:8000/v1/models
+curl http://$head_node_ip:8000/v1/models
+
+echo "Executing sanity check..."
+curl http://$head_node_ip:8000/v1/completions \
+    -H "Content-Type: application/json" \
+    -d "{
+        \"model\": \"$MODEL\",
+        \"prompt\": \"<｜begin▁of▁sentence｜><｜User｜>hi, how are you?<｜Assistant｜>\",
+        \"max_tokens\": 2048,
+        \"temperature\": 0.6
+    }"
 
 # Finally submit the job to the cluster
 echo "Submitting job to ray cluster..."
