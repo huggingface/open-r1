@@ -133,7 +133,7 @@ if __name__ == "__main__":
     print()
 
     print(f"Loading '{args.hf_dataset}' (config: {args.hf_dataset_config}, split: {args.hf_dataset_split}) dataset...")
-    dataset = load_dataset(args.hf_dataset, split=args.hf_dataset_split).select(range(50))
+    dataset = load_dataset(args.hf_dataset, split=args.hf_dataset_split)
     print("Dataset loaded!")
 
     pipeline = build_distilabel_pipeline(
