@@ -68,6 +68,26 @@ If it isn't installed, run:
 sudo apt-get install git-lfs
 ```
 
+## Setting up the Development Container
+
+To set up the development container, follow these steps:
+
+1. Install Docker on your machine. You can find the installation instructions [here](https://docs.docker.com/get-docker/).
+
+2. Install Visual Studio Code (VS Code) on your machine. You can find the installation instructions [here](https://code.visualstudio.com/Download).
+
+3. Install the Remote - Containers extension for VS Code. You can find the installation instructions [here](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers).
+
+4. Clone this repository to your local machine.
+
+5. Open the repository in VS Code.
+
+6. When you open the repository in VS Code, you should see a notification asking if you want to reopen the project in a container. Click "Reopen in Container".
+
+7. VS Code will build the development container using the provided `Dockerfile` and `devcontainer.json` file. This may take a few minutes.
+
+8. Once the container is built, you will be able to develop and run the code inside the container.
+
 ## Training models
 
 We support training models with either DDP or DeepSpeed ZeRO-2 and ZeRO-3. To switch between methods, simply change the path to the `accelerate` YAML config in `configs`.
