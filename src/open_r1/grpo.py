@@ -40,10 +40,10 @@ class GRPOScriptArguments(ScriptArguments):
 def accuracy_reward(completions, solution, **kwargs):
     """Reward function that checks if the completion is the same as the ground truth."""
     contents = [completion[0]["content"] for completion in completions]
-    answers = [parse(content) for content in contents]
     rewards = []
-    for answer, sol in zip(answers, solution):
+    for content, sol in zip(contents, solution):
         try:
+            answer = parse(content)
             reward = float(verify(answer, parse(sol)))
         except:  # if it fails for any reason, return 0.0
             reward = 0.0
@@ -91,6 +91,8 @@ def main(script_args, training_args, model_args):
 
     dataset = dataset.map(make_conversation)
     dataset = dataset.remove_columns("messages")
+
+    training_args.gradient_checkpointing_kwargs = dict(use_reentrant=False)
 
     # Initialize the GRPO trainer
     trainer = GRPOTrainer(
