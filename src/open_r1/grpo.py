@@ -41,6 +41,14 @@ class GRPOScriptArguments(ScriptArguments):
         default_factory=lambda: ["accuracy", "format"],
         metadata={"help": "List of reward functions. Possible values: 'accuracy', 'format'"},
     )
+    max_pixels: Optional[int] = field(
+        default=12845056,
+        metadata={"help": "Maximum number of pixels for the image"},
+    )
+    min_pixels: Optional[int] = field(
+        default=3136,
+        metadata={"help": "Minimum number of pixels for the image"},
+    )
 
 
 def accuracy_reward(completions, solution, **kwargs):
