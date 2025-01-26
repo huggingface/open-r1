@@ -64,73 +64,50 @@ def test_installation(
     results = {}
     start_time = time.time()
     
-    if verbose:
-        print("Testing installation...")
-    
-    # Test PyTorch
-    print("\n1. Testing PyTorch:")
-    print(f"PyTorch version: {torch.__version__}")
-    print(f"CUDA available: {torch.cuda.is_available()}")
-    print(f"MPS available: {torch.backends.mps.is_available()}")
-    
-    # Test Transformers
-    print("\n2. Testing Transformers:")
-    print(f"Loading model and tokenizer from {model_name}")
-    
     try:
-        print("\nLoading tokenizer...")
-        tokenizer = AutoTokenizer.from_pretrained(model_name)
-        print("✓ Tokenizer loaded successfully")
+        if verbose:
+            print("Testing installation...")
         
-        print("\nLoading model (this may take several minutes on first run)...")
-        model = AutoModelForCausalLM.from_pretrained(
-            model_name,
-            torch_dtype=torch.float16,
-            device_map=device
-        )
-        print("✓ Model loaded successfully")
+        # Test PyTorch environment
+        env_results = _test_pytorch_environment()
+        results.update(env_results)
+        if verbose:
+            print("\n1. Testing PyTorch:")
+            for key, value in env_results.items():
+                print(f"{key}: {value}")
         
-        # Test inference
-        print("\n3. Testing inference:")
-        print(f"Prompt: {prompt}")
+        # Load model and tokenizer
+        if verbose:
+            print(f"\n2. Loading model and tokenizer from {model_name}")
+        tokenizer, model = _load_model_and_tokenizer(model_name, device)
+        if verbose:
+            print("✓ Model and tokenizer loaded successfully")
         
-        print("\nGenerating response (this may take a minute on first run)...")
-        inference_start = time.time()
+        # Run inference
+        if verbose:
+            print("\n3. Testing inference:")
+            print(f"Prompt: {prompt}")
+        response, inference_time = _run_inference(model, tokenizer, prompt)
         
-        inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
-        print(f"Input processing complete. Device: {model.device}")
-        
-        # Reduced complexity generation
-        max_tokens = 50  # Reduced from 100
-        print(f"\nGenerating up to {max_tokens} tokens with simplified settings...")
-        outputs = model.generate(
-            **inputs,
-            max_new_tokens=max_tokens,
-            do_sample=False,  # Deterministic generation
-            temperature=0.0,  # Remove randomness
-            num_return_sequences=1,
-            pad_token_id=tokenizer.eos_token_id,
-            eos_token_id=tokenizer.eos_token_id
-        )
-        
-        inference_time = time.time() - inference_start
-        response = tokenizer.decode(outputs[0], skip_special_tokens=True)
-        print(f"\nModel response:\n{response}")
-        
+        # Collect results
         total_time = time.time() - start_time
-        print(f"\n✓ Installation test completed successfully!")
-        print(f"\nTiming information:")
-        print(f"- Inference time: {inference_time:.2f} seconds")
-        print(f"- Total test time: {total_time:.2f} seconds")
+        results.update({
+            "success": True,
+            "inference_time": inference_time,
+            "total_time": total_time,
+            "device": model.device,
+            "model_name": model_name,
+            "prompt": prompt,
+            "response": response
+        })
         
-        results["success"] = True
-        results["inference_time"] = inference_time
-        results["total_time"] = total_time
-        results["device"] = model.device
-        results["model_name"] = model_name
-        results["prompt"] = prompt
-        results["response"] = response
-        
+        if verbose:
+            print(f"\nModel response:\n{response}")
+            print(f"\n✓ Installation test completed successfully!")
+            print(f"\nTiming information:")
+            print(f"- Inference time: {inference_time:.2f} seconds")
+            print(f"- Total test time: {total_time:.2f} seconds")
+            
     except Exception as e:
         print(f"\n✗ Error during test: {str(e)}")
         results["success"] = False
