@@ -63,6 +63,7 @@ def prompt_fn(line, task_name: str = None):
         gold_index=0,
     )
 
+
 def aime_prompt_fn(line, task_name: str = None):
     return Doc(
         task_name=task_name,
