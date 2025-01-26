@@ -16,11 +16,13 @@ import re
 from dataclasses import dataclass, field
 
 from datasets import load_dataset
+from transformers import Qwen2VLForConditionalGeneration
 
 from latex2sympy2_extended import NormalizationConfig
 from math_verify import LatexExtractionConfig, parse, verify
 from open_r1.configs import GRPOConfig
 from open_r1.utils.callbacks import get_callbacks
+from open_r1.trainer import Qwen2VLGRPOTrainer
 from trl import GRPOConfig, GRPOTrainer, ModelConfig, ScriptArguments, TrlParser, get_peft_config
 
 
@@ -120,8 +122,13 @@ def main(script_args, training_args, model_args):
         if "messages" in dataset[split].column_names:
             dataset[split] = dataset[split].remove_columns("messages")
 
+    if "Qwen2-VL" in model_args.model_name_or_path:
+        trainer_cls = Qwen2VLGRPOTrainer
+    else:
+        trainer_cls = GRPOTrainer
+
     # Initialize the GRPO trainer
-    trainer = GRPOTrainer(
+    trainer = trainer_cls(
         model=model_args.model_name_or_path,
         reward_funcs=reward_funcs,
         args=training_args,
