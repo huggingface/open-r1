@@ -25,6 +25,25 @@ def _load_model_and_tokenizer(model_name: str, device: str) -> tuple:
     )
     return tokenizer, model
 
+def _run_inference(model, tokenizer, prompt: str) -> tuple:
+    """Run model inference with given prompt."""
+    inference_start = time.time()
+    inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+    
+    outputs = model.generate(
+        **inputs,
+        max_new_tokens=50,
+        do_sample=False,
+        temperature=0.0,
+        num_return_sequences=1,
+        pad_token_id=tokenizer.eos_token_id,
+        eos_token_id=tokenizer.eos_token_id
+    )
+    
+    response = tokenizer.decode(outputs[0], skip_special_tokens=True)
+    inference_time = time.time() - inference_start
+    return response, inference_time
+
 def test_installation(
     model_name: str = "Qwen/Qwen2.5-Math-1.5B-Instruct",
     device: str = "auto",
