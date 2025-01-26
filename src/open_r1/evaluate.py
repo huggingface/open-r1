@@ -66,8 +66,8 @@ def prompt_fn(line, task_name: str = None):
 def aime_prompt_fn(line, task_name: str = None):
     return Doc(
         task_name=task_name,
-        query=line["answer"],
-        choices=[line["solution"]],
+        query=line["problem"],
+        choices=[line["answer"]],
         gold_index=0,
     )
 
