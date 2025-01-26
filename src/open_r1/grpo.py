@@ -153,7 +153,7 @@ def main(script_args, training_args, model_args):
             if "messages" in dataset[split].column_names:
                 dataset[split] = dataset[split].remove_columns("messages")
 
-    if "Qwen2-VL" in model_args.model_name_or_path:
+    if "Qwen2-VL" in model_args.model_name_or_path or "Aria" in model_args.model_name_or_path:
         trainer_cls = Qwen2VLGRPOTrainer
     else:
         trainer_cls = GRPOTrainer

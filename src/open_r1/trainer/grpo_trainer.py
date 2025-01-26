@@ -23,6 +23,8 @@ import transformers
 from datasets import Dataset, IterableDataset
 from packaging import version
 from transformers import (
+    AriaForConditionalGeneration,
+    AriaProcessor,
     AutoModelForCausalLM,
     AutoModelForSequenceClassification,
     AutoProcessor,
@@ -184,6 +186,9 @@ class Qwen2VLGRPOTrainer(Trainer):
             )
             if "Qwen2-VL" in model_id:
                 model = Qwen2VLForConditionalGeneration.from_pretrained(model, **model_init_kwargs)
+            elif "Aria" in model_id:
+                model_init_kwargs.pop("use_cache")
+                model = AriaForConditionalGeneration.from_pretrained(model, **model_init_kwargs)
             else:
                 model = AutoModelForCausalLM.from_pretrained(model, **model_init_kwargs)
         else:
@@ -201,6 +206,8 @@ class Qwen2VLGRPOTrainer(Trainer):
         if is_deepspeed_zero3_enabled():
             if "Qwen2-VL" in model_id:
                 self.ref_model = Qwen2VLForConditionalGeneration.from_pretrained(model_id, **model_init_kwargs)
+            elif "Aria" in model_id:
+                self.ref_model = AriaForConditionalGeneration.from_pretrained(model_id, **model_init_kwargs)
             else:
                 self.ref_model = AutoModelForCausalLM.from_pretrained(model_id, **model_init_kwargs)
         elif peft_config is None:
@@ -213,13 +220,14 @@ class Qwen2VLGRPOTrainer(Trainer):
 
         # Processing class
         if processing_class is None:
-            if "Qwen2-VL" in model_id:
+            if "Qwen2-VL" in model_id or "Aria" in model_id:
                 processing_class = AutoProcessor.from_pretrained(model_id)
                 pad_token_id = processing_class.tokenizer.pad_token_id
                 processing_class.pad_token_id = pad_token_id
                 processing_class.eos_token_id = processing_class.tokenizer.eos_token_id
-                processing_class.image_processor.max_pixels = max_pixels
-                processing_class.image_processor.min_pixels = min_pixels
+                if "Qwen2-VL" in model_id:
+                    processing_class.image_processor.max_pixels = max_pixels
+                    processing_class.image_processor.min_pixels = min_pixels
             else:
                 processing_class = AutoTokenizer.from_pretrained(model.config._name_or_path, padding_side="left")
                 pad_token_id = processing_class.pad_token_id
