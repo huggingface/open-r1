@@ -151,6 +151,9 @@ class Qwen2VLGRPOTrainer(Trainer):
         callbacks: Optional[list[TrainerCallback]] = None,
         optimizers: tuple[Optional[torch.optim.Optimizer], Optional[torch.optim.lr_scheduler.LambdaLR]] = (None, None),
         peft_config: Optional["PeftConfig"] = None,
+        max_pixels: Optional[int] = 12845056,
+        min_pixels: Optional[int] = 3136,
+        attn_implementation: str = "flash_attention_2",
     ):
         # Args
         if args is None:
@@ -161,6 +164,7 @@ class Qwen2VLGRPOTrainer(Trainer):
         # Models
         # Trained model
         model_init_kwargs = args.model_init_kwargs or {}
+        model_init_kwargs["attn_implementation"] = attn_implementation
         if isinstance(model, str):
             model_id = model
             torch_dtype = model_init_kwargs.get("torch_dtype")
@@ -322,8 +326,14 @@ class Qwen2VLGRPOTrainer(Trainer):
 
         prompts = [x["prompt"] for x in inputs]
         prompts_text = [maybe_apply_chat_template(example, self.processing_class)["prompt"] for example in inputs]
+        images = [x["image"] for x in inputs]
         prompt_inputs = self.processing_class(
-            text=prompts_text, return_tensors="pt", padding=True, padding_side="left", add_special_tokens=False
+            text=prompts_text,
+            images=images,
+            return_tensors="pt",
+            padding=True,
+            padding_side="left",
+            add_special_tokens=False,
         )
         prompt_inputs = super()._prepare_inputs(prompt_inputs)
 

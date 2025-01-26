@@ -14,6 +14,7 @@
 
 import re
 from dataclasses import dataclass, field
+from typing import Optional
 
 from datasets import load_dataset
 from transformers import Qwen2VLForConditionalGeneration
@@ -117,10 +118,32 @@ def main(script_args, training_args, model_args):
             ],
         }
 
-    dataset = dataset.map(make_conversation)
-    for split in dataset:
-        if "messages" in dataset[split].column_names:
-            dataset[split] = dataset[split].remove_columns("messages")
+    def make_conversation_image(example):
+        return {
+            "prompt": [
+                {"role": "system", "content": [{"type": "text", "text": SYSTEM_PROMPT}]},
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "image"},
+                        {"type": "text", "text": example["problem"]},
+                    ],
+                },
+            ],
+        }
+
+    if "image" in dataset[script_args.dataset_train_split].features:
+        dataset = dataset.map(make_conversation_image)
+        for split in dataset:
+            if "original_question" in dataset[split].column_names:
+                dataset = dataset.remove_columns("original_question")
+            if "original_answer" in dataset[split].collumn_names:
+                dataset = dataset.remove_columns("original_answer")
+    else:
+        dataset = dataset.map(make_conversation)
+        for split in dataset:
+            if "messages" in dataset[split].column_names:
+                dataset[split] = dataset[split].remove_columns("messages")
 
     if "Qwen2-VL" in model_args.model_name_or_path:
         trainer_cls = Qwen2VLGRPOTrainer
