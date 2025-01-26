@@ -149,6 +149,7 @@ RAY_ADDRESS="http://$head_node_ip:8265" ray job submit \
     -- vllm serve $MODEL \
     --tensor-parallel-size 8 \
     --pipeline-parallel-size 4 \
+    --gpu-memory-utilization=0.85 \
     --max-model-len 16384 \
     --enable-chunked-prefill \
     --trust-remote-code \
