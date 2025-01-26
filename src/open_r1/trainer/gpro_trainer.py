@@ -25,6 +25,7 @@ from packaging import version
 from transformers import (
     AutoModelForCausalLM,
     AutoModelForSequenceClassification,
+    AutoProcessor,
     AutoTokenizer,
     GenerationConfig,
     PreTrainedModel,
@@ -177,7 +178,6 @@ class Qwen2VLGRPOTrainer(Trainer):
             model_init_kwargs["use_cache"] = (
                 False if args.gradient_checkpointing else model_init_kwargs.get("use_cache")
             )
-            print(model_init_kwargs)
             if "Qwen2-VL" in model_id:
                 model = Qwen2VLForConditionalGeneration.from_pretrained(model, **model_init_kwargs)
             else:
@@ -209,7 +209,14 @@ class Qwen2VLGRPOTrainer(Trainer):
 
         # Processing class
         if processing_class is None:
-            processing_class = AutoTokenizer.from_pretrained(model.config._name_or_path, padding_side="left")
+            if "Qwen2-VL" in model_id:
+                processing_class = AutoProcessor.from_pretrained(model_id)
+                pad_token_id = processing_class.tokenizer.pad_token_id
+                processing_class.pad_token_id = pad_token_id
+                processing_class.eos_token_id = processing_class.tokenizer.eos_token_id
+            else:
+                processing_class = AutoTokenizer.from_pretrained(model.config._name_or_path, padding_side="left")
+                pad_token_id = processing_class.pad_token_id
 
         # Reward functions
         if not isinstance(reward_funcs, list):
@@ -255,7 +262,7 @@ class Qwen2VLGRPOTrainer(Trainer):
             do_sample=True,
             temperature=args.temperature,
             num_return_sequences=self.num_generations,
-            pad_token_id=processing_class.pad_token_id,
+            pad_token_id=pad_token_id,
         )
         self.beta = args.beta
 
@@ -316,7 +323,7 @@ class Qwen2VLGRPOTrainer(Trainer):
         prompts = [x["prompt"] for x in inputs]
         prompts_text = [maybe_apply_chat_template(example, self.processing_class)["prompt"] for example in inputs]
         prompt_inputs = self.processing_class(
-            prompts_text, return_tensors="pt", padding=True, padding_side="left", add_special_tokens=False
+            text=prompts_text, return_tensors="pt", padding=True, padding_side="left", add_special_tokens=False
         )
         prompt_inputs = super()._prepare_inputs(prompt_inputs)
 

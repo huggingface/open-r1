@@ -65,6 +65,7 @@ _deps = [
     "trl @ git+https://github.com/huggingface/trl.git@main",
     "vllm>=0.7.0",
     "wandb>=0.19.1",
+    "pillow",
 ]
 
 # this is a lookup table with items like:
