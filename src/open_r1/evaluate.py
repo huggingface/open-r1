@@ -24,11 +24,20 @@ from lighteval.tasks.requests import Doc
 from lighteval.utils.language import Language
 
 
-metric = multilingual_extractive_match_metric(
+latex_gold_metric = multilingual_extractive_match_metric(
     language=Language.ENGLISH,
     fallback_mode="first_match",
     precision=5,
     gold_extraction_target=(LatexExtractionConfig(),),
+    pred_extraction_target=(ExprExtractionConfig(), LatexExtractionConfig()),
+    aggregation_function=max,
+)
+
+expr_gold_metric = multilingual_extractive_match_metric(
+    language=Language.ENGLISH,
+    fallback_mode="first_match",
+    precision=5,
+    gold_extraction_target=(ExprExtractionConfig(),),
     pred_extraction_target=(ExprExtractionConfig(), LatexExtractionConfig()),
     aggregation_function=max,
 )
@@ -44,11 +53,20 @@ def prompt_fn(line, task_name: str = None):
     )
 
 
+def aime_prompt_fn(line, task_name: str = None):
+    return Doc(
+        task_name=task_name,
+        query=line["problem"],
+        choices=[line["answer"]],
+        gold_index=0,
+    )
+
+
 # Define tasks
 aime24 = LightevalTaskConfig(
     name="aime24",
     suite=["custom"],
-    prompt_function=prompt_fn,
+    prompt_function=aime_prompt_fn,
     hf_repo="HuggingFaceH4/aime_2024",
     hf_subset="default",
     hf_avail_splits=["train"],
@@ -56,7 +74,7 @@ aime24 = LightevalTaskConfig(
     few_shots_split=None,
     few_shots_select=None,
     generation_size=32768,
-    metric=[metric],
+    metric=[expr_gold_metric],
     version=1,
 )
 math_500 = LightevalTaskConfig(
@@ -70,7 +88,7 @@ math_500 = LightevalTaskConfig(
     few_shots_split=None,
     few_shots_select=None,
     generation_size=32768,
-    metric=[metric],
+    metric=[latex_gold_metric],
     version=1,
 )
 
