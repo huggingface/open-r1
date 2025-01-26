@@ -1,12 +1,12 @@
 # Open R1
 
-*A fully open reproduction of DeepSeek-R1. This repo is work in progress, let's build it together!*
+*A fully open reproduction of DeepSeek-R1. This repo is a work in progress, let's build it together!*
 
 ## Overview
 
 The goal of this repo is to build the missing pieces of the R1 pipeline such that everybody can reproduce and build on top of it. The project is simple by design and mostly consists of:
 
-- `src/open_r1` contains the scripts to train and evaluate models as well generate synthetic data:
+- `src/open_r1` contains the scripts to train and evaluate models as well as generate synthetic data:
     - `grpo.py`: trains a model with GRPO on a given dataset.
     - `sft.py`: simple SFT of a model on a dataset.
     - `evaluate.py`: evaluates a model on the R1 benchmarks.
@@ -234,7 +234,7 @@ Take a look at the sample dataset at [HuggingFaceH4/numina-deepseek-r1-qwen-7b](
 
 ### Generate data from DeepSeek-R1
 
-To run the bigger DeepSeek-R1, we used 2 nodes of 8xH100 each one, using the slurm file present in this repo at `slurm/generate.slurm`. First, install the dependencies:
+To run the bigger DeepSeek-R1, we used 2 nodes, each with 8×H100 GPUs using the slurm file present in this repo at `slurm/generate.slurm`. First, install the dependencies:
 
 (for now we need to install the vllm dev wheel that [fixes the R1 cuda graph capture](https://github.com/vllm-project/vllm/commits/221d388cc5a836fa189305785ed7e887cea8b510/csrc/moe/moe_align_sum_kernels.cu))
 ```shell
