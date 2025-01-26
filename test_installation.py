@@ -6,6 +6,15 @@ import os
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
+def _test_pytorch_environment() -> dict:
+    """Test PyTorch installation and available devices."""
+    results = {
+        "pytorch_version": torch.__version__,
+        "cuda_available": torch.cuda.is_available(),
+        "mps_available": torch.backends.mps.is_available()
+    }
+    return results
+
 def test_installation(
     model_name: str = "Qwen/Qwen2.5-Math-1.5B-Instruct",
     device: str = "auto",
