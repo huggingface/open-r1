@@ -6,9 +6,28 @@ import os
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
-def test_installation():
-    print("Testing installation...")
+def test_installation(
+    model_name: str = "Qwen/Qwen2.5-Math-1.5B-Instruct",
+    device: str = "auto",
+    prompt: str = "What is 2 + 2? Please reason step by step, and put your final answer within \\boxed{}.",
+    verbose: bool = True
+) -> dict:
+    """Test ML environment installation and model inference.
+    
+    Args:
+        model_name (str): HuggingFace model identifier
+        device (str): Device to run on ('auto', 'cuda', 'cpu', 'mps')
+        prompt (str): Test prompt for inference
+        verbose (bool): Whether to print detailed progress
+    
+    Returns:
+        dict: Test results including timing and device info
+    """
+    results = {}
     start_time = time.time()
+    
+    if verbose:
+        print("Testing installation...")
     
     # Test PyTorch
     print("\n1. Testing PyTorch:")
@@ -18,7 +37,6 @@ def test_installation():
     
     # Test Transformers
     print("\n2. Testing Transformers:")
-    model_name = "Qwen/Qwen2.5-Math-1.5B-Instruct"
     print(f"Loading model and tokenizer from {model_name}")
     
     try:
@@ -30,12 +48,11 @@ def test_installation():
         model = AutoModelForCausalLM.from_pretrained(
             model_name,
             torch_dtype=torch.float16,
-            device_map="auto"
+            device_map=device
         )
         print("✓ Model loaded successfully")
         
         # Test inference
-        prompt = "What is 2 + 2? Please reason step by step, and put your final answer within \\boxed{}."
         print("\n3. Testing inference:")
         print(f"Prompt: {prompt}")
         
@@ -68,8 +85,20 @@ def test_installation():
         print(f"- Inference time: {inference_time:.2f} seconds")
         print(f"- Total test time: {total_time:.2f} seconds")
         
+        results["success"] = True
+        results["inference_time"] = inference_time
+        results["total_time"] = total_time
+        results["device"] = model.device
+        results["model_name"] = model_name
+        results["prompt"] = prompt
+        results["response"] = response
+        
     except Exception as e:
         print(f"\n✗ Error during test: {str(e)}")
+        results["success"] = False
+        results["error"] = str(e)
+    
+    return results
 
 if __name__ == "__main__":
     test_installation() 
