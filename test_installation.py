@@ -15,6 +15,16 @@ def _test_pytorch_environment() -> dict:
     }
     return results
 
+def _load_model_and_tokenizer(model_name: str, device: str) -> tuple:
+    """Load model and tokenizer from HuggingFace."""
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    model = AutoModelForCausalLM.from_pretrained(
+        model_name,
+        torch_dtype=torch.float16,
+        device_map=device
+    )
+    return tokenizer, model
+
 def test_installation(
     model_name: str = "Qwen/Qwen2.5-Math-1.5B-Instruct",
     device: str = "auto",
