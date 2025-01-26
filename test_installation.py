@@ -40,6 +40,10 @@ def _run_inference(model, tokenizer, prompt: str) -> tuple:
         eos_token_id=tokenizer.eos_token_id
     )
     
+    # Add CUDA synchronization if using GPU
+    if torch.cuda.is_available() and str(model.device).startswith("cuda"):
+        torch.cuda.synchronize()
+    
     response = tokenizer.decode(outputs[0], skip_special_tokens=True)
     inference_time = time.time() - inference_start
     return response, inference_time
