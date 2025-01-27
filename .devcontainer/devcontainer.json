@@ -10,5 +10,5 @@
         "ms-python.python",
         "ms-azuretools.vscode-docker"
     ],
-    "postCreateCommand": "pip install -r requirements.txt"
+    "postCreateCommand": "pip install -e '.[dev]'"
 }
