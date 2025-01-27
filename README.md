@@ -260,16 +260,19 @@ pip install https://wheels.vllm.ai/221d388cc5a836fa189305785ed7e887cea8b510/vllm
 pip install "distilabel[vllm,ray,openai]>=1.5.2"
 ```
 
-And then, place the `generate.slurm` file at the same level as `src/open_r1/generate.py` (it will try to run the file in the relative path), and run the following command:
+And then run the following command:
 
 ```shell
-sbatch generate.slurm \
+sbatch slurm/generate.slurm \
     --hf-dataset AI-MO/NuminaMath-TIR \
     --temperature 0.6 \
     --prompt-column problem \
     --model deepseek-ai/DeepSeek-R1 \
     --hf-output-dataset username/r1-dataset
 ```
+
+> [!NOTE]  
+> While the job is running, you can setup an SSH tunnel through the cluster login node to access the Ray dashboard from your computer running `ssh -L 8265:ray_ip_head_node:8265 <login_node>`, then browsing `http://localhost:8265`
 
 ## Contributing
 

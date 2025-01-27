@@ -16,6 +16,7 @@ from typing import Optional
 
 from distilabel.llms import OpenAILLM
 from distilabel.pipeline import Pipeline
+from distilabel.steps import StepResources
 from distilabel.steps.tasks import TextGeneration
 
 
@@ -27,6 +28,8 @@ def build_distilabel_pipeline(
     top_p: Optional[float] = None,
     max_new_tokens: int = 8192,
     num_generations: int = 1,
+    input_batch_size: int = 64,
+    client_replicas: int = 1,
 ) -> Pipeline:
     generation_kwargs = {"max_new_tokens": max_new_tokens}
 
@@ -47,8 +50,9 @@ def build_distilabel_pipeline(
                 generation_kwargs=generation_kwargs,
             ),
             input_mappings={"instruction": prompt_column} if prompt_column is not None else {},
-            input_batch_size=64,  # on 4 nodes bs ~60+ leads to preemption due to KV cache exhaustion
+            input_batch_size=input_batch_size,
             num_generations=num_generations,
+            resources=StepResources(replicas=client_replicas),
         )
 
     return pipeline
@@ -114,6 +118,18 @@ if __name__ == "__main__":
         help="Number of generations per problem",
     )
     parser.add_argument(
+        "--input-batch-size",
+        type=int,
+        default=64,
+        help="Batch size for input processing",
+    )
+    parser.add_argument(
+        "--client-replicas",
+        type=int,
+        default=1,
+        help="Number of client replicas for parallel processing",
+    )
+    parser.add_argument(
         "--hf-output-dataset",
         type=str,
         required=False,
@@ -144,10 +160,16 @@ if __name__ == "__main__":
         top_p=args.top_p,
         max_new_tokens=args.max_new_tokens,
         num_generations=args.num_generations,
+        input_batch_size=args.input_batch_size,
+        client_replicas=args.client_replicas,
     )
 
     print("Running generation pipeline...")
-    distiset = pipeline.run(dataset=dataset, use_cache=False)
+    distiset = pipeline.run(
+        dataset=dataset,
+        dataset_batch_size=args.input_batch_size * 10,
+        use_cache=False,
+    )
     print("Generation pipeline finished!")
 
     if args.hf_output_dataset:
