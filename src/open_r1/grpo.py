@@ -16,6 +16,7 @@ import re
 from dataclasses import dataclass, field
 
 from datasets import load_dataset
+import torch
 
 from latex2sympy2_extended import NormalizationConfig
 from math_verify import LatexExtractionConfig, parse, verify
@@ -37,6 +38,15 @@ class GRPOScriptArguments(ScriptArguments):
         metadata={"help": "List of reward functions. Possible values: 'accuracy', 'format'"},
     )
 
+def normalise_advantages(rewards):
+    """Normalise rewards using group-based advantage normalisation."""
+    rewards = torch.tensor(rewards)
+    group_mean = rewards.mean()
+    group_std = rewards.std()
+    # Add small epsilon to avoid division by zero
+    group_std = torch.maximum(group_std, torch.tensor(1e-8))
+    advantages = (rewards - group_mean) / group_std
+    return advantages.tolist()
 
 def accuracy_reward(completions, solution, **kwargs):
     """Reward function that checks if the completion is the same as the ground truth."""
@@ -73,7 +83,8 @@ def accuracy_reward(completions, solution, **kwargs):
             print("Failed to parse gold solution: ", sol)
         rewards.append(reward)
 
-    return rewards
+    # Apply group-based advantage normalization
+    return normalise_advantages(rewards)
 
 
 def format_reward(completions, **kwargs):
@@ -81,7 +92,10 @@ def format_reward(completions, **kwargs):
     pattern = r"^<think>.*?</think><answer>.*?</answer>$"
     completion_contents = [completion[0]["content"] for completion in completions]
     matches = [re.match(pattern, content) for content in completion_contents]
-    return [1.0 if match else 0.0 for match in matches]
+    rewards = [1.0 if match else 0.0 for match in matches]
+    
+    # Apply group-based advantage normalization
+    return normalise_advantages(rewards)
 
 
 reward_funcs_registry = {
