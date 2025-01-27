@@ -236,7 +236,10 @@ Take a look at the sample dataset at [HuggingFaceH4/numina-deepseek-r1-qwen-7b](
 
 To run the bigger DeepSeek-R1, we used 2 nodes of 8xH100 each one, using the slurm file present in this repo at `slurm/generate.slurm`. First, install the dependencies:
 
+(for now we need to install the vllm dev wheel that [fixes the R1 cuda graph capture](https://github.com/vllm-project/vllm/commits/221d388cc5a836fa189305785ed7e887cea8b510/csrc/moe/moe_align_sum_kernels.cu))
 ```shell
+pip install https://wheels.vllm.ai/221d388cc5a836fa189305785ed7e887cea8b510/vllm-1.0.0.dev-cp38-abi3-manylinux1_x86_64.whl --extra-index-url https://download.pytorch.org/whl/cu121
+
 pip install "distilabel[vllm,ray,openai]>=1.5.2"
 ```
 

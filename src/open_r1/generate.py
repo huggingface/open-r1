@@ -47,7 +47,7 @@ def build_distilabel_pipeline(
                 generation_kwargs=generation_kwargs,
             ),
             input_mappings={"instruction": prompt_column} if prompt_column is not None else {},
-            input_batch_size=10,
+            input_batch_size=64,  # on 4 nodes bs ~60+ leads to preemption due to KV cache exhaustion
             num_generations=num_generations,
         )
 
