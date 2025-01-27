@@ -170,6 +170,23 @@ lighteval vllm $MODEL_ARGS "custom|$TASK|0|0" \
     --output-dir $OUTPUT_DIR 
 ```
 
+You can also launch an evaluation with `make evaluate`, specifying the model, task, and optionally the parallelism technique and number of GPUs.
+
+To evaluate on a single GPU:
+```shell
+make evaluate MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-32B TASK=aime24
+```
+
+To use Data Parallelism:
+```shell
+make evaluate MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-32B TASK=aime24 PARALLEL=data NUM_GPUS=8
+```
+
+To use Tensor Parallelism:
+```shell
+make evaluate MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-32B TASK=aime24 PARALLEL=tensor NUM_GPUS=8
+```
+
 ## Data generation
 
 ### Generate data from a smol distilled R1 model

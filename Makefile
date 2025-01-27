@@ -35,8 +35,8 @@ evaluate:
 
 # Example usage:
 # Single GPU:
-#   make evaluate MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B TASK=aime24
+#   make evaluate MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-32B TASK=aime24
 # Data parallel:
-#   make evaluate MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B TASK=aime24 PARALLEL=data NUM_GPUS=8
+#   make evaluate MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-32B TASK=aime24 PARALLEL=data NUM_GPUS=8
 # Tensor parallel:
-#   make evaluate MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B PARALLEL=tensor NUM_GPUS=8
+#   make evaluate MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-32B TASK=aime24 PARALLEL=tensor NUM_GPUS=8
