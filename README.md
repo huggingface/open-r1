@@ -70,7 +70,7 @@ sudo apt-get install git-lfs
 
 ## Training models
 
-We support training models with either DDP or DeepSpeed ZeRO-2 and ZeRO-3. To switch between methods, simply change the path to the `accelerate` YAML config in `configs`.
+We support training models with either DDP or DeepSpeed ZeRO-2 and ZeRO-3. To switch between methods, simply change the path to the `recipes` YAML config in `accelerate_configs`.
 
 > [!NOTE]
 > The training commands below are configured for a node of 8 x H100s (80GB). For different hardware and topologies, you may need to tune the batch size and number of gradient accumulation steps.
@@ -79,23 +79,8 @@ We support training models with either DDP or DeepSpeed ZeRO-2 and ZeRO-3. To sw
 
 To run SFT on a dataset distilled from DeepSeek-R1 with reasoning traces such as [Bespoke-Stratos-17k](https://huggingface.co/datasets/bespokelabs/Bespoke-Stratos-17k), run:
 
-```
-accelerate launch --config_file=configs/zero3.yaml src/open_r1/sft.py \
-    --model_name_or_path Qwen/Qwen2.5-Math-1.5B-Instruct \
-    --dataset_name HuggingFaceH4/Bespoke-Stratos-17k \
-    --learning_rate 2.0e-5 \
-    --num_train_epochs 1 \
-    --packing \
-    --max_seq_length 4096 \
-    --per_device_train_batch_size 4 \
-    --per_device_eval_batch_size 4 \
-    --gradient_accumulation_steps 4 \
-    --gradient_checkpointing \
-    --bf16 \
-    --logging_steps 5 \
-    --eval_strategy steps \
-    --eval_steps 100 \
-    --output_dir data/Qwen2.5-1.5B-Open-R1-Distill
+```shell
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/zero3.yaml src/open_r1/sft.py recipes/qwen/sft/config_qwen2.5-1.5B.yaml
 ```
 
 To launch a Slurm job, run:
@@ -108,17 +93,11 @@ Here `{model}` and `{dataset}` refer to the model and dataset IDs on the Hugging
 
 ### GRPO
 
+```shell
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/zero3.yaml scripts/grpo.py recipes/qwen/grpo/config_qwen-7B.yaml
 ```
-accelerate launch --config_file configs/zero3.yaml src/open_r1/grpo.py \
-    --output_dir DeepSeek-R1-Distill-Qwen-7B-GRPO \
-    --model_name_or_path deepseek-ai/DeepSeek-R1-Distill-Qwen-7B \
-    --dataset_name AI-MO/NuminaMath-TIR \
-    --max_prompt_length 256 \
-    --per_device_train_batch_size 1 \
-    --gradient_accumulation_steps 16 \
-    --logging_steps 10 \
-    --bf16
-```
+
+You can find more model configurations in the [recipes](./recipes).
 
 ## Evaluating models
 
