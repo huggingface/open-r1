@@ -270,3 +270,7 @@ sbatch generate.slurm \
     --model deepseek-ai/DeepSeek-R1 \
     --hf-output-dataset username/r1-dataset
 ```
+
+## Contributing
+
+Contributions are welcome. Please refer to https://github.com/huggingface/open-r1/issues/23.
