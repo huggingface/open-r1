@@ -64,6 +64,10 @@ while [[ $# -gt 0 ]]; do
             TIMEOUT="$2"
             shift 2
             ;;
+        --retries)
+            RETRIES="$2"
+            shift 2
+            ;;
         --hf-output-dataset)
             HF_OUTPUT_DATASET="$2"
             shift 2
@@ -93,6 +97,7 @@ NUM_GENERATIONS=${NUM_GENERATIONS:-1}
 INPUT_BATCH_SIZE=${INPUT_BATCH_SIZE:-64}
 CLIENT_REPLICAS=${CLIENT_REPLICAS:-1}
 TIMEOUT=${TIMEOUT:-900}
+RETRIES=${RETRIES:-0}
 PRIVATE=${PRIVATE:-"false"}
 
 # Print all input arguments
@@ -110,6 +115,7 @@ echo "NUM_GENERATIONS: $NUM_GENERATIONS"
 echo "INPUT_BATCH_SIZE: $INPUT_BATCH_SIZE"
 echo "CLIENT_REPLICAS: $CLIENT_REPLICAS"
 echo "TIMEOUT: $TIMEOUT"
+echo "RETRIES: $RETRIES"
 echo "HF_OUTPUT_DATASET: $HF_OUTPUT_DATASET"
 echo "PRIVATE: $PRIVATE"
 echo "-------------------"
@@ -226,6 +232,7 @@ RAY_ADDRESS="http://$head_node_ip:8265" ray job submit \
     --input-batch-size "$INPUT_BATCH_SIZE" \
     --client-replicas "$CLIENT_REPLICAS" \
     --timeout "$TIMEOUT" \
+    --retries "$RETRIES" \
     ${HF_OUTPUT_DATASET:+--hf-output-dataset "$HF_OUTPUT_DATASET"} \
     ${PRIVATE:+--private} \
     --vllm-server-url "http://$head_node_ip:8000/v1"

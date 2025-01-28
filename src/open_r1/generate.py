@@ -32,6 +32,7 @@ def build_distilabel_pipeline(
     input_batch_size: int = 64,
     client_replicas: int = 1,
     timeout: int = 900,
+    retries: int = 0,
 ) -> Pipeline:
     generation_kwargs = {"max_new_tokens": max_new_tokens}
 
@@ -48,12 +49,11 @@ def build_distilabel_pipeline(
                 api_key="something",
                 model=model,
                 timeout=timeout,
+                max_retries=retries,
                 generation_kwargs=generation_kwargs,
             ),
             template=prompt_template,
-            input_mappings={"instruction": prompt_column}
-            if prompt_column is not None
-            else {},
+            input_mappings={"instruction": prompt_column} if prompt_column is not None else {},
             input_batch_size=input_batch_size,
             num_generations=num_generations,
             group_generations=True,
@@ -68,9 +68,7 @@ if __name__ == "__main__":
 
     from datasets import load_dataset
 
-    parser = argparse.ArgumentParser(
-        description="Run distilabel pipeline for generating responses with DeepSeek R1"
-    )
+    parser = argparse.ArgumentParser(description="Run distilabel pipeline for generating responses with DeepSeek R1")
     parser.add_argument(
         "--hf-dataset",
         type=str,
@@ -153,6 +151,12 @@ if __name__ == "__main__":
         help="Request timeout in seconds (default: 600)",
     )
     parser.add_argument(
+        "--retries",
+        type=int,
+        default=0,
+        help="Number of retries for failed requests (default: 3)",
+    )
+    parser.add_argument(
         "--hf-output-dataset",
         type=str,
         required=False,
@@ -171,12 +175,8 @@ if __name__ == "__main__":
         print(f"  {arg}: {value}")
     print()
 
-    print(
-        f"Loading '{args.hf_dataset}' (config: {args.hf_dataset_config}, split: {args.hf_dataset_split}) dataset..."
-    )
-    dataset = load_dataset(
-        args.hf_dataset, args.hf_dataset_config, split=args.hf_dataset_split
-    ).select(range(50))
+    print(f"Loading '{args.hf_dataset}' (config: {args.hf_dataset_config}, split: {args.hf_dataset_split}) dataset...")
+    dataset = load_dataset(args.hf_dataset, args.hf_dataset_config, split=args.hf_dataset_split)
     print("Dataset loaded!")
 
     pipeline = build_distilabel_pipeline(
@@ -191,6 +191,7 @@ if __name__ == "__main__":
         input_batch_size=args.input_batch_size,
         client_replicas=args.client_replicas,
         timeout=args.timeout,
+        retries=args.retries,
     )
 
     print("Running generation pipeline...")
