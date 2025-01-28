@@ -68,8 +68,8 @@ def accuracy_reward(completions, solution, **kwargs):
             # Reward 1 if the content is the same as the ground truth, 0 otherwise
             reward = float(verify(answer_parsed, gold_parsed))
         else:
-            # If the gold solution is not parseable, we reward 1 to skip this example
-            reward = 1.0
+            # If the gold solution is not parseable, we reward a neutral reward (0.5) to skip this example
+            reward = 0.5  # Neutral reward
             print("Failed to parse gold solution: ", sol)
         rewards.append(reward)
 
