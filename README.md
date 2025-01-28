@@ -31,16 +31,17 @@ We will use the DeepSeek-R1 [tech report](https://github.com/deepseek-ai/DeepSee
 To run the code in this project, first, create a Python virtual environment using e.g. Conda:
 
 ```shell
-conda create -n openr1 python=3.11 && conda activate openr1
+uv venv openr1 --python 3.11 && source openr1/bin/activate  && uv pip install pip
 ```
 
 Next, install vLLM:
 
 ```shell
-pip install vllm==0.6.6.post1
+uv pip install vllm==0.6.6.post1
 
 # For HF (cluster only has CUDA 12.1)
 pip install vllm==0.6.6.post1 --extra-index-url https://download.pytorch.org/whl/cu121
+export LD_LIBRARY_PATH=/path/to/open-r1/openr1/lib/python3.11/site-packages/nvidia/nvjitlink/lib:$LD_LIBRARY_PATH  # Change this path to the actual path on your system
 ```
 
 This will also install PyTorch `v2.5.1` and it is **very important** to use this version since the vLLM binaries are compiled for it. You can then install the remaining dependencies for your specific use case via `pip install -e .[LIST OF MODES]`. For most contributors, we recommend:
@@ -195,7 +196,7 @@ The following example can be run in 1xH100.
 First install the following dependencies:
 
 ```shell
-pip install "distilabel[vllm]>=1.5.2"
+uv pip install "distilabel[vllm]>=1.5.2"
 ```
 
 Now save the following snippet into a file named `pipeline.py` and run with `python pipeline.py`. It will generate for each of the 10 examples 4 generations (change the username for the repository to your org/user name):
@@ -257,7 +258,7 @@ To run the bigger DeepSeek-R1, we used 2 nodes, each with 8×H100 GPUs using the
 ```shell
 pip install https://wheels.vllm.ai/221d388cc5a836fa189305785ed7e887cea8b510/vllm-1.0.0.dev-cp38-abi3-manylinux1_x86_64.whl --extra-index-url https://download.pytorch.org/whl/cu121
 
-pip install "distilabel[vllm,ray,openai]>=1.5.2"
+uv pip install "distilabel[vllm,ray,openai]>=1.5.2"
 ```
 
 And then run the following command:
