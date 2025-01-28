@@ -24,6 +24,7 @@ def build_distilabel_pipeline(
     model: str,
     base_url: str = "http://localhost:8000/v1",
     prompt_column: Optional[str] = None,
+    prompt_template: str = "{{ instruction }}",
     temperature: Optional[float] = None,
     top_p: Optional[float] = None,
     max_new_tokens: int = 8192,
@@ -63,7 +64,9 @@ if __name__ == "__main__":
 
     from datasets import load_dataset
 
-    parser = argparse.ArgumentParser(description="Run distilabel pipeline for generating responses with DeepSeek R1")
+    parser = argparse.ArgumentParser(
+        description="Run distilabel pipeline for generating responses with DeepSeek R1"
+    )
     parser.add_argument(
         "--hf-dataset",
         type=str,
@@ -82,7 +85,17 @@ if __name__ == "__main__":
         default="train",
         help="Dataset split to use",
     )
-    parser.add_argument("--prompt-column", type=str, default="prompt")
+    parser.add_argument(
+        "--prompt-column",
+        type=str,
+        default="prompt",
+    )
+    parser.add_argument(
+        "--prompt-template",
+        type=str,
+        default="{{ instruction }}",
+        help="Template string for formatting prompts.",
+    )
     parser.add_argument(
         "--model",
         type=str,
@@ -161,6 +174,7 @@ if __name__ == "__main__":
     pipeline = build_distilabel_pipeline(
         model=args.model,
         base_url=args.vllm_server_url,
+        prompt_template=args.prompt_template,
         prompt_column=args.prompt_column,
         temperature=args.temperature,
         top_p=args.top_p,
@@ -174,7 +188,7 @@ if __name__ == "__main__":
     print("Running generation pipeline...")
     distiset = pipeline.run(
         dataset=dataset,
-        dataset_batch_size=args.input_batch_size * 10,
+        dataset_batch_size=args.input_batch_size * 1000,
         use_cache=False,
     )
     print("Generation pipeline finished!")

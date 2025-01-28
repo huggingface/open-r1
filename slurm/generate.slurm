@@ -28,6 +28,10 @@ while [[ $# -gt 0 ]]; do
             PROMPT_COLUMN="$2"
             shift 2
             ;;
+        --prompt-template)
+            PROMPT_TEMPLATE="$2"
+            shift 2
+            ;;
         --model)
             MODEL="$2"
             shift 2
@@ -83,6 +87,7 @@ fi
 # Set default values for optional parameters
 HF_DATASET_SPLIT=${HF_DATASET_SPLIT:-"train"}
 PROMPT_COLUMN=${PROMPT_COLUMN:-"prompt"}
+PROMPT_TEMPLATE=${PROMPT_TEMPLATE:-"{{ instruction }}"}
 MAX_NEW_TOKENS=${MAX_NEW_TOKENS:-8192}
 NUM_GENERATIONS=${NUM_GENERATIONS:-1}
 INPUT_BATCH_SIZE=${INPUT_BATCH_SIZE:-64}
@@ -97,12 +102,14 @@ echo "HF_DATASET: $HF_DATASET"
 echo "HF_DATASET_CONFIG: $HF_DATASET_CONFIG"
 echo "HF_DATASET_SPLIT: $HF_DATASET_SPLIT"
 echo "PROMPT_COLUMN: $PROMPT_COLUMN"
+echo "PROMPT_TEMPLATE: $PROMPT_TEMPLATE"
 echo "TEMPERATURE: $TEMPERATURE"
 echo "TOP_P: $TOP_P"
 echo "MAX_NEW_TOKENS: $MAX_NEW_TOKENS"
 echo "NUM_GENERATIONS: $NUM_GENERATIONS"
 echo "INPUT_BATCH_SIZE: $INPUT_BATCH_SIZE"
 echo "CLIENT_REPLICAS: $CLIENT_REPLICAS"
+echo "TIMEOUT: $TIMEOUT"
 echo "HF_OUTPUT_DATASET: $HF_OUTPUT_DATASET"
 echo "PRIVATE: $PRIVATE"
 echo "-------------------"
@@ -211,6 +218,7 @@ RAY_ADDRESS="http://$head_node_ip:8265" ray job submit \
     ${HF_DATASET_CONFIG:+--hf-dataset-config "$HF_DATASET_CONFIG"} \
     --hf-dataset-split "$HF_DATASET_SPLIT" \
     --prompt-column "$PROMPT_COLUMN" \
+    --prompt-template "$PROMPT_TEMPLATE" \
     ${TEMPERATURE:+--temperature "$TEMPERATURE"} \
     ${TOP_P:+--top-p "$TOP_P"} \
     --max-new-tokens "$MAX_NEW_TOKENS" \
