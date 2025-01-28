@@ -30,6 +30,7 @@ def build_distilabel_pipeline(
     num_generations: int = 1,
     input_batch_size: int = 64,
     client_replicas: int = 1,
+    timeout: int = 900,
 ) -> Pipeline:
     generation_kwargs = {"max_new_tokens": max_new_tokens}
 
@@ -45,8 +46,7 @@ def build_distilabel_pipeline(
                 base_url=base_url,
                 api_key="something",
                 model=model,
-                # thinking can take some time...
-                timeout=10 * 60,
+                timeout=timeout,
                 generation_kwargs=generation_kwargs,
             ),
             input_mappings={"instruction": prompt_column} if prompt_column is not None else {},
@@ -130,6 +130,12 @@ if __name__ == "__main__":
         help="Number of client replicas for parallel processing",
     )
     parser.add_argument(
+        "--timeout",
+        type=int,
+        default=600,
+        help="Request timeout in seconds (default: 600)",
+    )
+    parser.add_argument(
         "--hf-output-dataset",
         type=str,
         required=False,
@@ -162,6 +168,7 @@ if __name__ == "__main__":
         num_generations=args.num_generations,
         input_batch_size=args.input_batch_size,
         client_replicas=args.client_replicas,
+        timeout=args.timeout,
     )
 
     print("Running generation pipeline...")

@@ -2,12 +2,12 @@
 #SBATCH --job-name=deepseek-r1-generation
 #SBATCH --partition=hopper-prod
 #SBATCH --qos=normal
-#SBATCH --nodes=4
+#SBATCH --nodes=2
 #SBATCH --exclusive
 #SBATCH --gpus-per-node=8
 #SBATCH --output=./logs/%x-%j.out
 #SBATCH --err=./logs/%x-%j.err
-#SBATCH --time=08:00:00
+#SBATCH --time=04-00:00:00
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -56,6 +56,10 @@ while [[ $# -gt 0 ]]; do
             CLIENT_REPLICAS="$2"
             shift 2
             ;;
+        --timeout)
+            TIMEOUT="$2"
+            shift 2
+            ;;
         --hf-output-dataset)
             HF_OUTPUT_DATASET="$2"
             shift 2
@@ -83,6 +87,7 @@ MAX_NEW_TOKENS=${MAX_NEW_TOKENS:-8192}
 NUM_GENERATIONS=${NUM_GENERATIONS:-1}
 INPUT_BATCH_SIZE=${INPUT_BATCH_SIZE:-64}
 CLIENT_REPLICAS=${CLIENT_REPLICAS:-1}
+TIMEOUT=${TIMEOUT:-900}
 PRIVATE=${PRIVATE:-"false"}
 
 # Print all input arguments
@@ -212,6 +217,7 @@ RAY_ADDRESS="http://$head_node_ip:8265" ray job submit \
     --num-generations "$NUM_GENERATIONS" \
     --input-batch-size "$INPUT_BATCH_SIZE" \
     --client-replicas "$CLIENT_REPLICAS" \
+    --timeout "$TIMEOUT" \
     ${HF_OUTPUT_DATASET:+--hf-output-dataset "$HF_OUTPUT_DATASET"} \
     ${PRIVATE:+--private} \
     --vllm-server-url "http://$head_node_ip:8000/v1"
