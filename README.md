@@ -41,7 +41,7 @@ uv pip install vllm==0.6.6.post1
 
 # For HF (cluster only has CUDA 12.1)
 pip install vllm==0.6.6.post1 --extra-index-url https://download.pytorch.org/whl/cu121
-export LD_LIBRARY_PATH=/path/to/open-r1/openr1/lib/python3.11/site-packages/nvidia/nvjitlink/lib:$LD_LIBRARY_PATH  # Change this path to the actual path on your system
+export LD_LIBRARY_PATH=$(python -c "import site; print(site.getsitepackages()[0] + '/nvidia/nvjitlink/lib')"):$LD_LIBRARY_PATH
 ```
 
 This will also install PyTorch `v2.5.1` and it is **very important** to use this version since the vLLM binaries are compiled for it. You can then install the remaining dependencies for your specific use case via `pip install -e .[LIST OF MODES]`. For most contributors, we recommend:
