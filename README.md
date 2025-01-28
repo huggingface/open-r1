@@ -186,6 +186,30 @@ To use Tensor Parallelism:
 ```shell
 make evaluate MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-32B TASK=aime24 PARALLEL=tensor NUM_GPUS=8
 ```
+## Reproducing Deepseek's evaluation results on MATH-500
+We are able to reproduce Deepseek's reported results on the MATH-500 Benchmark:
+| Model                      | MATH-500 (HF lighteval) | MATH-500 (DeepSeek Reported) |
+| :-------------------------- | :-------: | :----------------------------: |
+| DeepSeek-R1-Distill-Qwen-1.5B  |  81.6   |              83.9              |
+| DeepSeek-R1-Distill-Qwen-7B    |  91.8   |              92.8              |
+| DeepSeek-R1-Distill-Qwen-14B   |  94.2   |              93.9              |
+| DeepSeek-R1-Distill-Qwen-32B   |  95.0   |              94.3              |
+| DeepSeek-R1-Distill-Llama-8B   |  85.8   |              89.1              |
+| DeepSeek-R1-Distill-Llama-70B  |  93.4   |              94.5              |
+
+
+
+To reproduce these results use the following command:
+```shell
+sbatch slurm/evaluate.slurm deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B math_500
+sbatch slurm/evaluate.slurm deepseek-ai/DeepSeek-R1-Distill-Qwen-7B math_500
+sbatch slurm/evaluate.slurm deepseek-ai/DeepSeek-R1-Distill-Qwen-14B math_500
+sbatch slurm/evaluate.slurm deepseek-ai/DeepSeek-R1-Distill-Qwen-32B math_500 tp
+sbatch slurm/evaluate.slurm deepseek-ai/DeepSeek-R1-Distill-Llama-8B math_500
+sbatch slurm/evaluate.slurm deepseek-ai/DeepSeek-R1-Distill-Llama-70B math_500 tp
+```
+
+
 
 ## Data generation
 
