@@ -69,7 +69,7 @@ def accuracy_reward(completions, solution, **kwargs):
             reward = float(verify(answer_parsed, gold_parsed))
         else:
             # If the gold solution is not parseable, we reward 1 to skip this example
-            reward = 1
+            reward = 1.0
             print("Failed to parse gold solution: ", sol)
         rewards.append(reward)
 
