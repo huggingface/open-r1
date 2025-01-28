@@ -21,108 +21,77 @@ from latex2sympy2_extended import NormalizationConfig
 from math_verify import LatexExtractionConfig, parse, verify
 from trl import GRPOConfig, GRPOTrainer, ModelConfig, ScriptArguments, TrlParser, get_peft_config
 
+import argparse
 
-@dataclass
-class GRPOScriptArguments(ScriptArguments):
-    """
-    Script arguments for the GRPO training script.
+from datasets import load_dataset
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
-    Args:
-        reward_funcs (`list[str]`):
-            List of reward functions. Possible values: 'accuracy', 'format'.
-    """
+from math_equivalence import evaluate_answer
+from src.chat_templates import LLAMA_3_TEMPLATE
+from trl import GRPOConfig, GRPOTrainer, ModelConfig, ScriptArguments, TrlParser, get_peft_config
 
-    reward_funcs: list[str] = field(
-        default_factory=lambda: ["accuracy", "format"],
-        metadata={"help": "List of reward functions. Possible values: 'accuracy', 'format'"},
-    )
-
-
-def accuracy_reward(completions, solution, **kwargs):
-    """Reward function that checks if the completion is the same as the ground truth."""
-    contents = [completion[0]["content"] for completion in completions]
-    rewards = []
-    for content, sol in zip(contents, solution):
-        gold_parsed = parse(sol, extraction_mode="first_match", extraction_config=[LatexExtractionConfig()])
-        if len(gold_parsed) != 0:
-            # We require the answer to be provided in correct latex (no malformed operators)
-            answer_parsed = parse(
-                content,
-                extraction_config=[
-                    LatexExtractionConfig(
-                        normalization_config=NormalizationConfig(
-                            nits=False,
-                            malformed_operators=False,
-                            basic_latex=True,
-                            equations=True,
-                            boxed=True,
-                            units=True,
-                        ),
-                        # Ensures that boxed is tried first
-                        boxed_match_priority=0,
-                        try_extract_without_anchor=False,
-                    )
-                ],
-                extraction_mode="first_match",
-            )
-            # Reward 1 if the content is the same as the ground truth, 0 otherwise
-            reward = float(verify(answer_parsed, gold_parsed))
-        else:
-            # If the gold solution is not parseable, we reward 1 to skip this example
-            reward = 1.0
-            print("Failed to parse gold solution: ", sol)
-        rewards.append(reward)
-
+def reward_func(completions, ground_truth, **kwargs):
+    """Reward function that gives higher scores to longer completions."""
+    print(ground_truth)
+    print(completions)
+    rewards = [float(evaluate_answer(gt, c)) for c, gt in zip(completions, ground_truth)]
+    print(rewards)
     return rewards
 
 
-def format_reward(completions, **kwargs):
-    """Reward function that checks if the completion has a specific format."""
-    pattern = r"^<think>.*?</think><answer>.*?</answer>$"
-    completion_contents = [completion[0]["content"] for completion in completions]
-    matches = [re.match(pattern, content) for content in completion_contents]
-    return [1.0 if match else 0.0 for match in matches]
+def extract_boxed_value(text):
+    import re
 
-
-reward_funcs_registry = {
-    "accuracy": accuracy_reward,
-    "format": format_reward,
-}
-
-SYSTEM_PROMPT = (
-    "A conversation between User and Assistant. The user asks a question, and the Assistant solves it. The assistant "
-    "first thinks about the reasoning process in the mind and then provides the user with the answer. The reasoning "
-    "process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., "
-    "<think> reasoning process here </think><answer> answer here </answer>"
-)
-
+    pattern = r"\\boxed{([^}]*)}(?![^{]*})"
+    matches = re.findall(pattern, text)
+    return matches[-1] if matches else None
 
 def main(script_args, training_args, model_args):
-    # Get reward functions
-    reward_funcs = [reward_funcs_registry[func] for func in script_args.reward_funcs]
+    
+    tokenizer = AutoTokenizer.from_pretrained(
+        model_args.model_name_or_path,
+        trust_remote_code=model_args.trust_remote_code,
+        revision=model_args.model_revision,
+    )
+
+    if tokenizer.chat_template is None:
+        tokenizer.chat_template = LLAMA_3_TEMPLATE
+        tokenizer.eos_token = "<|eot_id|>"
+
+    tokenizer.pad_token = "<|end_of_text|>"
 
     # Load the dataset
-    dataset = load_dataset(script_args.dataset_name, name=script_args.dataset_config)
+    dataset = load_dataset(script_args.dataset_name)
 
-    # Format into conversation
-    def make_conversation(example):
-        return {
-            "prompt": [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": example["problem"]},
-            ],
-        }
+    def process_dataset(example):
+        messages = example["messages"]
+        last_message = messages[-1]["content"]
+        if "\nWait, this seems off. Let's try something else.\nStep" in last_message:
+            last_message = last_message.split("\nWait, this seems off. Let's try something else.\nStep")[0] + "\nWait, this seems off. Let's try something else.\nStep"
+            messages[-1]["content"] = last_message
+            
+        text = tokenizer.apply_chat_template(
+            messages, tokenize=False, return_tensors="pt", continue_final_message=True, add_generation_prompt=False
+        )
+        # print(text)
+        return {"prompt": text, "ground_truth": example["ground_truth"]}
 
-    dataset = dataset.map(make_conversation)
-    dataset = dataset.remove_columns("messages")
+    processed_dataset = dataset.map(process_dataset, remove_columns=["messages"])
+    # print(script_args.dataset_train_split)
+    # print(len(processed_dataset[script_args.dataset_train_split]))
+    # print(script_args.dataset_test_split)
+    # print(len(processed_dataset[script_args.dataset_test_split]))
+    # exit()
 
     # Initialize the GRPO trainer
     trainer = GRPOTrainer(
         model=model_args.model_name_or_path,
-        reward_funcs=reward_funcs,
+        reward_funcs=reward_func,
         args=training_args,
-        train_dataset=dataset[script_args.dataset_train_split],
-        eval_dataset=dataset[script_args.dataset_test_split] if training_args.eval_strategy != "no" else None,
+        train_dataset=processed_dataset[script_args.dataset_train_split],
+        eval_dataset=(
+            processed_dataset[script_args.dataset_test_split] if training_args.eval_strategy != "no" else None
+        ),
         peft_config=get_peft_config(model_args),
     )
 
@@ -136,6 +105,6 @@ def main(script_args, training_args, model_args):
 
 
 if __name__ == "__main__":
-    parser = TrlParser((GRPOScriptArguments, GRPOConfig, ModelConfig))
+    parser = TrlParser((ScriptArguments, GRPOConfig, ModelConfig))
     script_args, training_args, model_args = parser.parse_args_and_config()
     main(script_args, training_args, model_args)
