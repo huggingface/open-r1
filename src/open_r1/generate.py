@@ -50,9 +50,13 @@ def build_distilabel_pipeline(
                 timeout=timeout,
                 generation_kwargs=generation_kwargs,
             ),
-            input_mappings={"instruction": prompt_column} if prompt_column is not None else {},
+            template=prompt_template,
+            input_mappings={"instruction": prompt_column}
+            if prompt_column is not None
+            else {},
             input_batch_size=input_batch_size,
             num_generations=num_generations,
+            group_generations=True,
             resources=StepResources(replicas=client_replicas),
         )
 
@@ -167,8 +171,12 @@ if __name__ == "__main__":
         print(f"  {arg}: {value}")
     print()
 
-    print(f"Loading '{args.hf_dataset}' (config: {args.hf_dataset_config}, split: {args.hf_dataset_split}) dataset...")
-    dataset = load_dataset(args.hf_dataset, split=args.hf_dataset_split)
+    print(
+        f"Loading '{args.hf_dataset}' (config: {args.hf_dataset_config}, split: {args.hf_dataset_split}) dataset..."
+    )
+    dataset = load_dataset(
+        args.hf_dataset, args.hf_dataset_config, split=args.hf_dataset_split
+    ).select(range(50))
     print("Dataset loaded!")
 
     pipeline = build_distilabel_pipeline(
