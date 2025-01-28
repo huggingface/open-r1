@@ -29,7 +29,8 @@ latex_gold_metric = multilingual_extractive_match_metric(
     fallback_mode="first_match",
     precision=5,
     gold_extraction_target=(LatexExtractionConfig(),),
-    pred_extraction_target=(ExprExtractionConfig(), LatexExtractionConfig()),
+    # Match boxed first before trying other regexes
+    pred_extraction_target=(ExprExtractionConfig(), LatexExtractionConfig(boxed_match_priority=0)),
     aggregation_function=max,
 )
 
@@ -38,7 +39,8 @@ expr_gold_metric = multilingual_extractive_match_metric(
     fallback_mode="first_match",
     precision=5,
     gold_extraction_target=(ExprExtractionConfig(),),
-    pred_extraction_target=(ExprExtractionConfig(), LatexExtractionConfig()),
+    # Match boxed first before trying other regexes
+    pred_extraction_target=(ExprExtractionConfig(), LatexExtractionConfig(boxed_match_priority=0)),
     aggregation_function=max,
 )
 
