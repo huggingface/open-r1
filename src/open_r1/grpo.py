@@ -12,6 +12,39 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# def info_gain_reward_low(completions, current_reward, ground_truth, **kwargs):
+#     alpha = 0.1
+#     final_reward = [float(evaluate_answer(gt, c)) for c, gt in zip(completions, ground_truth)]
+#     rewards = [float(alpha*(f-c)) for c, f in zip(current_reward, final_reward)]
+
+# def info_gain_reward_mid(completions, current_reward, ground_truth, **kwargs):
+#     alpha = 0.5
+#     final_reward = [float(evaluate_answer(gt, c)) for c, gt in zip(completions, ground_truth)]
+#     rewards = [float(alpha*(f-c)) for c, f in zip(current_reward, final_reward)]
+
+# def info_gain_reward_high(completions, current_reward, ground_truth, **kwargs):
+#     alpha = 1.0
+#     final_reward = [float(evaluate_answer(gt, c)) for c, gt in zip(completions, ground_truth)]
+#     rewards = [float(alpha*(f-c)) for c, f in zip(current_reward, final_reward)]
+
+# def final_ttf_weighted_reward(completions, ground_truth, **kwargs):
+#     rewards = [float(evaluate_answer(gt, c)) for c, gt in zip(completions, ground_truth)]
+#     if sum(rewards) == 0:
+#         return rewards
+#     num_tokens = [len(tokenizer.encode(completion)) for completion in completions]
+#     total_ttf = sum(num_tokens)
+#     avg_ttf = 1.0 * total_ttf / len(rewards)
+#     rewards = [avg_ttf * rewards[i] / num_tokens[i] for i in range(len(num_tokens))]
+#     return rewards
+
+# def final_reward(completions, ground_truth, **kwargs):
+#     """Reward function that gives higher scores to longer completions."""
+#     print(ground_truth)
+#     print(completions)
+#     rewards = [float(evaluate_answer(gt, c)) for c, gt in zip(completions, ground_truth)]
+#     print(rewards)
+#     return rewards
+
 import re
 from dataclasses import dataclass, field
 
@@ -30,24 +63,92 @@ from math_equivalence import evaluate_answer
 from src.chat_templates import LLAMA_3_TEMPLATE
 from trl import GRPOConfig, GRPOTrainer, ModelConfig, ScriptArguments, TrlParser, get_peft_config
 
-def reward_func(completions, ground_truth, **kwargs):
-    """Reward function that gives higher scores to longer completions."""
-    print(ground_truth)
-    print(completions)
+@dataclass
+class GRPOScriptArguments(ScriptArguments):
+    """
+    Script arguments for the GRPO training script.
+
+    Args:
+        reward_funcs (`list[str]`):
+            List of reward functions. Possible values: 'accuracy', 'format'.
+    """
+
+    reward_funcs: list[str] = field(
+        default_factory=lambda: ["final", "info_gain"],
+        metadata={"help": "List of reward functions. Possible values: 'accuracy', 'format'"},
+    )
+
+    alpha: float = field(
+        default=None,
+        metadata={"help": "Alpha parameter for info_gain_reward. Used only if 'info_gain_reward' is selected."}
+    )
+
+    final_reward_weight: str = field(
+        default="no",
+        metadata={"help": "Weight for final reward"}
+    )
+    
+    dataset_start: int = field(
+        default=None,
+    )
+
+    dataset_end: int = field(
+        default=None,
+    )
+
+
+def final_weighted_reward(completions, current_reward, ground_truth, **kwargs):
     rewards = [float(evaluate_answer(gt, c)) for c, gt in zip(completions, ground_truth)]
-    print(rewards)
+    if weight == "no" or sum(rewards) == 0:
+        return rewards
+    tokenizer = kwargs.get('tokenizer')
+    num_tokens = [len(tokenizer.encode(completion)) for completion in completions]
+    if weight == kwargs.get('weight'):
+        total_tts = 0
+        for i in range(rewards):
+            if rewards[i] == 1:
+                total_tts += num_tokens[i]
+        avg_tts = 1.0 * total_tts / sum(rewards)
+        rewards = [avg_tts * rewards[i] / num_tokens[i] for i in range(len(num_tokens))]
+    elif weight == kwargs.get('weight'):
+        total_ttf = sum(num_tokens)
+        avg_ttf = 1.0 * total_ttf / len(rewards)
+        rewards = [avg_ttf * rewards[i] / num_tokens[i] for i in range(len(num_tokens))]
     return rewards
 
+def make_final_weighted_reward(tokenizer, weight):
+    """Factory function to create a reward function with a specific alpha."""
+    def reward_wrapper(completions, current_reward, ground_truth):
+        return final_weighted_reward(completions, current_reward, ground_truth, tokenizer=tokenizer, weight=weight)
+    return reward_wrapper
 
-def extract_boxed_value(text):
-    import re
+def info_gain_reward(completions, current_reward, ground_truth, **kwargs):
+    """Reward function that adjusts rewards based on information gain."""
+    print(f"alpha = {kwargs.get('alpha')}")
+    final_rewards = [float(evaluate_answer(gt, c)) for c, gt in zip(completions, ground_truth)]
+    adjusted_rewards = [kwargs.get('alpha', 0.1) * (f - c) for c, f in zip(current_reward, final_rewards)]
 
-    pattern = r"\\boxed{([^}]*)}(?![^{]*})"
-    matches = re.findall(pattern, text)
-    return matches[-1] if matches else None
+    print(f"current_reward: {current_reward}")
+    print(f"final_rewards: {final_rewards}")
+    print(f"adjusted_reward: {adjusted_rewards}")
+    print(f"completions: {completions}")
+    print(f"ground_truth: {ground_truth}")
+    
+    return adjusted_rewards
+
+def make_info_gain_reward(alpha):
+    """Factory function to create a reward function with a specific alpha."""
+    def reward_wrapper(completions, current_reward, ground_truth):
+        return info_gain_reward(completions, current_reward, ground_truth, alpha=alpha)
+    return reward_wrapper
+
+reward_funcs_registry = {
+    "final": final_weighted_reward,
+    "info_gain": info_gain_reward
+}
 
 def main(script_args, training_args, model_args):
-    
+    print(script_args.reward_funcs)
     tokenizer = AutoTokenizer.from_pretrained(
         model_args.model_name_or_path,
         trust_remote_code=model_args.trust_remote_code,
@@ -60,27 +161,39 @@ def main(script_args, training_args, model_args):
 
     tokenizer.pad_token = "<|end_of_text|>"
 
+    reward_funcs = []
+    for func in script_args.reward_funcs:
+        if func == "info_gain" and script_args.alpha is not None:
+            print(f"Register <info_gain> reward with alpha = {script_args.alpha}")
+            reward_func = make_info_gain_reward(script_args.alpha)
+        elif func == "final" and script_args.final_reward_weight is not None:
+            print(f"Register <final> reward with weight = {script_args.final_reward_weight}")
+            reward_func = make_final_weighted_reward(tokenizer, script_args.final_reward_weight)
+        else:
+            print("Reward specification is wrong")
+            exit()
+        reward_funcs.append(reward_func)
+
     # Load the dataset
     dataset = load_dataset(script_args.dataset_name)
+    if script_args.dataset_start is not None and script_args.dataset_end is not None:
+        dataset["train"] = dataset["train"].select(range(script_args.dataset_start, script_args.dataset_end))
 
     def process_dataset(example):
         messages = example["messages"]
-        last_message = messages[-1]["content"]
-        last_message = last_message.split("\nWait, this seems off. Let's try something else.\nStep")[0] + "\nWait, this seems off. Let's try something else.\nStep"
-            messages[-1]["content"] = last_message
-            
+        messages[-1]["content"]+= "\nWait, this seems off. Let's try something else.\nStep"
         text = tokenizer.apply_chat_template(
             messages, tokenize=False, return_tensors="pt", continue_final_message=True, add_generation_prompt=False
         )
         # print(text)
-        return {"prompt": text, "ground_truth": example["ground_truth"]}
+        return {"prompt": text, "ground_truth": example["ground_truth"], "current_reward": example["current_reward"]}
 
     processed_dataset = dataset.map(process_dataset, remove_columns=["messages"])
-
+    
     # Initialize the GRPO trainer
     trainer = GRPOTrainer(
         model=model_args.model_name_or_path,
-        reward_funcs=reward_func,
+        reward_funcs=reward_funcs,
         args=training_args,
         train_dataset=processed_dataset[script_args.dataset_train_split],
         eval_dataset=(
@@ -99,6 +212,6 @@ def main(script_args, training_args, model_args):
 
 
 if __name__ == "__main__":
-    parser = TrlParser((ScriptArguments, GRPOConfig, ModelConfig))
+    parser = TrlParser((GRPOScriptArguments, GRPOConfig, ModelConfig))
     script_args, training_args, model_args = parser.parse_args_and_config()
     main(script_args, training_args, model_args)
