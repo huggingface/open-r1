@@ -2,12 +2,12 @@
 #SBATCH --job-name=deepseek-r1-generation
 #SBATCH --partition=hopper-prod
 #SBATCH --qos=normal
-#SBATCH --nodes=4
+#SBATCH --nodes=2
 #SBATCH --exclusive
 #SBATCH --gpus-per-node=8
 #SBATCH --output=./logs/%x-%j.out
 #SBATCH --err=./logs/%x-%j.err
-#SBATCH --time=08:00:00
+#SBATCH --time=04-00:00:00
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -26,6 +26,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --prompt-column)
             PROMPT_COLUMN="$2"
+            shift 2
+            ;;
+        --prompt-template)
+            PROMPT_TEMPLATE="$2"
             shift 2
             ;;
         --model)
@@ -56,6 +60,14 @@ while [[ $# -gt 0 ]]; do
             CLIENT_REPLICAS="$2"
             shift 2
             ;;
+        --timeout)
+            TIMEOUT="$2"
+            shift 2
+            ;;
+        --retries)
+            RETRIES="$2"
+            shift 2
+            ;;
         --hf-output-dataset)
             HF_OUTPUT_DATASET="$2"
             shift 2
@@ -79,10 +91,13 @@ fi
 # Set default values for optional parameters
 HF_DATASET_SPLIT=${HF_DATASET_SPLIT:-"train"}
 PROMPT_COLUMN=${PROMPT_COLUMN:-"prompt"}
+PROMPT_TEMPLATE=${PROMPT_TEMPLATE:-"{{ instruction }}"}
 MAX_NEW_TOKENS=${MAX_NEW_TOKENS:-8192}
 NUM_GENERATIONS=${NUM_GENERATIONS:-1}
 INPUT_BATCH_SIZE=${INPUT_BATCH_SIZE:-64}
 CLIENT_REPLICAS=${CLIENT_REPLICAS:-1}
+TIMEOUT=${TIMEOUT:-900}
+RETRIES=${RETRIES:-0}
 PRIVATE=${PRIVATE:-"false"}
 
 # Print all input arguments
@@ -92,12 +107,15 @@ echo "HF_DATASET: $HF_DATASET"
 echo "HF_DATASET_CONFIG: $HF_DATASET_CONFIG"
 echo "HF_DATASET_SPLIT: $HF_DATASET_SPLIT"
 echo "PROMPT_COLUMN: $PROMPT_COLUMN"
+echo "PROMPT_TEMPLATE: $PROMPT_TEMPLATE"
 echo "TEMPERATURE: $TEMPERATURE"
 echo "TOP_P: $TOP_P"
 echo "MAX_NEW_TOKENS: $MAX_NEW_TOKENS"
 echo "NUM_GENERATIONS: $NUM_GENERATIONS"
 echo "INPUT_BATCH_SIZE: $INPUT_BATCH_SIZE"
 echo "CLIENT_REPLICAS: $CLIENT_REPLICAS"
+echo "TIMEOUT: $TIMEOUT"
+echo "RETRIES: $RETRIES"
 echo "HF_OUTPUT_DATASET: $HF_OUTPUT_DATASET"
 echo "PRIVATE: $PRIVATE"
 echo "-------------------"
@@ -160,8 +178,8 @@ RAY_ADDRESS="http://$head_node_ip:8265" ray job submit \
     --no-wait \
     --job-id vllm-server \
     -- vllm serve $MODEL \
-    --tensor-parallel-size 8 \
-    --pipeline-parallel-size 4 \
+    --tensor-parallel-size $SLURM_GPUS_PER_NODE \
+    --pipeline-parallel-size $SLURM_JOB_NUM_NODES \
     --gpu-memory-utilization=0.85 \
     --max-model-len 16384 \
     --enable-chunked-prefill \
@@ -206,12 +224,15 @@ RAY_ADDRESS="http://$head_node_ip:8265" ray job submit \
     ${HF_DATASET_CONFIG:+--hf-dataset-config "$HF_DATASET_CONFIG"} \
     --hf-dataset-split "$HF_DATASET_SPLIT" \
     --prompt-column "$PROMPT_COLUMN" \
+    --prompt-template "$PROMPT_TEMPLATE" \
     ${TEMPERATURE:+--temperature "$TEMPERATURE"} \
     ${TOP_P:+--top-p "$TOP_P"} \
     --max-new-tokens "$MAX_NEW_TOKENS" \
     --num-generations "$NUM_GENERATIONS" \
     --input-batch-size "$INPUT_BATCH_SIZE" \
     --client-replicas "$CLIENT_REPLICAS" \
+    --timeout "$TIMEOUT" \
+    --retries "$RETRIES" \
     ${HF_OUTPUT_DATASET:+--hf-output-dataset "$HF_OUTPUT_DATASET"} \
     ${PRIVATE:+--private} \
     --vllm-server-url "http://$head_node_ip:8000/v1"
