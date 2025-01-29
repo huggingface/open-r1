@@ -24,12 +24,15 @@ def build_distilabel_pipeline(
     model: str,
     base_url: str = "http://localhost:8000/v1",
     prompt_column: Optional[str] = None,
+    prompt_template: str = "{{ instruction }}",
     temperature: Optional[float] = None,
     top_p: Optional[float] = None,
     max_new_tokens: int = 8192,
     num_generations: int = 1,
     input_batch_size: int = 64,
     client_replicas: int = 1,
+    timeout: int = 900,
+    retries: int = 0,
 ) -> Pipeline:
     generation_kwargs = {"max_new_tokens": max_new_tokens}
 
@@ -45,13 +48,15 @@ def build_distilabel_pipeline(
                 base_url=base_url,
                 api_key="something",
                 model=model,
-                # thinking can take some time...
-                timeout=10 * 60,
+                timeout=timeout,
+                max_retries=retries,
                 generation_kwargs=generation_kwargs,
             ),
+            template=prompt_template,
             input_mappings={"instruction": prompt_column} if prompt_column is not None else {},
             input_batch_size=input_batch_size,
             num_generations=num_generations,
+            group_generations=True,
             resources=StepResources(replicas=client_replicas),
         )
 
@@ -82,7 +87,17 @@ if __name__ == "__main__":
         default="train",
         help="Dataset split to use",
     )
-    parser.add_argument("--prompt-column", type=str, default="prompt")
+    parser.add_argument(
+        "--prompt-column",
+        type=str,
+        default="prompt",
+    )
+    parser.add_argument(
+        "--prompt-template",
+        type=str,
+        default="{{ instruction }}",
+        help="Template string for formatting prompts.",
+    )
     parser.add_argument(
         "--model",
         type=str,
@@ -130,6 +145,18 @@ if __name__ == "__main__":
         help="Number of client replicas for parallel processing",
     )
     parser.add_argument(
+        "--timeout",
+        type=int,
+        default=600,
+        help="Request timeout in seconds (default: 600)",
+    )
+    parser.add_argument(
+        "--retries",
+        type=int,
+        default=0,
+        help="Number of retries for failed requests (default: 3)",
+    )
+    parser.add_argument(
         "--hf-output-dataset",
         type=str,
         required=False,
@@ -149,12 +176,13 @@ if __name__ == "__main__":
     print()
 
     print(f"Loading '{args.hf_dataset}' (config: {args.hf_dataset_config}, split: {args.hf_dataset_split}) dataset...")
-    dataset = load_dataset(args.hf_dataset, split=args.hf_dataset_split)
+    dataset = load_dataset(args.hf_dataset, args.hf_dataset_config, split=args.hf_dataset_split)
     print("Dataset loaded!")
 
     pipeline = build_distilabel_pipeline(
         model=args.model,
         base_url=args.vllm_server_url,
+        prompt_template=args.prompt_template,
         prompt_column=args.prompt_column,
         temperature=args.temperature,
         top_p=args.top_p,
@@ -162,12 +190,14 @@ if __name__ == "__main__":
         num_generations=args.num_generations,
         input_batch_size=args.input_batch_size,
         client_replicas=args.client_replicas,
+        timeout=args.timeout,
+        retries=args.retries,
     )
 
     print("Running generation pipeline...")
     distiset = pipeline.run(
         dataset=dataset,
-        dataset_batch_size=args.input_batch_size * 10,
+        dataset_batch_size=args.input_batch_size * 1000,
         use_cache=False,
     )
     print("Generation pipeline finished!")
