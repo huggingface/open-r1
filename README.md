@@ -32,16 +32,17 @@ We will use the DeepSeek-R1 [tech report](https://github.com/deepseek-ai/DeepSee
 To run the code in this project, first, create a Python virtual environment using e.g. Conda:
 
 ```shell
-conda create -n openr1 python=3.11 && conda activate openr1
+uv venv openr1 --python 3.11 && source openr1/bin/activate  && uv pip install pip
 ```
 
 Next, install vLLM:
 
 ```shell
-pip install vllm==0.6.6.post1
+uv pip install vllm==0.6.6.post1
 
 # For HF (cluster only has CUDA 12.1)
 pip install vllm==0.6.6.post1 --extra-index-url https://download.pytorch.org/whl/cu121
+export LD_LIBRARY_PATH=$(python -c "import site; print(site.getsitepackages()[0] + '/nvidia/nvjitlink/lib')"):$LD_LIBRARY_PATH
 ```
 
 This will also install PyTorch `v2.5.1` and it is **very important** to use this version since the vLLM binaries are compiled for it. You can then install the remaining dependencies for your specific use case via `pip install -e .[LIST OF MODES]`. For most contributors, we recommend:
@@ -196,7 +197,7 @@ The following example can be run in 1xH100.
 First install the following dependencies:
 
 ```shell
-pip install "distilabel[vllm]>=1.5.2"
+uv pip install "distilabel[vllm]>=1.5.2"
 ```
 
 Now save the following snippet into a file named `pipeline.py` and run it with `python pipeline.py`. It will generate 4 outputs for each of the 10 examples (change the username for the repository to your org/user name):
@@ -258,16 +259,23 @@ To run the bigger DeepSeek-R1, we used 2 nodes, each with 8×H100 GPUs using the
 ```shell
 pip install https://wheels.vllm.ai/221d388cc5a836fa189305785ed7e887cea8b510/vllm-1.0.0.dev-cp38-abi3-manylinux1_x86_64.whl --extra-index-url https://download.pytorch.org/whl/cu121
 
-pip install "distilabel[vllm,ray,openai]>=1.5.2"
+uv pip install "distilabel[vllm,ray,openai]>=1.5.2"
 ```
 
-And then, place the `generate.slurm` file at the same level as `src/open_r1/generate.py` (it will try to run the file in the relative path), and run the following command:
+And then run the following command:
 
 ```shell
-sbatch generate.slurm \
+sbatch slurm/generate.slurm \
     --hf-dataset AI-MO/NuminaMath-TIR \
     --temperature 0.6 \
     --prompt-column problem \
     --model deepseek-ai/DeepSeek-R1 \
     --hf-output-dataset username/r1-dataset
 ```
+
+> [!NOTE]  
+> While the job is running, you can setup an SSH tunnel through the cluster login node to access the Ray dashboard from your computer running `ssh -L 8265:ray_ip_head_node:8265 <login_node>`, then browsing `http://localhost:8265`
+
+## Contributing
+
+Contributions are welcome. Please refer to https://github.com/huggingface/open-r1/issues/23.
