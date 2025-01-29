@@ -38,10 +38,9 @@ class DummyConfig:
             setattr(self, k, v)
 
 
-class PushToHubCallback(TrainerCallback):
-    def __init__(self, model_config, data_config) -> None:
+class PushToHubRevisionCallback(TrainerCallback):
+    def __init__(self, model_config) -> None:
         self.model_config = model_config
-        self.data_config = data_config
 
     def on_save(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
         if state.is_world_process_zero:
@@ -53,6 +52,7 @@ class PushToHubCallback(TrainerCallback):
                 hub_model_id=args.hub_model_id,
                 hub_model_revision=f"{args.hub_model_revision}-step-{global_step:09d}",
                 output_dir=f"{args.output_dir}/checkpoint-{global_step}",
+                system_prompt=args.system_prompt,
             )
 
             # TODO: I think this could be made async
@@ -60,20 +60,19 @@ class PushToHubCallback(TrainerCallback):
 
             if is_slurm_available():
                 dummy_config.benchmarks = args.benchmarks
-                dummy_config.quants = args.quants
                 run_benchmark_jobs(dummy_config, self.model_config)
 
 
 CALLBACKS = {
-    "push_to_hub": PushToHubCallback,
+    "push_to_hub_revision": PushToHubRevisionCallback,
 }
 
 
-def get_callbacks(sft_config, model_config, data_config) -> List[TrainerCallback]:
+def get_callbacks(train_config, model_config) -> List[TrainerCallback]:
     callbacks = []
-    for callback_name in sft_config.callbacks:
+    for callback_name in train_config.callbacks:
         if callback_name not in CALLBACKS:
             raise ValueError(f"Callback {callback_name} not found in CALLBACKS.")
-        callbacks.append(CALLBACKS[callback_name](model_config, data_config))
+        callbacks.append(CALLBACKS[callback_name](model_config))
 
     return callbacks

@@ -47,7 +47,8 @@ from trl import (
     get_peft_config,
     get_quantization_config,
 )
-from.configs import SFTConfig
+from open_r1.configs import SFTConfig
+from open_r1.utils.callbacks import get_callbacks
 
 def main(script_args, training_args, model_args):
     ################
@@ -84,6 +85,7 @@ def main(script_args, training_args, model_args):
         eval_dataset=dataset[script_args.dataset_test_split] if training_args.eval_strategy != "no" else None,
         processing_class=tokenizer,
         peft_config=get_peft_config(model_args),
+        callbacks=get_callbacks(training_args, model_args),
     )
 
     trainer.train()

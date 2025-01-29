@@ -66,7 +66,7 @@ def run_lighteval_job(benchmark: str, training_args: Union["SFTConfig", "GRPOCon
     cmd = VLLM_SLURM_PREFIX.copy()
     cmd_args = [
         f"--gres=gpu:{num_gpus}",
-        f"--job-name=open-r1_{benchmark}_{model_name.split('/')[-1]}_{model_revision}",
+        f"--job-name=or1_{benchmark}_{model_name.split('/')[-1]}_{model_revision}",
         "slurm/eval_callback.slurm",
         benchmark,
         f'"{task_list}"',

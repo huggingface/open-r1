@@ -43,7 +43,7 @@ class GRPOConfig(trl.GRPOConfig):
     push_to_hub_revision: bool = field(default=False, metadata={"help": ("Whether to push to a Hub revision/branch.")})
     
 @dataclass
-class SFTConfig(trl.GRPOConfig):
+class SFTConfig(trl.SFTConfig):
     """
     args for callbacks, benchmarks etc
     """
