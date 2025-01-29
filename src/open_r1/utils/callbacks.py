@@ -21,7 +21,7 @@ from transformers import TrainerCallback
 from transformers.trainer_callback import TrainerControl, TrainerState
 from transformers.training_args import TrainingArguments
 
-from .evaluation import SUPPORTED_BENCHMARKS, run_benchmark_jobs
+from .evaluation import run_benchmark_jobs
 from .hub import push_to_hub_revision
 
 
