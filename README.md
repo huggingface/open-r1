@@ -6,12 +6,13 @@
 
 The goal of this repo is to build the missing pieces of the R1 pipeline such that everybody can reproduce and build on top of it. The project is simple by design and mostly consists of:
 
-- `src/open_r1` contains the scripts to train and evaluate models as well as generate synthetic data:
+
+- `src/open_r1`: contains the scripts to train and evaluate models as well as generate synthetic data:
     - `grpo.py`: trains a model with GRPO on a given dataset.
-    - `sft.py`: simple SFT of a model on a dataset.
+    - `sft.py`: performs a simple SFT of a model on a dataset.
     - `evaluate.py`: evaluates a model on the R1 benchmarks.
-    - `generate.py`: generate synthetic data from a model using [Distilabel](https://github.com/argilla-io/distilabel).
-- `Makefile` contains an easy to run command for each step in the R1 pipeline leveraging the scripts above.
+    - `generate.py`: generates synthetic data from a model using [Distilabel](https://github.com/argilla-io/distilabel).
+- `Makefile`: contains easy-to-run commands for each step in the R1 pipeline leveraging the scripts above.
 
 ### Plan of attack
 
@@ -57,7 +58,7 @@ huggingface-cli login
 wandb login
 ```
 
-Finally, check your system has Git LFS installed so that you can load and push models/datasets to the Hugging Face Hub:
+Finally, check whether your system has Git LFS installed so that you can load and push models/datasets to the Hugging Face Hub:
 
 ```shell
 git-lfs --version
@@ -80,7 +81,7 @@ We support training models with either DDP or DeepSpeed ZeRO-2 and ZeRO-3. To sw
 
 To run SFT on a dataset distilled from DeepSeek-R1 with reasoning traces such as [Bespoke-Stratos-17k](https://huggingface.co/datasets/bespokelabs/Bespoke-Stratos-17k), run:
 
-```
+```shell
 accelerate launch --config_file=configs/zero3.yaml src/open_r1/sft.py \
     --model_name_or_path Qwen/Qwen2.5-Math-1.5B-Instruct \
     --dataset_name HuggingFaceH4/Bespoke-Stratos-17k \
@@ -109,7 +110,7 @@ Here `{model}` and `{dataset}` refer to the model and dataset IDs on the Hugging
 
 ### GRPO
 
-```
+```shell
 accelerate launch --config_file configs/zero3.yaml src/open_r1/grpo.py \
     --output_dir DeepSeek-R1-Distill-Qwen-7B-GRPO \
     --model_name_or_path deepseek-ai/DeepSeek-R1-Distill-Qwen-7B \
@@ -199,7 +200,7 @@ First install the following dependencies:
 uv pip install "distilabel[vllm]>=1.5.2"
 ```
 
-Now save the following snippet into a file named `pipeline.py` and run with `python pipeline.py`. It will generate for each of the 10 examples 4 generations (change the username for the repository to your org/user name):
+Now save the following snippet into a file named `pipeline.py` and run it with `python pipeline.py`. It will generate 4 outputs for each of the 10 examples (change the username for the repository to your org/user name):
 
 ```python
 from datasets import load_dataset
