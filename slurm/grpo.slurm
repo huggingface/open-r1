@@ -24,7 +24,6 @@ ACCELERATOR=$3
 NUM_NODES=$SLURM_NNODES
 GPUS_PER_NODE=8
 WORLD_SIZE=$(($NUM_NODES*$GPUS_PER_NODE))
-NUM_PROCESSES=$(($WORLD_SIZE-1))
 
 
 # so processes know who to talk to
@@ -57,7 +56,6 @@ export LAUNCHER="HF_HUB_ENABLE_HF_TRANSFER=1 ACCELERATE_LOG_LEVEL=info TRANSFORM
     --config_file configs/$ACCELERATOR.yaml  \
     --gradient_accumulation_steps 4 \
     --num_machines $NUM_NODES \
-    --num_processes $NUM_PROCESSES \
     --main_process_ip $MASTER_ADDR \
     --main_process_port $MASTER_PORT \
     --machine_rank \$SLURM_PROCID \
