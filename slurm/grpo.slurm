@@ -37,8 +37,8 @@ export CMD=" \
     --dataset_name $DATASET_PATH \
     --learning_rate 2.0e-5 \
     --num_train_epochs 1 \
-    --max_seq_length 1024 \
-    --max_prompt_length 64 \
+    --max_completion_length 1024 \
+    --max_prompt_length 512 \
     --per_device_train_batch_size 4 \
     --per_device_eval_batch_size 4 \
     --gradient_accumulation_steps 4 \
