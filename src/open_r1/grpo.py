@@ -19,9 +19,9 @@ from datasets import load_dataset
 
 from latex2sympy2_extended import NormalizationConfig
 from math_verify import LatexExtractionConfig, parse, verify
-from trl import GRPOTrainer, ModelConfig, ScriptArguments, TrlParser, get_peft_config
 from open_r1.configs import GRPOConfig
 from open_r1.utils.callbacks import get_callbacks
+from trl import GRPOTrainer, ModelConfig, ScriptArguments, TrlParser, get_peft_config
 
 
 @dataclass

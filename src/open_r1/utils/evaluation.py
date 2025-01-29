@@ -3,11 +3,12 @@ from typing import TYPE_CHECKING, Dict, Union
 
 from .hub import get_gpu_count_for_vllm, get_param_count_from_repo_id
 
+
 if TYPE_CHECKING:
     from trl import GRPOConfig, SFTConfig, ModelConfig
 
-
 import os
+
 
 # We need a special environment setup to launch vLLM from within Slurm training jobs.
 # - Reference code: https://github.com/huggingface/brrr/blob/c55ba3505686d690de24c7ace6487a5c1426c0fd/brrr/lighteval/one_job_runner.py#L105
@@ -20,6 +21,7 @@ VLLM_SLURM_PREFIX = [
     "-c",
     f"for f in /etc/profile.d/*.sh; do source $f; done; export HOME={user_home_directory}; sbatch ",
 ]
+
 
 def register_lighteval_task(
     configs: Dict[str, str], eval_suite: str, task_name: str, task_list: str, num_fewshot: int = 0
@@ -47,12 +49,17 @@ LIGHTEVAL_TASKS = {}
 register_lighteval_task(LIGHTEVAL_TASKS, "custom", "math_500", "math_500", 0)
 register_lighteval_task(LIGHTEVAL_TASKS, "custom", "aime24", "aime24", 0)
 
+
 def get_lighteval_tasks():
     return list(LIGHTEVAL_TASKS.keys())
 
+
 SUPPORTED_BENCHMARKS = get_lighteval_tasks()
 
-def run_lighteval_job(benchmark: str, training_args: Union["SFTConfig", "GRPOConfig"], model_args: "ModelConfig") -> None:
+
+def run_lighteval_job(
+    benchmark: str, training_args: Union["SFTConfig", "GRPOConfig"], model_args: "ModelConfig"
+) -> None:
     task_list = LIGHTEVAL_TASKS[benchmark]
     model_name = training_args.hub_model_id
     model_revision = training_args.hub_model_revision
@@ -79,6 +86,7 @@ def run_lighteval_job(benchmark: str, training_args: Union["SFTConfig", "GRPOCon
         cmd_args.append(f"--system_prompt={training_args.system_prompt}")
     cmd[-1] += " " + " ".join(cmd_args)
     subprocess.run(cmd, check=True)
+
 
 def run_benchmark_jobs(training_args: Union["SFTConfig", "GRPOConfig"], model_args: "ModelConfig") -> None:
     benchmarks = training_args.benchmarks

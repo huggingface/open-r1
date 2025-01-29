@@ -38,6 +38,8 @@ accelerate launch --config_file=configs/zero3.yaml src/open_r1/sft.py \
 from datasets import load_dataset
 from transformers import AutoTokenizer
 
+from open_r1.configs import SFTConfig
+from open_r1.utils.callbacks import get_callbacks
 from trl import (
     ModelConfig,
     ScriptArguments,
@@ -47,8 +49,7 @@ from trl import (
     get_peft_config,
     get_quantization_config,
 )
-from open_r1.configs import SFTConfig
-from open_r1.utils.callbacks import get_callbacks
+
 
 def main(script_args, training_args, model_args):
     ################

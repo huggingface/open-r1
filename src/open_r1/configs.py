@@ -13,17 +13,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
 from dataclasses import dataclass, field
+from typing import Optional
+
 import trl
 
+
 # TODO: add the shared options with a mixin to reduce code duplication
+
 
 @dataclass
 class GRPOConfig(trl.GRPOConfig):
     """
     args for callbacks, benchmarks etc
     """
+
     benchmarks: list[str] = field(
         default_factory=lambda: [],
         metadata={"help": ("The benchmarks to run after training.")},
@@ -41,12 +45,14 @@ class GRPOConfig(trl.GRPOConfig):
     )
     overwrite_hub_revision: bool = field(default=False, metadata={"help": ("Whether to overwrite the Hub revision.")})
     push_to_hub_revision: bool = field(default=False, metadata={"help": ("Whether to push to a Hub revision/branch.")})
-    
+
+
 @dataclass
 class SFTConfig(trl.SFTConfig):
     """
     args for callbacks, benchmarks etc
     """
+
     benchmarks: list[str] = field(
         default_factory=lambda: [],
         metadata={"help": ("The benchmarks to run after training.")},
@@ -64,8 +70,3 @@ class SFTConfig(trl.SFTConfig):
     )
     overwrite_hub_revision: bool = field(default=False, metadata={"help": ("Whether to overwrite the Hub revision.")})
     push_to_hub_revision: bool = field(default=False, metadata={"help": ("Whether to push to a Hub revision/branch.")})
-
-
-
-    
-    

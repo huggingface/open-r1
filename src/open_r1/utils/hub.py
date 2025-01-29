@@ -19,7 +19,7 @@ import re
 import sys
 
 from transformers import AutoConfig
-from trl import GRPOConfig, SFTConfig
+
 from huggingface_hub import (
     create_branch,
     create_repo,
@@ -30,6 +30,8 @@ from huggingface_hub import (
     repo_exists,
     upload_folder,
 )
+from trl import GRPOConfig, SFTConfig
+
 
 logger = logging.getLogger(__name__)
 
@@ -115,8 +117,9 @@ def get_param_count_from_repo_id(repo_id: str) -> int:
 
 
 def get_gpu_count_for_vllm(model_name: str, revision: str = "main", num_gpus: int = 8) -> int:
-    """vLLM enforces a constraint that the number of attention heads must be divisible by the number of GPUs and 64 must be divisible by the number of GPUs. 
-       This function calculates the number of GPUs to use for decoding based on the number of attention heads in the model."""
+    """vLLM enforces a constraint that the number of attention heads must be divisible by the number of GPUs and 64 must be divisible by the number of GPUs.
+    This function calculates the number of GPUs to use for decoding based on the number of attention heads in the model.
+    """
     config = AutoConfig.from_pretrained(model_name, revision=revision, trust_remote_code=True)
     # Get number of attention heads
     num_heads = config.num_attention_heads
