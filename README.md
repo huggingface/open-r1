@@ -109,12 +109,15 @@ Here `{model}` and `{dataset}` refer to the model and dataset IDs on the Hugging
 
 ### GRPO
 
+To train via the GRPO trainer we will use the strategy of using one node to run vLLM for faster generation and the remaining nodes for training. Thus we will use the `configs/zero3_7proc.yaml` config that sets the `num_processes=7` for the 8 GPU training scenario. Thus all we need to do is:
+
 ```
-accelerate launch --config_file configs/zero3.yaml src/open_r1/grpo.py \
+accelerate launch --config_file configs/zero3_7proc.yaml src/open_r1/grpo.py \
     --output_dir DeepSeek-R1-Distill-Qwen-7B-GRPO \
     --model_name_or_path deepseek-ai/DeepSeek-R1-Distill-Qwen-7B \
     --dataset_name AI-MO/NuminaMath-TIR \
-    --max_prompt_length 256 \
+    --max_prompt_length 512 \
+    --max_completion_length 1024 \
     --per_device_train_batch_size 1 \
     --gradient_accumulation_steps 16 \
     --logging_steps 10 \
