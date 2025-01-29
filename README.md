@@ -124,6 +124,13 @@ accelerate launch --config_file configs/zero3_7proc.yaml src/open_r1/grpo.py \
     --bf16
 ```
 
+To launch a Slurm job, run:
+
+```shell
+sbatch --output=/path/to/logs/%x-%j.out --err=/path/to/logs/%x-%j.err slurm/grpo.slurm {model} {dataset} {accelerator}
+```
+
+
 ## Evaluating models
 
 We use `lighteval` to evaluate models, with custom tasks defined in `src/open_r1/evaluate.py`. For models which fit on a single GPU, run:
