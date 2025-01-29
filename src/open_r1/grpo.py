@@ -66,8 +66,7 @@ def main(script_args, training_args, model_args):
     def process_dataset(example):
         messages = example["messages"]
         last_message = messages[-1]["content"]
-        if "\nWait, this seems off. Let's try something else.\nStep" in last_message:
-            last_message = last_message.split("\nWait, this seems off. Let's try something else.\nStep")[0] + "\nWait, this seems off. Let's try something else.\nStep"
+        last_message = last_message.split("\nWait, this seems off. Let's try something else.\nStep")[0] + "\nWait, this seems off. Let's try something else.\nStep"
             messages[-1]["content"] = last_message
             
         text = tokenizer.apply_chat_template(
@@ -77,11 +76,6 @@ def main(script_args, training_args, model_args):
         return {"prompt": text, "ground_truth": example["ground_truth"]}
 
     processed_dataset = dataset.map(process_dataset, remove_columns=["messages"])
-    # print(script_args.dataset_train_split)
-    # print(len(processed_dataset[script_args.dataset_train_split]))
-    # print(script_args.dataset_test_split)
-    # print(len(processed_dataset[script_args.dataset_test_split]))
-    # exit()
 
     # Initialize the GRPO trainer
     trainer = GRPOTrainer(

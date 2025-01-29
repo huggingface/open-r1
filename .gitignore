@@ -173,3 +173,6 @@ cython_debug/
 # Temp folders
 data/
 wandb/
+bash/
+src/open_r1/grpo_full.py
+src/create_dataset.py
