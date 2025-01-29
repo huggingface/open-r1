@@ -28,7 +28,7 @@ We will use the DeepSeek-R1 [tech report](https://github.com/deepseek-ai/DeepSee
 
 ## Installation
 
-To run the code in this project, first, create a Python virtual environment using e.g. Conda:
+To run the code in this project, first, make sure you have [uv](https://github.com/astral-sh/uv) then create a Python virtual environment using e.g. Conda:
 
 ```shell
 uv venv openr1 --python 3.11 && source openr1/bin/activate  && uv pip install pip
