@@ -1,38 +1,59 @@
 # Please install OpenAI SDK first: `pip3 install openai`
 import json
+import os
 from openai import OpenAI
 
-client = OpenAI(api_key="Your Deepseek API", base_url="https://api.deepseek.com")
+ds_key = os.getenv("DEEPSEEK_API_KEY")  # To make it easier to manage
 
-math_problems = 'math_problems.txt'
+if not ds_key:
+    raise ValueError("DEEPSEEK_API_KEY environment variable is not set.")
 
-with open(math_problems, "r") as file:
-    math_problems = file.readlines()
+client = OpenAI(api_key=ds_key, base_url="https://api.deepseek.com")
 
+math_problems_file = 'math_problems.txt'
 solutions = []
 
+try:
+    with open(math_problems_file, "r") as file:
+        math_problems = file.readlines()
+except FileNotFoundError:
+    print(f"Error: The file '{math_problems_file}' was not found.")
+    exit(1)
+except IOError as e:
+    print(f"Error: An I/O error occurred while reading the file: {e}")
+    exit(1)
+
 for problem in math_problems:
+    try:
+        messages = [{"role": "user", "content": problem.strip()}]
+        
+        response = client.chat.completions.create(
+            model="deepseek-reasoner",
+            messages=messages
+        )
+        
+        reasoning_content = response.choices[0].message.reasoning_content
+        content = response.choices[0].message.content
+        
+        solution = {
+            "problem": problem.strip(),
+            "reasoning": reasoning_content,
+            "solution": content
+        }
+        
+        solutions.append(solution)
+        print(f"Successfully wrote the answer to the problem : {problem}")
+    except Exception as e:
+        print(f"Error: An error occurred while processing the problem '{problem.strip()}': {e}")
+        continue
 
-    messages = [{"role": "user", "content": problem.strip()}]
-    
-    response = client.chat.completions.create(
-        model="deepseek-reasoner",
-        messages=messages
-    )
-    
-    reasoning_content = response.choices[0].message.reasoning_content
-    content = response.choices[0].message.content
-    
-    solution = {
-        "problem": problem.strip(),
-        "reasoning": reasoning_content,
-        "solution": content
-    }
-    
-    solutions.append(solution)
+try:
+    with open("math_solutions.json", "w") as output_file:
+        json.dump(solutions, output_file, indent=4)
 
-with open("math_solutions.json", "w") as output_file:
-    json.dump(solutions, output_file, indent=4)
+except IOError as e:
+    print(f"Error: An I/O error occurred while writing to the file: {e}")
+    exit(1)
 
 ######## Example ########
 # To make the repo cleaner, I put the example below.
