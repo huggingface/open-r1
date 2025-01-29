@@ -11,7 +11,6 @@ The goal of this repo is to build the missing pieces of the R1 pipeline such tha
     - `grpo.py`: trains a model with GRPO on a given dataset.
     - `sft.py`: performs a simple SFT of a model on a dataset.
     - `evaluate.py`: evaluates a model on the R1 benchmarks.
-
     - `generate.py`: generates synthetic data from a model using [Distilabel](https://github.com/argilla-io/distilabel).
 - `Makefile`: contains easy-to-run commands for each step in the R1 pipeline leveraging the scripts above.
 
