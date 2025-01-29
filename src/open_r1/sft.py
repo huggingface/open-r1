@@ -41,14 +41,13 @@ from transformers import AutoTokenizer
 from trl import (
     ModelConfig,
     ScriptArguments,
-    SFTConfig,
     SFTTrainer,
     TrlParser,
     get_kbit_device_map,
     get_peft_config,
     get_quantization_config,
 )
-
+from.configs import SFTConfig
 
 def main(script_args, training_args, model_args):
     ################
