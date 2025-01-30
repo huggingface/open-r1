@@ -23,7 +23,12 @@ echo "PYTHON ENV: $(which python)"
 NUM_GPUS=8
 MODEL=$1
 TASK=$2
-MODEL_ARGS="pretrained=$MODEL,dtype=float16,data_parallel_size=$NUM_GPUS,max_model_length=32768,gpu_memory_utilisation=0.8"
+# Check if a third argument is passed, if it is tp then eval with tensor parallelism. Required for larger models
+if [ -n "$3" ] && [ "$3" == "tp" ]; then
+  MODEL_ARGS="pretrained=$MODEL,dtype=float16,tensor_parallel_size=$NUM_GPUS,max_model_length=32768,gpu_memory_utilisation=0.8"
+else
+  MODEL_ARGS="pretrained=$MODEL,dtype=float16,data_parallel_size=$NUM_GPUS,max_model_length=32768,gpu_memory_utilisation=0.8"
+fi
 OUTPUT_DIR=data/evals/$MODEL
 
 

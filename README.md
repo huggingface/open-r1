@@ -6,12 +6,13 @@
 
 The goal of this repo is to build the missing pieces of the R1 pipeline such that everybody can reproduce and build on top of it. The project is simple by design and mostly consists of:
 
-- `src/open_r1` contains the scripts to train and evaluate models as well as generate synthetic data:
+
+- `src/open_r1`: contains the scripts to train and evaluate models as well as generate synthetic data:
     - `grpo.py`: trains a model with GRPO on a given dataset.
-    - `sft.py`: simple SFT of a model on a dataset.
+    - `sft.py`: performs a simple SFT of a model on a dataset.
     - `evaluate.py`: evaluates a model on the R1 benchmarks.
-    - `generate.py`: generate synthetic data from a model using [Distilabel](https://github.com/argilla-io/distilabel).
-- `Makefile` contains an easy to run command for each step in the R1 pipeline leveraging the scripts above.
+    - `generate.py`: generates synthetic data from a model using [Distilabel](https://github.com/argilla-io/distilabel).
+- `Makefile`: contains easy-to-run commands for each step in the R1 pipeline leveraging the scripts above.
 
 ### Plan of attack
 
@@ -28,10 +29,12 @@ We will use the DeepSeek-R1 [tech report](https://github.com/deepseek-ai/DeepSee
 
 ## Installation
 
-To run the code in this project, first, create a Python virtual environment using e.g. Conda:
+To run the code in this project, first, create a Python virtual environment using e.g. `uv`.
+To install `uv`, follow the [UV Installation Guide](https://docs.astral.sh/uv/getting-started/installation/).
+
 
 ```shell
-uv venv openr1 --python 3.11 && source openr1/bin/activate  && uv pip install pip
+uv venv openr1 --python 3.11 && source openr1/bin/activate && uv pip install --upgrade pip
 ```
 
 Next, install vLLM:
@@ -57,7 +60,7 @@ huggingface-cli login
 wandb login
 ```
 
-Finally, check your system has Git LFS installed so that you can load and push models/datasets to the Hugging Face Hub:
+Finally, check whether your system has Git LFS installed so that you can load and push models/datasets to the Hugging Face Hub:
 
 ```shell
 git-lfs --version
@@ -71,7 +74,7 @@ sudo apt-get install git-lfs
 
 ## Training models
 
-We support training models with either DDP or DeepSpeed ZeRO-2 and ZeRO-3. To switch between methods, simply change the path to the `accelerate` YAML config in `configs`.
+We support training models with either DDP or DeepSpeed (ZeRO-2 and ZeRO-3). To switch between methods, simply change the path to the `accelerate` YAML config in `configs`.
 
 > [!NOTE]
 > The training commands below are configured for a node of 8 x H100s (80GB). For different hardware and topologies, you may need to tune the batch size and number of gradient accumulation steps.
@@ -80,7 +83,7 @@ We support training models with either DDP or DeepSpeed ZeRO-2 and ZeRO-3. To sw
 
 To run SFT on a dataset distilled from DeepSeek-R1 with reasoning traces such as [Bespoke-Stratos-17k](https://huggingface.co/datasets/bespokelabs/Bespoke-Stratos-17k), run:
 
-```
+```shell
 accelerate launch --config_file=configs/zero3.yaml src/open_r1/sft.py \
     --model_name_or_path Qwen/Qwen2.5-Math-1.5B-Instruct \
     --dataset_name HuggingFaceH4/Bespoke-Stratos-17k \
@@ -105,11 +108,11 @@ To launch a Slurm job, run:
 sbatch --output=/path/to/logs/%x-%j.out --err=/path/to/logs/%x-%j.err slurm/sft.slurm {model} {dataset} {accelerator}
 ```
 
-Here `{model}` and `{dataset}` refer to the model and dataset IDs on the Hugging Face Hub, while `{accelerator}` refers to the choice of 🤗 Accelerate config in `configs`. 
+Here `{model}` and `{dataset}` refer to the model and dataset IDs on the Hugging Face Hub, while `{accelerator}` refers to the choice of an 🤗 Accelerate config file in configs. 
 
 ### GRPO
 
-```
+```shell
 accelerate launch --config_file configs/zero3.yaml src/open_r1/grpo.py \
     --output_dir DeepSeek-R1-Distill-Qwen-7B-GRPO \
     --model_name_or_path deepseek-ai/DeepSeek-R1-Distill-Qwen-7B \
@@ -187,6 +190,30 @@ To use Tensor Parallelism:
 ```shell
 make evaluate MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-32B TASK=aime24 PARALLEL=tensor NUM_GPUS=8
 ```
+## Reproducing Deepseek's evaluation results on MATH-500
+We are able to reproduce Deepseek's reported results on the MATH-500 Benchmark:
+| Model                      | MATH-500 (HF lighteval) | MATH-500 (DeepSeek Reported) |
+| :-------------------------- | :-------: | :----------------------------: |
+| DeepSeek-R1-Distill-Qwen-1.5B  |  81.6   |              83.9              |
+| DeepSeek-R1-Distill-Qwen-7B    |  91.8   |              92.8              |
+| DeepSeek-R1-Distill-Qwen-14B   |  94.2   |              93.9              |
+| DeepSeek-R1-Distill-Qwen-32B   |  95.0   |              94.3              |
+| DeepSeek-R1-Distill-Llama-8B   |  85.8   |              89.1              |
+| DeepSeek-R1-Distill-Llama-70B  |  93.4   |              94.5              |
+
+
+
+To reproduce these results use the following command:
+```shell
+sbatch slurm/evaluate.slurm deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B math_500
+sbatch slurm/evaluate.slurm deepseek-ai/DeepSeek-R1-Distill-Qwen-7B math_500
+sbatch slurm/evaluate.slurm deepseek-ai/DeepSeek-R1-Distill-Qwen-14B math_500
+sbatch slurm/evaluate.slurm deepseek-ai/DeepSeek-R1-Distill-Qwen-32B math_500 tp
+sbatch slurm/evaluate.slurm deepseek-ai/DeepSeek-R1-Distill-Llama-8B math_500
+sbatch slurm/evaluate.slurm deepseek-ai/DeepSeek-R1-Distill-Llama-70B math_500 tp
+```
+
+
 
 ## Data generation
 
@@ -199,7 +226,7 @@ First install the following dependencies:
 uv pip install "distilabel[vllm]>=1.5.2"
 ```
 
-Now save the following snippet into a file named `pipeline.py` and run with `python pipeline.py`. It will generate for each of the 10 examples 4 generations (change the username for the repository to your org/user name):
+Now save the following snippet into a file named `pipeline.py` and run it with `python pipeline.py`. It will generate 4 outputs for each of the 10 examples (change the username for the repository to your org/user name):
 
 ```python
 from datasets import load_dataset
