@@ -29,10 +29,14 @@ We will use the DeepSeek-R1 [tech report](https://github.com/deepseek-ai/DeepSee
 
 ## Installation
 
-To run the code in this project, first, create a Python virtual environment using e.g. Conda:
+**Note: Libraries rely on CUDA 12.1. Double check your system if you get segmentation faults.**
+
+To run the code in this project, first, create a Python virtual environment using e.g. `uv`.
+To install `uv`, follow the [UV Installation Guide](https://docs.astral.sh/uv/getting-started/installation/).
+
 
 ```shell
-uv venv openr1 --python 3.11 && source openr1/bin/activate  && uv pip install pip
+uv venv openr1 --python 3.11 && source openr1/bin/activate && uv pip install --upgrade pip
 ```
 
 Next, install vLLM:
@@ -40,7 +44,7 @@ Next, install vLLM:
 ```shell
 uv pip install vllm==0.6.6.post1
 
-# For HF (cluster only has CUDA 12.1)
+# For CUDA 12.1
 pip install vllm==0.6.6.post1 --extra-index-url https://download.pytorch.org/whl/cu121
 export LD_LIBRARY_PATH=$(python -c "import site; print(site.getsitepackages()[0] + '/nvidia/nvjitlink/lib')"):$LD_LIBRARY_PATH
 ```
@@ -72,7 +76,7 @@ sudo apt-get install git-lfs
 
 ## Training models
 
-We support training models with either DDP or DeepSpeed ZeRO-2 and ZeRO-3. To switch between methods, simply change the path to the `accelerate` YAML config in `configs`.
+We support training models with either DDP or DeepSpeed (ZeRO-2 and ZeRO-3). To switch between methods, simply change the path to the `accelerate` YAML config in `configs`.
 
 > [!NOTE]
 > The training commands below are configured for a node of 8 x H100s (80GB). For different hardware and topologies, you may need to tune the batch size and number of gradient accumulation steps.
@@ -106,7 +110,7 @@ To launch a Slurm job, run:
 sbatch --output=/path/to/logs/%x-%j.out --err=/path/to/logs/%x-%j.err slurm/sft.slurm {model} {dataset} {accelerator}
 ```
 
-Here `{model}` and `{dataset}` refer to the model and dataset IDs on the Hugging Face Hub, while `{accelerator}` refers to the choice of 🤗 Accelerate config in `configs`. 
+Here `{model}` and `{dataset}` refer to the model and dataset IDs on the Hugging Face Hub, while `{accelerator}` refers to the choice of an 🤗 Accelerate config file in configs. 
 
 ### GRPO
 
@@ -198,6 +202,30 @@ To use Tensor Parallelism:
 ```shell
 make evaluate MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-32B TASK=aime24 PARALLEL=tensor NUM_GPUS=8
 ```
+## Reproducing Deepseek's evaluation results on MATH-500
+We are able to reproduce Deepseek's reported results on the MATH-500 Benchmark:
+| Model                      | MATH-500 (HF lighteval) | MATH-500 (DeepSeek Reported) |
+| :-------------------------- | :-------: | :----------------------------: |
+| DeepSeek-R1-Distill-Qwen-1.5B  |  81.6   |              83.9              |
+| DeepSeek-R1-Distill-Qwen-7B    |  91.8   |              92.8              |
+| DeepSeek-R1-Distill-Qwen-14B   |  94.2   |              93.9              |
+| DeepSeek-R1-Distill-Qwen-32B   |  95.0   |              94.3              |
+| DeepSeek-R1-Distill-Llama-8B   |  85.8   |              89.1              |
+| DeepSeek-R1-Distill-Llama-70B  |  93.4   |              94.5              |
+
+
+
+To reproduce these results use the following command:
+```shell
+sbatch slurm/evaluate.slurm deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B math_500
+sbatch slurm/evaluate.slurm deepseek-ai/DeepSeek-R1-Distill-Qwen-7B math_500
+sbatch slurm/evaluate.slurm deepseek-ai/DeepSeek-R1-Distill-Qwen-14B math_500
+sbatch slurm/evaluate.slurm deepseek-ai/DeepSeek-R1-Distill-Qwen-32B math_500 tp
+sbatch slurm/evaluate.slurm deepseek-ai/DeepSeek-R1-Distill-Llama-8B math_500
+sbatch slurm/evaluate.slurm deepseek-ai/DeepSeek-R1-Distill-Llama-70B math_500 tp
+```
+
+
 
 ## Data generation
 
