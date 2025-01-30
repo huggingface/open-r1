@@ -126,7 +126,10 @@ accelerate launch --config_file configs/zero3.yaml --num_processes=7 src/open_r1
     --per_device_train_batch_size 1 \
     --gradient_accumulation_steps 16 \
     --logging_steps 10 \
-    --bf16
+    --bf16 \
+    --use_vllm \
+    --vllm_device auto \
+    --vllm_gpu_memory_utilization 0.7
 ```
 
 To launch a Slurm job, run:
