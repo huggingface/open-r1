@@ -19,7 +19,9 @@ from datasets import load_dataset
 
 from latex2sympy2_extended import NormalizationConfig
 from math_verify import LatexExtractionConfig, parse, verify
-from trl import GRPOConfig, GRPOTrainer, ModelConfig, ScriptArguments, TrlParser, get_peft_config
+from open_r1.configs import GRPOConfig
+from open_r1.utils.callbacks import get_callbacks
+from trl import GRPOTrainer, ModelConfig, ScriptArguments, TrlParser, get_peft_config
 
 
 @dataclass
@@ -114,7 +116,9 @@ def main(script_args, training_args, model_args):
         }
 
     dataset = dataset.map(make_conversation)
-    dataset = dataset.remove_columns("messages")
+    if "messages" in dataset.column_names:
+        # (Ed) not sure if this is required
+        dataset = dataset.remove_columns("messages")
 
     # Initialize the GRPO trainer
     trainer = GRPOTrainer(
@@ -124,6 +128,7 @@ def main(script_args, training_args, model_args):
         train_dataset=dataset[script_args.dataset_train_split],
         eval_dataset=dataset[script_args.dataset_test_split] if training_args.eval_strategy != "no" else None,
         peft_config=get_peft_config(model_args),
+        callbacks=get_callbacks(training_args, model_args),
     )
 
     # Train and push the model to the Hub
