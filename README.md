@@ -29,6 +29,8 @@ We will use the DeepSeek-R1 [tech report](https://github.com/deepseek-ai/DeepSee
 
 ## Installation
 
+**Note: Libraries rely on CUDA 12.1. Double check your system if you get segmentation faults.**
+
 To run the code in this project, first, create a Python virtual environment using e.g. `uv`.
 To install `uv`, follow the [UV Installation Guide](https://docs.astral.sh/uv/getting-started/installation/).
 
@@ -42,7 +44,7 @@ Next, install vLLM:
 ```shell
 uv pip install vllm==0.6.6.post1
 
-# For HF (cluster only has CUDA 12.1)
+# For CUDA 12.1
 pip install vllm==0.6.6.post1 --extra-index-url https://download.pytorch.org/whl/cu121
 export LD_LIBRARY_PATH=$(python -c "import site; print(site.getsitepackages()[0] + '/nvidia/nvjitlink/lib')"):$LD_LIBRARY_PATH
 ```
