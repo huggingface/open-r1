@@ -2,6 +2,20 @@
 
 *A fully open reproduction of DeepSeek-R1. This repo is a work in progress, let's build it together!*
 
+**Table of Contents**  
+1. [Overview](#overview)  
+2. [Plan of attack](#plan-of-attack)  
+3. [Installation](#installation)  
+4. [Training models](#training-models)  
+   - [SFT](#sft)  
+   - [GRPO](#grpo)  
+5. [Evaluating models](#evaluating-models)  
+6. [Reproducing Deepseek's evaluation results on MATH-500](#reproducing-deepseeks-evaluation-results-on-math-500)  
+7. [Data generation](#data-generation)  
+   - [Generate data from a smol distilled R1 model](#generate-data-from-a-smol-distilled-r1-model)  
+   - [Generate data from DeepSeek-R1](#generate-data-from-deepseek-r1)  
+8. [Contributing](#contributing)
+
 ## Overview
 
 The goal of this repo is to build the missing pieces of the R1 pipeline such that everybody can reproduce and build on top of it. The project is simple by design and mostly consists of:

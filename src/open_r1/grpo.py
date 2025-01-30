@@ -116,9 +116,9 @@ def main(script_args, training_args, model_args):
         }
 
     dataset = dataset.map(make_conversation)
-    if "messages" in dataset.column_names:
-        # (Ed) not sure if this is required
-        dataset = dataset.remove_columns("messages")
+    for split in dataset:
+        if "messages" in dataset[split].column_names:
+            dataset[split] = dataset[split].remove_columns("messages")
 
     # Initialize the GRPO trainer
     trainer = GRPOTrainer(
