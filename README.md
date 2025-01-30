@@ -105,6 +105,12 @@ To train via the GRPO trainer we will use the strategy of using one node to run 
 ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/zero3.yaml src/open_r1/grpo.py --config recipes/qwen/Qwen2.5-1.5B-Instruct/grpo/confg_full.yaml
 ```
 
+To launch a Slurm job, run:
+
+```shell
+sbatch --output=/path/to/logs/%x-%j.out --err=/path/to/logs/%x-%j.err slurm/grpo.slurm {model} {dataset} {accelerator}
+```
+
 You can find more model configurations in the [recipes](./recipes).
 
 ## Evaluating models
