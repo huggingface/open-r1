@@ -114,7 +114,7 @@ Here `{model}` and `{dataset}` refer to the model and dataset IDs on the Hugging
 
 ### GRPO
 
-To train via the GRPO trainer we will use the strategy of using one node to run vLLM for faster generation and the remaining nodes for training. Thus we will use the `configs/zero3_7proc.yaml` config that sets the `num_processes=7` for the 8 GPU training scenario. Thus all we need to do is:
+To train via the GRPO trainer we will use the strategy of using one node to run vLLM for faster generation and the remaining nodes for training. Thus we will use the `configs/zero3.yaml` config and then overwrite the `num_processes=7` for the 8 GPU training scenario. Thus all we need to do is:
 
 ```shell
 accelerate launch --config_file configs/zero3.yaml --num_processes=7 src/open_r1/grpo.py \
