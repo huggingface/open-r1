@@ -17,7 +17,7 @@ Push the details from a LightEval run to the Hub.
 
 Usage:
 
-python scripts/evaluation/lighteval/upload_details.py \
+python src/open_r1/utils/upload_details.py \
     --data_files {path_to_parquet_file} \
     --hub_repo_id {hub_repo_id} \
     --config_name {config_name}
