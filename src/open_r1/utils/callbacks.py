@@ -57,14 +57,17 @@ class PushToHubRevisionCallback(TrainerCallback):
                 system_prompt=args.system_prompt,
             )
 
-            future = push_to_hub_revision(dummy_config, extra_ignore_patterns=["*.pt"])  # don't push the optimizer states
-            
+            future = push_to_hub_revision(
+                dummy_config, extra_ignore_patterns=["*.pt"]
+            )  # don't push the optimizer states
+
             if is_slurm_available():
                 dummy_config.benchmarks = args.benchmarks
+
                 def run_benchmark_callback(_):
                     print(f"Checkpoint {global_step} pushed to hub.")
                     run_benchmark_jobs(dummy_config, self.model_config)
-                
+
                 future.add_done_callback(run_benchmark_callback)
 
 

@@ -16,9 +16,9 @@
 
 import logging
 import re
+from concurrent.futures import Future
 
 from transformers import AutoConfig
-from concurrent.futures import Future
 
 from huggingface_hub import (
     create_branch,
@@ -61,7 +61,6 @@ def push_to_hub_revision(training_args: SFTConfig | GRPOConfig, extra_ignore_pat
         commit_message=f"Add {training_args.hub_model_revision} checkpoint",
         ignore_patterns=ignore_patterns,
         run_as_future=True,
-        
     )
     logger.info(f"Pushed to {repo_url} revision {training_args.hub_model_revision} successfully!")
 
