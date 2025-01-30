@@ -36,8 +36,8 @@ accelerate launch --config_file=configs/zero3.yaml src/open_r1/sft.py \
 """
 
 import logging
-import sys
 import os
+import sys
 
 import datasets
 import torch
