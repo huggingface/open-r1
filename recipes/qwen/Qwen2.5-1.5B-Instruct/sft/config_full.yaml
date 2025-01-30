@@ -7,7 +7,7 @@ torch_dtype: bfloat16
 dataset_name: HuggingFaceH4/Bespoke-Stratos-17k
 dataset_configs:
 - all
-preprocessing_num_workers: 36
+preprocessing_num_workers: 8
 
 # SFT trainer config
 bf16: true
