@@ -1,5 +1,7 @@
 # Open R1
 
+*A fully open reproduction of DeepSeek-R1. This repo is a work in progress, let's build it together!*
+
 **Table of Contents**  
 1. [Overview](#overview)  
 2. [Plan of attack](#plan-of-attack)  
@@ -13,8 +15,6 @@
    - [Generate data from a smol distilled R1 model](#generate-data-from-a-smol-distilled-r1-model)  
    - [Generate data from DeepSeek-R1](#generate-data-from-deepseek-r1)  
 8. [Contributing](#contributing)
-
-*A fully open reproduction of DeepSeek-R1. This repo is a work in progress, let's build it together!*
 
 ## Overview
 
