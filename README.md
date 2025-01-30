@@ -29,6 +29,8 @@ We will use the DeepSeek-R1 [tech report](https://github.com/deepseek-ai/DeepSee
 
 ## Installation
 
+**Note: Libraries rely on CUDA 12.1. Double check your system if you get segmentation faults.**
+
 To run the code in this project, first, create a Python virtual environment using e.g. `uv`.
 To install `uv`, follow the [UV Installation Guide](https://docs.astral.sh/uv/getting-started/installation/).
 
@@ -42,7 +44,7 @@ Next, install vLLM:
 ```shell
 uv pip install vllm==0.6.6.post1
 
-# For HF (cluster only has CUDA 12.1)
+# For CUDA 12.1
 pip install vllm==0.6.6.post1 --extra-index-url https://download.pytorch.org/whl/cu121
 export LD_LIBRARY_PATH=$(python -c "import site; print(site.getsitepackages()[0] + '/nvidia/nvjitlink/lib')"):$LD_LIBRARY_PATH
 ```
@@ -97,11 +99,37 @@ Here `{model}` and `{dataset}` refer to the model and dataset IDs on the Hugging
 
 ### GRPO
 
+To train via the GRPO trainer we will use the strategy of using one node to run vLLM for faster generation and the remaining nodes for training. Thus we will use the `configs/zero3.yaml` config and then overwrite the `num_processes=7` for the 8 GPU training scenario. Thus all we need to do is:
+
 ```shell
+<<<<<<< HEAD
 ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/zero3.yaml scripts/grpo.py recipes/qwen/grpo/config_qwen-7B.yaml
 ```
 
 You can find more model configurations in the [recipes](./recipes).
+=======
+accelerate launch --config_file configs/zero3.yaml --num_processes=7 src/open_r1/grpo.py \
+    --output_dir DeepSeek-R1-Distill-Qwen-7B-GRPO \
+    --model_name_or_path deepseek-ai/DeepSeek-R1-Distill-Qwen-7B \
+    --dataset_name AI-MO/NuminaMath-TIR \
+    --max_prompt_length 512 \
+    --max_completion_length 1024 \
+    --per_device_train_batch_size 1 \
+    --gradient_accumulation_steps 16 \
+    --logging_steps 10 \
+    --bf16 \
+    --use_vllm \
+    --vllm_device auto \
+    --vllm_gpu_memory_utilization 0.7
+```
+
+To launch a Slurm job, run:
+
+```shell
+sbatch --output=/path/to/logs/%x-%j.out --err=/path/to/logs/%x-%j.err slurm/grpo.slurm {model} {dataset} {accelerator}
+```
+
+>>>>>>> c0b53fae290fcac46a690e8fa7965c45093f39b4
 
 ## Evaluating models
 
