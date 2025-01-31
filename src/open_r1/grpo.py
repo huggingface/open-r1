@@ -110,7 +110,6 @@ SYSTEM_PROMPT = (
 
 
 def main(script_args, training_args, model_args):
-
     # Set seed for reproducibility
     set_seed(training_args.seed)
 
