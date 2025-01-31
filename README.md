@@ -56,10 +56,10 @@ uv venv openr1 --python 3.11 && source openr1/bin/activate && uv pip install --u
 Next, install vLLM:
 
 ```shell
-uv pip install vllm==0.6.6.post1
+uv pip install vllm>=0.7.0
 
 # For CUDA 12.1
-pip install vllm==0.6.6.post1 --extra-index-url https://download.pytorch.org/whl/cu121
+pip install vllm>=0.7.0 --extra-index-url https://download.pytorch.org/whl/cu121
 export LD_LIBRARY_PATH=$(python -c "import site; print(site.getsitepackages()[0] + '/nvidia/nvjitlink/lib')"):$LD_LIBRARY_PATH
 ```
 
