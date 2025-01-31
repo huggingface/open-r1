@@ -36,7 +36,7 @@ class GRPOConfig(trl.GRPOConfig):
         default=None, metadata={"help": ("The optional system prompt to use for benchmarking.")}
     )
     hub_model_revision: Optional[str] = field(
-        default="main", metadata={"help": ("The Hub model branch to push the model to.")}
+        default="main", metadata={"help": "The Hub model branch to push the model to."}
     )
     overwrite_hub_revision: bool = field(default=False, metadata={"help": ("Whether to overwrite the Hub revision.")})
     push_to_hub_revision: bool = field(default=False, metadata={"help": ("Whether to push to a Hub revision/branch.")})
