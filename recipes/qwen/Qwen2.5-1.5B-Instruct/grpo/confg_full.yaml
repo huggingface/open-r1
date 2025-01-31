@@ -7,7 +7,8 @@ torch_dtype: bfloat16
 dataset_name: AI-MO/NuminaMath-TIR
 dataset_configs:
 - all
-num_processes: 8
+# Num processes is less by 1 as vLLM is using 1 GPU
+num_processes: 7
 
 # GRPO trainer config
 bf16: true
