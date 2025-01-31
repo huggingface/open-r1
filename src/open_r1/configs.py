@@ -33,7 +33,7 @@ class GRPOConfig(trl.GRPOConfig):
         default_factory=lambda: [], metadata={"help": ("The callbacks to run during training.")}
     )
     system_prompt: Optional[str] = field(
-        default=None, metadata={"help": ("The optional system prompt to use for benchmarking.")}
+        default=None, metadata={"help": "The optional system prompt to use for benchmarking."}
     )
     hub_model_revision: Optional[str] = field(
         default="main", metadata={"help": "The Hub model branch to push the model to."}
