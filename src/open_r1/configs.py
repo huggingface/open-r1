@@ -27,7 +27,7 @@ class GRPOConfig(trl.GRPOConfig):
     """
 
     benchmarks: list[str] = field(
-        default_factory=lambda: [], metadata={"help": ("The benchmarks to run after training.")}
+        default_factory=lambda: [], metadata={"help": "The benchmarks to run after training."}
     )
     callbacks: list[str] = field(
         default_factory=lambda: [], metadata={"help": ("The callbacks to run during training.")}
