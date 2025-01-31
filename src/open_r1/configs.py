@@ -31,7 +31,8 @@ class GRPOConfig(trl.GRPOConfig):
         metadata={"help": ("The benchmarks to run after training.")},
     )
     callbacks: list[str] = field(
-        default_factory=lambda: [], metadata={"help": ("The callbacks to run during training.")}
+        default_factory=lambda: [],
+        metadata={"help": ("The callbacks to run during training.")},
     )
     system_prompt: Optional[str] = field(
         default=None,
@@ -56,7 +57,8 @@ class SFTConfig(trl.SFTConfig):
         metadata={"help": ("The benchmarks to run after training.")},
     )
     callbacks: list[str] = field(
-        default_factory=lambda: [], metadata={"help": ("The callbacks to run during training.")}
+        default_factory=lambda: [],
+        metadata={"help": ("The callbacks to run during training.")},
     )
     system_prompt: Optional[str] = field(
         default=None,
