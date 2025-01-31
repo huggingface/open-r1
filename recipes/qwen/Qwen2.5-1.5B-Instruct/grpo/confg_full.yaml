@@ -16,7 +16,7 @@ use_vllm: true
 vllm_device: auto
 vllm_gpu_memory_utilization: 0.7
 do_eval: true
-evaluation_strategy: steps
+eval_strategy: steps
 eval_steps: 100
 gradient_accumulation_steps: 16
 gradient_checkpointing: true

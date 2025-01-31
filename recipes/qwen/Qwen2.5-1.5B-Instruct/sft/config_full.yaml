@@ -12,7 +12,7 @@ preprocessing_num_workers: 8
 # SFT trainer config
 bf16: true
 do_eval: true
-evaluation_strategy: steps
+eval_strategy: steps
 eval_steps: 100
 gradient_accumulation_steps: 4
 gradient_checkpointing: true
