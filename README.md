@@ -152,6 +152,33 @@ To launch a Slurm job, run:
 sbatch --output=/path/to/logs/%x-%j.out --err=/path/to/logs/%x-%j.err slurm/grpo.slurm {model} {dataset} {accelerator}
 ```
 
+To launch GRPO training with Qwen2-VL using torchrun, first config the `zero3.json`. Then you can run:
+
+```shell
+torchrun --nproc_per_node="8" \
+    --nnodes="1" \
+    --node_rank="0" \
+    --master_addr="127.0.0.1" \
+    --master_port="12345" \
+    src/open_r1/grpo.py \
+    --deepspeed scripts/zero3.json \
+    --output_dir checkpoints/Qwen2-VL-2B-GRPO-8k \
+    --model_name_or_path Qwen/Qwen2-VL-2B-Instruct \
+    --dataset_name lmms-lab/multimodal-open-r1-8k-verified \
+    --max_prompt_length 8192 \
+    --per_device_train_batch_size 1 \
+    --gradient_accumulation_steps 1 \
+    --logging_steps 1 \
+    --bf16 \
+    --report_to wandb \
+    --gradient_checkpointing true \
+    --attn_implementation flash_attention_2 \
+    --max_pixels 2359296 \
+    --save_total_limit 8 \
+    --num_train_epochs 1 \
+    --run_name Qwen2-VL-2B-GRPO-8k
+```
+
 
 ## Evaluating models
 
