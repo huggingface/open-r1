@@ -140,7 +140,6 @@ def main(script_args, training_args, model_args):
 
     # Check for last checkpoint
     last_checkpoint = None
-    last_checkpoint = None
     if os.path.isdir(training_args.output_dir):
         last_checkpoint = get_last_checkpoint(training_args.output_dir)
     if last_checkpoint is not None and training_args.resume_from_checkpoint is None:
