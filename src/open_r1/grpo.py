@@ -14,14 +14,17 @@
 
 import re
 from dataclasses import dataclass, field
+from typing import Optional
 
 from datasets import load_dataset
+from transformers import Qwen2VLForConditionalGeneration
 
 from latex2sympy2_extended import NormalizationConfig
 from math_verify import LatexExtractionConfig, parse, verify
 from open_r1.configs import GRPOConfig
+from open_r1.trainer import Qwen2VLGRPOTrainer
 from open_r1.utils.callbacks import get_callbacks
-from trl import GRPOTrainer, ModelConfig, ScriptArguments, TrlParser, get_peft_config
+from trl import GRPOConfig, GRPOTrainer, ModelConfig, ScriptArguments, TrlParser, get_peft_config
 
 
 @dataclass
@@ -37,6 +40,14 @@ class GRPOScriptArguments(ScriptArguments):
     reward_funcs: list[str] = field(
         default_factory=lambda: ["accuracy", "format"],
         metadata={"help": "List of reward functions. Possible values: 'accuracy', 'format'"},
+    )
+    max_pixels: Optional[int] = field(
+        default=12845056,
+        metadata={"help": "Maximum number of pixels for the image"},
+    )
+    min_pixels: Optional[int] = field(
+        default=3136,
+        metadata={"help": "Minimum number of pixels for the image"},
     )
 
 
@@ -71,7 +82,7 @@ def accuracy_reward(completions, solution, **kwargs):
             reward = float(verify(answer_parsed, gold_parsed))
         else:
             # If the gold solution is not parseable, we reward 1 to skip this example
-            reward = 1.0
+            reward = 1
             print("Failed to parse gold solution: ", sol)
         rewards.append(reward)
 
@@ -115,20 +126,55 @@ def main(script_args, training_args, model_args):
             ],
         }
 
-    dataset = dataset.map(make_conversation)
-    for split in dataset:
-        if "messages" in dataset[split].column_names:
-            dataset[split] = dataset[split].remove_columns("messages")
+    def make_conversation_image(example):
+        return {
+            "prompt": [
+                {"role": "system", "content": [{"type": "text", "text": SYSTEM_PROMPT}]},
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "image"},
+                        {"type": "text", "text": example["problem"]},
+                    ],
+                },
+            ],
+        }
+
+    if "image" in dataset[script_args.dataset_train_split].features:
+        dataset = dataset.map(make_conversation_image)
+        for split in dataset:
+            if "original_question" in dataset[split].column_names:
+                dataset = dataset.remove_columns("original_question")
+            if "original_answer" in dataset[split].column_names:
+                dataset = dataset.remove_columns("original_answer")
+    else:
+        dataset = dataset.map(make_conversation)
+        for split in dataset:
+            if "messages" in dataset[split].column_names:
+                dataset[split] = dataset[split].remove_columns("messages")
+
+    if "Qwen2-VL" in model_args.model_name_or_path or "Aria" in model_args.model_name_or_path:
+        trainer_cls = Qwen2VLGRPOTrainer
+        kwargs = {
+            "attn_implementation": model_args.attn_implementation,
+            "max_pixels": script_args.max_pixels,
+            "min_pixels": script_args.min_pixels,
+        }
+    else:
+        trainer_cls = GRPOTrainer
+        kwargs = {
+            "callbacks": get_callbacks(training_args, model_args),
+        }
 
     # Initialize the GRPO trainer
-    trainer = GRPOTrainer(
+    trainer = trainer_cls(
         model=model_args.model_name_or_path,
         reward_funcs=reward_funcs,
         args=training_args,
         train_dataset=dataset[script_args.dataset_train_split],
         eval_dataset=dataset[script_args.dataset_test_split] if training_args.eval_strategy != "no" else None,
         peft_config=get_peft_config(model_args),
-        callbacks=get_callbacks(training_args, model_args),
+        **kwargs,
     )
 
     # Train and push the model to the Hub
