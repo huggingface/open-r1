@@ -16,6 +16,7 @@
 
 import logging
 import re
+from concurrent.futures import Future
 
 from transformers import AutoConfig
 
@@ -35,7 +36,7 @@ from trl import GRPOConfig, SFTConfig
 logger = logging.getLogger(__name__)
 
 
-def push_to_hub_revision(training_args: SFTConfig | GRPOConfig, extra_ignore_patterns=[]) -> bool:
+def push_to_hub_revision(training_args: SFTConfig | GRPOConfig, extra_ignore_patterns=[]) -> Future:
     """Pushes the model to branch on a Hub repo."""
 
     # Create a repo if it doesn't exist yet
@@ -53,16 +54,17 @@ def push_to_hub_revision(training_args: SFTConfig | GRPOConfig, extra_ignore_pat
     logger.info(f"Pushing to the Hub revision {training_args.hub_model_revision}...")
     ignore_patterns = ["checkpoint-*", "*.pth"]
     ignore_patterns.extend(extra_ignore_patterns)
-    upload_folder(
+    future = upload_folder(
         repo_id=training_args.hub_model_id,
         folder_path=training_args.output_dir,
         revision=training_args.hub_model_revision,
         commit_message=f"Add {training_args.hub_model_revision} checkpoint",
         ignore_patterns=ignore_patterns,
+        run_as_future=True,
     )
     logger.info(f"Pushed to {repo_url} revision {training_args.hub_model_revision} successfully!")
 
-    return True
+    return future
 
 
 def check_hub_revision_exists(training_args: SFTConfig | GRPOConfig):
