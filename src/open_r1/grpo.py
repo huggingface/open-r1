@@ -26,8 +26,8 @@ from transformers.trainer_utils import get_last_checkpoint
 
 from latex2sympy2_extended import NormalizationConfig
 from math_verify import LatexExtractionConfig, parse, verify
-from open_r1.configs import GRPOConfig
-from open_r1.utils.callbacks import get_callbacks
+from src.open_r1.configs import GRPOConfig
+from src.open_r1.utils.callbacks import get_callbacks
 from trl import GRPOTrainer, ModelConfig, ScriptArguments, TrlParser, get_peft_config
 
 
