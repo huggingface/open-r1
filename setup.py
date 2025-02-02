@@ -64,6 +64,7 @@ _deps = [
     "transformers @ git+https://github.com/huggingface/transformers.git@main",
     "trl @ git+https://github.com/huggingface/trl.git@main",
     "vllm>=0.7.0",
+    "sglang>=0.4.0",
     "wandb>=0.19.1",
 ]
 

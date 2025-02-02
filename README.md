@@ -2,18 +2,18 @@
 
 *A fully open reproduction of DeepSeek-R1. This repo is a work in progress, let's build it together!*
 
-**Table of Contents**  
-1. [Overview](#overview)  
-2. [Plan of attack](#plan-of-attack)  
-3. [Installation](#installation)  
-4. [Training models](#training-models)  
-   - [SFT](#sft)  
-   - [GRPO](#grpo)  
-5. [Evaluating models](#evaluating-models)  
-6. [Reproducing Deepseek's evaluation results on MATH-500](#reproducing-deepseeks-evaluation-results-on-math-500)  
-7. [Data generation](#data-generation)  
-   - [Generate data from a smol distilled R1 model](#generate-data-from-a-smol-distilled-r1-model)  
-   - [Generate data from DeepSeek-R1](#generate-data-from-deepseek-r1)  
+**Table of Contents**
+1. [Overview](#overview)
+2. [Plan of attack](#plan-of-attack)
+3. [Installation](#installation)
+4. [Training models](#training-models)
+   - [SFT](#sft)
+   - [GRPO](#grpo)
+5. [Evaluating models](#evaluating-models)
+6. [Reproducing Deepseek's evaluation results on MATH-500](#reproducing-deepseeks-evaluation-results-on-math-500)
+7. [Data generation](#data-generation)
+   - [Generate data from a smol distilled R1 model](#generate-data-from-a-smol-distilled-r1-model)
+   - [Generate data from DeepSeek-R1](#generate-data-from-deepseek-r1)
 8. [Contributing](#contributing)
 
 ## Overview
@@ -45,6 +45,7 @@ We will use the DeepSeek-R1 [tech report](https://github.com/deepseek-ai/DeepSee
 
 **Note: Libraries rely on CUDA 12.1. Double check your system if you get segmentation faults.**
 
+
 To run the code in this project, first, create a Python virtual environment using e.g. `uv`.
 To install `uv`, follow the [UV Installation Guide](https://docs.astral.sh/uv/getting-started/installation/).
 
@@ -63,7 +64,19 @@ pip install vllm>=0.7.0 --extra-index-url https://download.pytorch.org/whl/cu121
 export LD_LIBRARY_PATH=$(python -c "import site; print(site.getsitepackages()[0] + '/nvidia/nvjitlink/lib')"):$LD_LIBRARY_PATH
 ```
 
-This will also install PyTorch `v2.5.1` and it is **very important** to use this version since the vLLM binaries are compiled for it. You can then install the remaining dependencies for your specific use case via `pip install -e .[LIST OF MODES]`. For most contributors, we recommend:
+This will also install PyTorch `v2.5.1` and it is **very important** to use this version since the vLLM binaries are compiled for it.
+
+Alternatively, you can use *SGLang* as a replacement for *vLLM*:
+
+```shell
+pip install --upgrade pip
+pip install sgl-kernel --force-reinstall --no-deps
+pip install "sglang[all]" --find-links https://flashinfer.ai/whl/cu124/torch2.4/flashinfer/
+```
+
+**Note:** When using SGLang, make sure to check the [FlashInfer installation doc](https://github.com/flashinfer-ai/flashinfer) to install the proper version according to your PyTorch and CUDA versions.
+
+You can then install the remaining dependencies for your specific use case via `pip install -e .[LIST OF MODES]`. For most contributors, we recommend:
 
 ```shell
 pip install -e ".[dev]"
@@ -109,7 +122,7 @@ To launch a Slurm job, run:
 sbatch --output=/path/to/logs/%x-%j.out --err=/path/to/logs/%x-%j.err slurm/sft.slurm {model} {dataset} {accelerator}
 ```
 
-Here `{model}` and `{dataset}` refer to the model and dataset IDs on the Hugging Face Hub, while `{accelerator}` refers to the choice of an 🤗 Accelerate config file in configs. 
+Here `{model}` and `{dataset}` refer to the model and dataset IDs on the Hugging Face Hub, while `{accelerator}` refers to the choice of an 🤗 Accelerate config file in configs.
 
 ### GRPO
 
@@ -141,7 +154,7 @@ lighteval vllm $MODEL_ARGS "custom|$TASK|0|0" \
     --custom-tasks src/open_r1/evaluate.py \
     --use-chat-template \
     --system-prompt="Please reason step by step, and put your final answer within \boxed{}." \
-    --output-dir $OUTPUT_DIR 
+    --output-dir $OUTPUT_DIR
 ```
 
 To increase throughput across multiple GPUs, use _data parallel_ as follows:
@@ -157,7 +170,7 @@ lighteval vllm $MODEL_ARGS "custom|$TASK|0|0" \
     --custom-tasks src/open_r1/evaluate.py \
     --use-chat-template \
     --system-prompt="Please reason step by step, and put your final answer within \boxed{}." \
-    --output-dir $OUTPUT_DIR 
+    --output-dir $OUTPUT_DIR
 ```
 
 For large models which require sharding across GPUs, use _tensor parallel_ and run:
@@ -174,7 +187,7 @@ lighteval vllm $MODEL_ARGS "custom|$TASK|0|0" \
     --custom-tasks src/open_r1/evaluate.py \
     --use-chat-template \
     --system-prompt="Please reason step by step, and put your final answer within \boxed{}." \
-    --output-dir $OUTPUT_DIR 
+    --output-dir $OUTPUT_DIR
 ```
 
 You can also launch an evaluation with `make evaluate`, specifying the model, task, and optionally the parallelism technique and number of GPUs.
@@ -193,6 +206,16 @@ To use Tensor Parallelism:
 ```shell
 make evaluate MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-32B TASK=aime24 PARALLEL=tensor NUM_GPUS=8
 ```
+
+To use SGLang instead of vLLM, you would then run the commands with the --backend sglang flag or BACKEND=sglang for make commands. For example:
+
+To evaluate on a single GPU:
+```shell
+make evaluate MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-32B TASK=aime24 BackEND=sglang
+```
+
+
+
 ## Reproducing Deepseek's evaluation results on MATH-500
 We are able to reproduce Deepseek's reported results on the MATH-500 Benchmark:
 | Model                      | MATH-500 (HF lighteval) | MATH-500 (DeepSeek Reported) |
@@ -222,7 +245,7 @@ sbatch slurm/evaluate.slurm deepseek-ai/DeepSeek-R1-Distill-Llama-70B math_500 t
 
 ### Generate data from a smol distilled R1 model
 
-The following example can be run in 1xH100. 
+The following example can be run in 1xH100.
 First install the following dependencies:
 
 ```shell
@@ -265,7 +288,7 @@ with Pipeline(
     )
     prompt_column = "problem"
     text_generation = TextGeneration(
-        llm=llm, 
+        llm=llm,
         template=prompt_template,
         num_generations=4,
         input_mappings={"instruction": prompt_column} if prompt_column is not None else {}
@@ -302,7 +325,7 @@ sbatch slurm/generate.slurm \
     --hf-output-dataset username/r1-dataset
 ```
 
-> [!NOTE]  
+> [!NOTE]
 > While the job is running, you can setup an SSH tunnel through the cluster login node to access the Ray dashboard from your computer running `ssh -L 8265:ray_ip_head_node:8265 <login_node>`, then browsing `http://localhost:8265`
 
 ## Contributing

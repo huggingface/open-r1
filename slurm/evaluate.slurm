@@ -4,7 +4,7 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --exclusive
 #SBATCH --gres=gpu:8
-#SBATCH --partition=hopper-prod 
+#SBATCH --partition=hopper-prod
 #SBATCH --time=01:59:00
 #SBATCH --output=./logs/evaluate/%x-%j.out
 #SBATCH --err=./logs/evaluate/%x-%j.err
@@ -44,12 +44,13 @@ export NCCL_ASYNC_ERROR_HANDLING=1
 # Be ye warned this may not work on other clusters!
 module load cuda/12.1
 
-lighteval vllm $MODEL_ARGS "custom|$TASK|0|0" \
+BACKEND=${BACKEND:-vllm}  # Default to vLLM if not specified
+
+lighteval $BACKEND $MODEL_ARGS "custom|$TASK|0|0" \
     --custom-tasks src/open_r1/evaluate.py \
     --use-chat-template \
     --system-prompt="Please reason step by step, and put your final answer within \boxed{}." \
     --save-details \
-    --output-dir $OUTPUT_DIR 
-
+    --output-dir $OUTPUT_DIR
 
 echo "END TIME: $(date)"

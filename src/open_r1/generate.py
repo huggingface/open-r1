@@ -18,10 +18,46 @@ from distilabel.llms import OpenAILLM
 from distilabel.pipeline import Pipeline
 from distilabel.steps import StepResources
 from distilabel.steps.tasks import TextGeneration
+from typing import Union
+from sglang import RuntimeClient
+
+
+class LLMBackend:
+    def __init__(self, backend: str = "vllm"):
+        self.backend = backend
+
+    def get_llm(
+        self,
+        model: str,
+        base_url: str = "http://localhost:8000/v1",
+        timeout: int = 900,
+        max_retries: int = 0,
+        generation_kwargs: dict = None
+    ) -> Union[OpenAILLM, RuntimeClient]:
+        if self.backend == "vllm":
+            return OpenAILLM(
+                base_url=base_url,
+                api_key="something",
+                model=model,
+                timeout=timeout,
+                max_retries=max_retries,
+                generation_kwargs=generation_kwargs,
+            )
+        elif self.backend == "sglang":
+            return RuntimeClient(
+                model=model,
+                api_base=base_url,
+                timeout=timeout,
+                max_retries=max_retries,
+                **generation_kwargs
+            )
+        else:
+            raise ValueError(f"Unknown backend: {self.backend}")
 
 
 def build_distilabel_pipeline(
     model: str,
+    backend: str = "vllm",  # Add backend parameter
     base_url: str = "http://localhost:8000/v1",
     prompt_column: Optional[str] = None,
     prompt_template: str = "{{ instruction }}",
@@ -42,12 +78,13 @@ def build_distilabel_pipeline(
     if top_p is not None:
         generation_kwargs["top_p"] = top_p
 
+    llm_backend = LLMBackend(backend=backend)
+
     with Pipeline().ray() as pipeline:
         TextGeneration(
-            llm=OpenAILLM(
+            llm=llm_backend.get_llm(
+                model,
                 base_url=base_url,
-                api_key="something",
-                model=model,
                 timeout=timeout,
                 max_retries=retries,
                 generation_kwargs=generation_kwargs,
@@ -166,6 +203,13 @@ if __name__ == "__main__":
         "--private",
         action="store_true",
         help="Whether to make the output dataset private when pushing to HF Hub",
+    )
+    parser.add_argument(
+        "--backend",
+        type=str,
+        default="vllm",
+        choices=["vllm", "sglang"],
+        help="Backend to use for generation (vllm or sglang)",
     )
 
     args = parser.parse_args()

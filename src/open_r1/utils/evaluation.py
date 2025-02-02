@@ -50,8 +50,22 @@ register_lighteval_task(LIGHTEVAL_TASKS, "custom", "math_500", "math_500", 0)
 register_lighteval_task(LIGHTEVAL_TASKS, "custom", "aime24", "aime24", 0)
 
 
-def get_lighteval_tasks():
-    return list(LIGHTEVAL_TASKS.keys())
+def get_lighteval_tasks(backend: str = "vllm"):
+    """Get lighteval tasks with specified backend configuration.
+    
+    Args:
+        backend (str, optional): Backend to use for evaluation. Either "vllm" or "sglang". Defaults to "vllm".
+    
+    Returns:
+        List[str]: List of available task names
+    """
+    tasks = LIGHTEVAL_TASKS.copy()
+    if backend == "sglang":
+        # Modify task configurations for SGLang backend
+        for task_name, task_config in tasks.items():
+            # Add SGLang specific configuration while preserving the task definition
+            tasks[task_name] = f"custom|{task_config}|sglang"
+    return list(tasks.keys())
 
 
 SUPPORTED_BENCHMARKS = get_lighteval_tasks()
