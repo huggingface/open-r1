@@ -66,7 +66,7 @@ export LD_LIBRARY_PATH=$(python -c "import site; print(site.getsitepackages()[0]
 
 This will also install PyTorch `v2.5.1` and it is **very important** to use this version since the vLLM binaries are compiled for it.
 
-Alternatively, you can use *SGLang* as a replacement for *vLLM*:
+Alternatively, you can use *SGLang* as inference backend.
 
 ```shell
 pip install --upgrade pip
@@ -207,11 +207,11 @@ To use Tensor Parallelism:
 make evaluate MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-32B TASK=aime24 PARALLEL=tensor NUM_GPUS=8
 ```
 
-To use SGLang instead of vLLM, you would then run the commands with the --backend sglang flag or BACKEND=sglang for make commands. For example:
+To use SGLang, you would then run the commands with the `--backend sglang` flag or `BACKEND=sglang` for make commands. For example:
 
 To evaluate on a single GPU:
 ```shell
-make evaluate MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-32B TASK=aime24 BackEND=sglang
+make evaluate MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-32B TASK=aime24 BACKEND=sglang
 ```
 
 

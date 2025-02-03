@@ -57,7 +57,7 @@ class LLMBackend:
 
 def build_distilabel_pipeline(
     model: str,
-    backend: str = "vllm",  # Add backend parameter
+    backend: str = "vllm",
     base_url: str = "http://localhost:8000/v1",
     prompt_column: Optional[str] = None,
     prompt_template: str = "{{ instruction }}",

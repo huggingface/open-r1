@@ -52,10 +52,10 @@ register_lighteval_task(LIGHTEVAL_TASKS, "custom", "aime24", "aime24", 0)
 
 def get_lighteval_tasks(backend: str = "vllm"):
     """Get lighteval tasks with specified backend configuration.
-    
+
     Args:
         backend (str, optional): Backend to use for evaluation. Either "vllm" or "sglang". Defaults to "vllm".
-    
+
     Returns:
         List[str]: List of available task names
     """
@@ -65,6 +65,9 @@ def get_lighteval_tasks(backend: str = "vllm"):
         for task_name, task_config in tasks.items():
             # Add SGLang specific configuration while preserving the task definition
             tasks[task_name] = f"custom|{task_config}|sglang"
+    else:
+        # Keep original task configurations for vLLM backend
+        pass
     return list(tasks.keys())
 
 
