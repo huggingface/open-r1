@@ -154,7 +154,7 @@ if __name__ == "__main__":
         "--retries",
         type=int,
         default=0,
-        help="Number of retries for failed requests (default: 3)",
+        help="Number of retries for failed requests (default: 0)",
     )
     parser.add_argument(
         "--hf-output-dataset",

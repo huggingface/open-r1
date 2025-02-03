@@ -43,7 +43,7 @@ if stale_egg_info.exists():
 _deps = [
     "accelerate>=1.2.1",
     "bitsandbytes>=0.43.0",
-    "black>=24.4.2",
+    "ruff>=0.9.0",
     "datasets>=3.2.0",
     "deepspeed==0.15.4",
     "distilabel[vllm,ray,openai]>=1.5.2",
@@ -54,7 +54,7 @@ _deps = [
     "isort>=5.12.0",
     "liger_kernel==0.5.2",
     "lighteval @ git+https://github.com/huggingface/lighteval.git@0e462692436e1f0575bdb4c6ef63453ad9bde7d4#egg=lighteval[math]",
-    "math-verify>=0.3.2",  # Used for math verification in grpo
+    "math-verify>=0.3.3",  # Used for math verification in grpo
     "packaging>=23.0",
     "parameterized>=0.9.0",
     "pytest",
@@ -63,7 +63,7 @@ _deps = [
     "torch>=2.5.1",
     "transformers @ git+https://github.com/huggingface/transformers.git@main",
     "trl @ git+https://github.com/huggingface/trl.git@main",
-    "vllm==0.6.6.post1",
+    "vllm>=0.7.0",
     "wandb>=0.19.1",
 ]
 
@@ -83,7 +83,7 @@ def deps_list(*pkgs):
 extras = {}
 extras["tests"] = deps_list("pytest", "parameterized")
 extras["torch"] = deps_list("torch")
-extras["quality"] = deps_list("black", "isort", "flake8")
+extras["quality"] = deps_list("ruff", "isort", "flake8")
 extras["eval"] = deps_list("lighteval", "math-verify")
 extras["dev"] = extras["quality"] + extras["tests"] + extras["eval"]
 
