@@ -17,8 +17,9 @@ import os
 import re
 import sys
 from dataclasses import dataclass, field
-import torch
+
 import datasets
+import torch
 import transformers
 from datasets import load_dataset
 from transformers import set_seed
@@ -163,7 +164,6 @@ def main(script_args, training_args, model_args):
     for split in dataset:
         if "messages" in dataset[split].column_names:
             dataset[split] = dataset[split].remove_columns("messages")
-
 
     logger.info("*** Initializing model kwargs ***")
     torch_dtype = (
