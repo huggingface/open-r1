@@ -167,7 +167,7 @@ def main(script_args, training_args, model_args):
 
     # Save everything else on main process
     kwargs = {
-        "finetuned_from": model_args.model_name_or_path,
+        # "finetuned_from": model_args.model_name_or_path, # This argument is not supported
         "dataset": list(script_args.dataset_name),
         "dataset_tags": list(script_args.dataset_name),
         "tags": ["open-r1"],
