@@ -61,8 +61,8 @@ _deps = [
     "safetensors>=0.3.3",
     "sentencepiece>=0.1.99",
     "torch>=2.5.1",
-    "transformers @ git+https://github.com/huggingface/transformers.git@main",
-    "trl @ git+https://github.com/huggingface/trl.git@main",
+    "transformers>=4.48.2",
+    "trl>=0.14.0",
     "vllm>=0.7.1",
     "wandb>=0.19.1",
 ]
