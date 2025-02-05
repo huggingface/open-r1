@@ -1,5 +1,5 @@
 # Model arguments
-model_name_or_path: deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B
+model_name_or_path: Qwen/Qwen2.5-1.5B-Instruct
 model_revision: main
 torch_dtype: bfloat16
 
@@ -22,7 +22,7 @@ gradient_accumulation_steps: 16
 gradient_checkpointing: true
 gradient_checkpointing_kwargs:
   use_reentrant: false
-hub_model_id: Qwen2.5-1.5B-Open-R1-GRPO
+hub_model_id: Qwen2.5-1.5B-Instruct-Open-R1-GRPO
 hub_strategy: every_save
 learning_rate: 2.0e-05
 log_level: info
@@ -33,7 +33,7 @@ max_prompt_length: 512
 max_completion_length: 1024
 max_steps: -1
 num_train_epochs: 1
-output_dir: data/Qwen2.5-1.5B-Open-R1-GRPO
+output_dir: data/Qwen2.5-1.5B-Instruct-Open-R1-GRPO
 overwrite_output_dir: true
 per_device_eval_batch_size: 4   
 per_device_train_batch_size: 1
