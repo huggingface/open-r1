@@ -19,6 +19,7 @@ import sys
 from dataclasses import dataclass, field
 
 import datasets
+import torch
 import transformers
 from datasets import load_dataset
 from transformers import set_seed
@@ -163,6 +164,19 @@ def main(script_args, training_args, model_args):
     for split in dataset:
         if "messages" in dataset[split].column_names:
             dataset[split] = dataset[split].remove_columns("messages")
+
+    logger.info("*** Initializing model kwargs ***")
+    torch_dtype = (
+        model_args.torch_dtype if model_args.torch_dtype in ["auto", None] else getattr(torch, model_args.torch_dtype)
+    )
+    model_kwargs = dict(
+        revision=model_args.model_revision,
+        trust_remote_code=model_args.trust_remote_code,
+        attn_implementation=model_args.attn_implementation,
+        torch_dtype=torch_dtype,
+        use_cache=False if training_args.gradient_checkpointing else True,
+    )
+    training_args.model_init_kwargs = model_kwargs
 
     #############################
     # Initialize the GRPO trainer
