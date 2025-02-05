@@ -60,7 +60,7 @@ _deps = [
     "pytest",
     "safetensors>=0.3.3",
     "sentencepiece>=0.1.99",
-    "torch>=2.5.1",
+    "torch==2.5.1",
     "transformers>=4.48.2",
     "trl>=0.14.0",
     "vllm>=0.7.1",
