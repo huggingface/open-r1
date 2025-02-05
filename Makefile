@@ -18,6 +18,7 @@ quality:
 # Evaluation
 
 evaluate:
+	$(eval BACKEND := $(if $(BACKEND),$(BACKEND),vllm))
 	$(eval PARALLEL_ARGS := $(if $(PARALLEL),$(shell \
 		if [ "$(PARALLEL)" = "data" ]; then \
 			echo "data_parallel_size=$(NUM_GPUS)"; \
