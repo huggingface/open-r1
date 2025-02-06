@@ -56,11 +56,7 @@ uv venv openr1 --python 3.11 && source openr1/bin/activate && uv pip install --u
 Next, install vLLM:
 
 ```shell
-uv pip install vllm==0.7.1
-
-# For CUDA 12.1
-uv pip install vllm==0.7.1 --extra-index-url https://download.pytorch.org/whl/cu121 --index-strategy unsafe-best-match --link-mode=copy
-export LD_LIBRARY_PATH=$(python -c "import site; print(site.getsitepackages()[0] + '/nvidia/nvjitlink/lib')"):$LD_LIBRARY_PATH
+uv pip install vllm==0.7.1 --link-mode=copy
 ```
 
 This will also install PyTorch `v2.5.1` and it is **very important** to use this version since the vLLM binaries are compiled for it. You can then install the remaining dependencies for your specific use case via `pip install -e .[LIST OF MODES]`. For most contributors, we recommend:

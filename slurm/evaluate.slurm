@@ -6,13 +6,18 @@
 #SBATCH --err=./logs/%x-%j.err
 #SBATCH --requeue
 
+nvidia-smi
+echo "CUDA devices: $(CUDA_VISIBLE_DEVICES)"
+python -c "import torch; print(torch.cuda.device_count())"
+
+
 set -x -e
 source ~/.bashrc
 source openr1/bin/activate
 
 # Specific configuration optimized for the Hugging Face Compute Cluster
 # Be ye warned this may not work on other clusters!
-module load cuda/12.1
+module load cuda/12.4
 
 TASK_NAME=$1
 TASKS=$2
