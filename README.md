@@ -258,7 +258,7 @@ We are able to reproduce Deepseek's reported results on the GPQA Diamond benchma
 | DeepSeek-R1-Distill-Qwen-14B  |            55.56            |               59.1               |
 | DeepSeek-R1-Distill-Qwen-32B  |            58.59            |               62.1               |
 | DeepSeek-R1-Distill-Llama-8B  |            51.01            |               49.0               |
-| DeepSeek-R1-Distill-Llama-70B |              x              |               65.2               |
+| DeepSeek-R1-Distill-Llama-70B |            65.15            |               65.2               |
 
 To reproduce these results use the following command:
 
