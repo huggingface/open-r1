@@ -122,14 +122,14 @@ echo "-------------------"
 
 set -ex
 
-module load cuda/12.1
+module load cuda/12.4
 
 export LD_LIBRARY_PATH=.venv/lib/python3.11/site-packages/nvidia/nvjitlink/lib
 
 echo "SLURM_JOB_ID: $SLURM_JOB_ID"
 echo "SLURM_JOB_NODELIST: $SLURM_JOB_NODELIST"
 
-source .venv/bin/activate
+source openr1/bin/activate
 
 # Getting the node names
 nodes=$(scontrol show hostnames "$SLURM_JOB_NODELIST")
