@@ -222,6 +222,9 @@ make evaluate MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-32B TASK=aime24 PARALLE
 
 ## Reproducing Deepseek's evaluation results
 
+> [!NOTE]
+> The DeepSeek-R1 paper uses sampling with a temperature of 0.6, a top-p value of 0.95, and 64 responses per query to estimate `pass@1`. Below, we report the results from greedy decoding, which likely explains the small 1-3σ discrepancies between our results and theirs.
+
 ### MATH-500
 
 We are able to reproduce Deepseek's reported results on the MATH-500 benchmark within ~1-3 standard deviations:
