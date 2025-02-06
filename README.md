@@ -66,7 +66,7 @@ export LD_LIBRARY_PATH=$(python -c "import site; print(site.getsitepackages()[0]
 This will also install PyTorch `v2.5.1` and it is **very important** to use this version since the vLLM binaries are compiled for it. You can then install the remaining dependencies for your specific use case via `pip install -e .[LIST OF MODES]`. For most contributors, we recommend:
 
 ```shell
-GIT_LFS_SKIP_SMUDGE=1 uv pip install -e ".[dev]"
+uv pip install -e ".[dev]" --link-mode=copy
 ```
 
 Next, log into your Hugging Face and Weights and Biases accounts as follows:
@@ -133,7 +133,7 @@ We use `lighteval` to evaluate models, with custom tasks defined in `src/open_r1
 
 ```shell
 MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B
-MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=32768,gpu_memory_utilisation=0.8"
+MODEL_ARGS="pretrained=$MODEL,dtype=float16,max_model_length=32768,gpu_memory_utilisation=0.8"
 OUTPUT_DIR=data/evals/$MODEL
 
 # AIME 2024
@@ -149,7 +149,6 @@ TASK=math_500
 lighteval vllm $MODEL_ARGS "custom|$TASK|0|0" \
     --custom-tasks src/open_r1/evaluate.py \
     --use-chat-template \
-    --system-prompt="Please reason step by step, and put your final answer within \boxed{}." \
     --output-dir $OUTPUT_DIR \
     --save-details \
     --push-to-hub \
