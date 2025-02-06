@@ -63,7 +63,7 @@ _deps = [
     "torch>=2.5.1",
     "transformers @ git+https://github.com/huggingface/transformers.git@main",
     "trl @ git+https://github.com/huggingface/trl.git@main",
-    "vllm>=0.7.0",
+    "vllm>=0.7.1",
     "wandb>=0.19.1",
 ]
 
