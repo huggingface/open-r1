@@ -1,8 +1,9 @@
 """Reward functions for GRPO training."""
 
 import re
-from math_verify import LatexExtractionConfig, parse, verify
+
 from latex2sympy2_extended import NormalizationConfig
+from math_verify import LatexExtractionConfig, parse, verify
 
 
 def accuracy_reward(completions, solution, **kwargs):

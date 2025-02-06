@@ -25,9 +25,9 @@ from transformers import set_seed
 from transformers.trainer_utils import get_last_checkpoint
 
 from open_r1.configs import GRPOConfig
+from open_r1.rewards import REWARD_FUNCS_REGISTRY
 from open_r1.utils.callbacks import get_callbacks
 from trl import GRPOTrainer, ModelConfig, ScriptArguments, TrlParser, get_peft_config
-from open_r1.rewards import REWARD_FUNCS_REGISTRY
 
 
 logger = logging.getLogger(__name__)
