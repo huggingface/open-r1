@@ -19,7 +19,7 @@ export LD_LIBRARY_PATH=$(python -c "import site; print(site.getsitepackages()[0]
 
 echo "---"
 echo "Installing dependencies."
-pip install -e ".[dev]"
+pip install -U -e ".[dev]"
 
 echo "---"
 echo "Finished setup. GRPO example (expects 8 accelerators):
