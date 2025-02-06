@@ -67,6 +67,8 @@ This will also install PyTorch `v2.5.1` and it is **very important** to use this
 
 ```shell
 uv pip install -e ".[dev]" --link-mode=copy
+# Temporary fix until lighteval is updated
+uv pip install latex2sympy2_extended==1.0.5
 ```
 
 Next, log into your Hugging Face and Weights and Biases accounts as follows:
@@ -141,7 +143,6 @@ TASK=aime24
 lighteval vllm $MODEL_ARGS "custom|$TASK|0|0" \
     --custom-tasks src/open_r1/evaluate.py \
     --use-chat-template \
-    --system-prompt="Please reason step by step, and put your final answer within \boxed{}." \
     --output-dir $OUTPUT_DIR
 
 # MATH-500
@@ -149,10 +150,7 @@ TASK=math_500
 lighteval vllm $MODEL_ARGS "custom|$TASK|0|0" \
     --custom-tasks src/open_r1/evaluate.py \
     --use-chat-template \
-    --output-dir $OUTPUT_DIR \
-    --save-details \
-    --push-to-hub \
-    --results-org lewtun
+    --output-dir $OUTPUT_DIR
 
 # GPQA Diamond
 TASK=gpqa:diamond
@@ -177,7 +175,6 @@ OUTPUT_DIR=data/evals/$MODEL
 lighteval vllm $MODEL_ARGS "custom|$TASK|0|0" \
     --custom-tasks src/open_r1/evaluate.py \
     --use-chat-template \
-    --system-prompt="Please reason step by step, and put your final answer within \boxed{}." \
     --output-dir $OUTPUT_DIR 
 ```
 

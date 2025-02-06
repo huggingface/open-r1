@@ -2,8 +2,8 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:8
 #SBATCH --partition=hopper-prod
-#SBATCH --output=/fsx/h4/logs/%x-%j.out
-#SBATCH --err=/fsx/h4/logs/%x-%j.err
+#SBATCH --output=./logs/%x-%j.out
+#SBATCH --err=./logs/%x-%j.err
 #SBATCH --requeue
 
 set -x -e
