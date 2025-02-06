@@ -8,8 +8,7 @@
 
 set -x -e
 source ~/.bashrc
-conda activate openr1
-
+source openr1/bin/activate
 TASK_NAME=$1
 TASKS=$2
 MODEL_ID=$3
@@ -31,7 +30,7 @@ fi
 
 LM_EVAL_REPO_ID="open-r1/open-r1-eval-leaderboard"
 MODEL_NAME=$(echo $MODEL_ID | sed 's/\//_/g') # replaces / with _
-DETAILS_REPO_ID="open-r1//details-$MODEL_NAME"
+DETAILS_REPO_ID="open-r1/details-$MODEL_NAME"
 OUTPUT_DIR="eval_results/$MODEL_ID/$MODEL_REVISION/$TASK_NAME"
 # We need this flag since we run this script from training jobs that use DeepSpeed and the env vars get progated which causes errors during evaluation
 ACCELERATE_USE_DEEPSPEED=false
