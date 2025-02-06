@@ -43,30 +43,26 @@ We will use the DeepSeek-R1 [tech report](https://github.com/deepseek-ai/DeepSee
 
 ## Installation
 
-**Note: Libraries rely on CUDA 12.1. Double check your system if you get segmentation faults.**
+**Note: Libraries rely on CUDA 12.4. Double check your system if you get segmentation faults.**
 
 To run the code in this project, first, create a Python virtual environment using e.g. `uv`.
 To install `uv`, follow the [UV Installation Guide](https://docs.astral.sh/uv/getting-started/installation/).
 
 
 ```shell
-uv venv openr1 --python 3.11 && source openr1/bin/activate && uv pip install --upgrade pip
+uv venv openr1 --python 3.11 && source openr1/bin/activate && uv pip install --upgrade pip --link-mode=copy
 ```
 
 Next, install vLLM:
 
 ```shell
-uv pip install vllm>=0.7.0
-
-# For CUDA 12.1
-pip install vllm>=0.7.0 --extra-index-url https://download.pytorch.org/whl/cu121
-export LD_LIBRARY_PATH=$(python -c "import site; print(site.getsitepackages()[0] + '/nvidia/nvjitlink/lib')"):$LD_LIBRARY_PATH
+uv pip install vllm==0.7.1 --link-mode=copy
 ```
 
 This will also install PyTorch `v2.5.1` and it is **very important** to use this version since the vLLM binaries are compiled for it. You can then install the remaining dependencies for your specific use case via `pip install -e .[LIST OF MODES]`. For most contributors, we recommend:
 
 ```shell
-pip install -e ".[dev]"
+GIT_LFS_SKIP_SMUDGE=1 uv pip install -e ".[dev]" --link-mode=copy
 ```
 
 Next, log into your Hugging Face and Weights and Biases accounts as follows:
@@ -119,6 +115,14 @@ To train via the GRPO trainer, we use one GPU to run vLLM for faster generation 
 ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/zero3.yaml --num_processes=7 src/open_r1/grpo.py --config recipes/qwen/Qwen2.5-1.5B-Instruct/grpo/confg_full.yaml
 ```
 
+We provide a minimal reproducible experiment using GRPO for mathematical reasoning, referencing the approach from [SimpleRL-Reason](https://hkust-nlp.notion.site/simplerl-reason) which uses a 7B model trained on 8K examples. Running this on 8 H100 80G GPU takes about 3 hours:
+
+```shell
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/zero2.yaml --num_processes=7 src/open_r1/grpo.py --config recipes/deepseek/DeepSeek-R1-Distill-Qwen-7B/grpo/config_base_math_smalllr.yaml
+```
+
+Our final [model](Dongwei/Qwen-2.5-7B_Base_Math_smalllr), while using different learning rates, loss functions and reward structures, achieves 69.4% accuracy on Math_500, demonstrating a 17%+ improvement over the base model.
+
 To launch a Slurm job, run:
 
 ```shell
@@ -133,30 +137,46 @@ We use `lighteval` to evaluate models, with custom tasks defined in `src/open_r1
 
 ```shell
 MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B
-MODEL_ARGS="pretrained=$MODEL,dtype=float16,max_model_length=32768,gpu_memory_utilisation=0.8"
-TASK=aime24
+MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=32768,gpu_memory_utilisation=0.8"
 OUTPUT_DIR=data/evals/$MODEL
 
+# AIME 2024
+TASK=aime24
 lighteval vllm $MODEL_ARGS "custom|$TASK|0|0" \
     --custom-tasks src/open_r1/evaluate.py \
     --use-chat-template \
-    --system-prompt="Please reason step by step, and put your final answer within \boxed{}." \
+    --output-dir $OUTPUT_DIR
+
+# MATH-500
+TASK=math_500
+lighteval vllm $MODEL_ARGS "custom|$TASK|0|0" \
+    --custom-tasks src/open_r1/evaluate.py \
+    --use-chat-template \
+    --output-dir $OUTPUT_DIR
+
+# GPQA Diamond
+TASK=gpqa:diamond
+lighteval vllm $MODEL_ARGS "custom|$TASK|0|0" \
+    --custom-tasks src/open_r1/evaluate.py \
+    --use-chat-template \
     --output-dir $OUTPUT_DIR 
 ```
+
+> [!IMPORTANT]
+> You must set `max_model_length=32768` in the `vllm` command to align with the `generation_size` we define per eval. Without this, `lighteval` will throw an error.
 
 To increase throughput across multiple GPUs, use _data parallel_ as follows:
 
 ```shell
 NUM_GPUS=8
 MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B
-MODEL_ARGS="pretrained=$MODEL,dtype=float16,data_parallel_size=$NUM_GPUS,max_model_length=32768,gpu_memory_utilisation=0.8"
+MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,data_parallel_size=$NUM_GPUS,max_model_length=32768,gpu_memory_utilisation=0.8"
 TASK=aime24
 OUTPUT_DIR=data/evals/$MODEL
 
 lighteval vllm $MODEL_ARGS "custom|$TASK|0|0" \
     --custom-tasks src/open_r1/evaluate.py \
     --use-chat-template \
-    --system-prompt="Please reason step by step, and put your final answer within \boxed{}." \
     --output-dir $OUTPUT_DIR 
 ```
 
@@ -165,7 +185,7 @@ For large models which require sharding across GPUs, use _tensor parallel_ and r
 ```shell
 NUM_GPUS=8
 MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-32B
-MODEL_ARGS="pretrained=$MODEL,dtype=float16,tensor_parallel_size=$NUM_GPUS,max_model_length=32768,gpu_memory_utilisation=0.8"
+MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,tensor_parallel_size=$NUM_GPUS,max_model_length=32768,gpu_memory_utilisation=0.8"
 TASK=aime24
 OUTPUT_DIR=data/evals/$MODEL
 
@@ -173,50 +193,97 @@ export VLLM_WORKER_MULTIPROC_METHOD=spawn
 lighteval vllm $MODEL_ARGS "custom|$TASK|0|0" \
     --custom-tasks src/open_r1/evaluate.py \
     --use-chat-template \
-    --system-prompt="Please reason step by step, and put your final answer within \boxed{}." \
     --output-dir $OUTPUT_DIR 
 ```
 
 You can also launch an evaluation with `make evaluate`, specifying the model, task, and optionally the parallelism technique and number of GPUs.
 
 To evaluate on a single GPU:
+
 ```shell
 make evaluate MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-32B TASK=aime24
 ```
 
 To use Data Parallelism:
+
 ```shell
 make evaluate MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-32B TASK=aime24 PARALLEL=data NUM_GPUS=8
 ```
 
 To use Tensor Parallelism:
+
 ```shell
 make evaluate MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-32B TASK=aime24 PARALLEL=tensor NUM_GPUS=8
 ```
-## Reproducing Deepseek's evaluation results on MATH-500
-We are able to reproduce Deepseek's reported results on the MATH-500 Benchmark:
-| Model                      | MATH-500 (HF lighteval) | MATH-500 (DeepSeek Reported) |
-| :-------------------------- | :-------: | :----------------------------: |
-| DeepSeek-R1-Distill-Qwen-1.5B  |  81.6   |              83.9              |
-| DeepSeek-R1-Distill-Qwen-7B    |  91.8   |              92.8              |
-| DeepSeek-R1-Distill-Qwen-14B   |  94.2   |              93.9              |
-| DeepSeek-R1-Distill-Qwen-32B   |  95.0   |              94.3              |
-| DeepSeek-R1-Distill-Llama-8B   |  85.8   |              89.1              |
-| DeepSeek-R1-Distill-Llama-70B  |  93.4   |              94.5              |
 
+## Reproducing Deepseek's evaluation results
 
+> [!NOTE]
+> The DeepSeek-R1 paper uses sampling with a temperature of 0.6, a top-p value of 0.95, and 64 responses per query to estimate `pass@1`. Below, we report the results from greedy decoding, which likely explains the small 1-3σ discrepancies between our results and theirs.
+
+### MATH-500
+
+We are able to reproduce Deepseek's reported results on the MATH-500 benchmark within ~1-3 standard deviations:
+
+| Model                         | MATH-500 (🤗 LightEval) | MATH-500 (DeepSeek Reported) |
+|:------------------------------|:-----------------------:|:----------------------------:|
+| DeepSeek-R1-Distill-Qwen-1.5B |          81.2           |             83.9             |
+| DeepSeek-R1-Distill-Qwen-7B   |          91.8           |             92.8             |
+| DeepSeek-R1-Distill-Qwen-14B  |          94.2           |             93.9             |
+| DeepSeek-R1-Distill-Qwen-32B  |          95.0           |             94.3             |
+| DeepSeek-R1-Distill-Llama-8B  |          85.4           |             89.1             |
+| DeepSeek-R1-Distill-Llama-70B |          93.4           |             94.5             |
 
 To reproduce these results use the following command:
+
 ```shell
-sbatch slurm/evaluate.slurm deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B math_500
-sbatch slurm/evaluate.slurm deepseek-ai/DeepSeek-R1-Distill-Qwen-7B math_500
-sbatch slurm/evaluate.slurm deepseek-ai/DeepSeek-R1-Distill-Qwen-14B math_500
-sbatch slurm/evaluate.slurm deepseek-ai/DeepSeek-R1-Distill-Qwen-32B math_500 tp
-sbatch slurm/evaluate.slurm deepseek-ai/DeepSeek-R1-Distill-Llama-8B math_500
-sbatch slurm/evaluate.slurm deepseek-ai/DeepSeek-R1-Distill-Llama-70B math_500 tp
+NUM_GPUS=1 # Set to 8 for 32B and 70B models
+MODEL=deepseek-ai/{model_name}
+MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=32768,gpu_memory_utilisation=0.8,tensor_parallel_size=$NUM_GPUS"
+OUTPUT_DIR=data/evals/$MODEL
+
+lighteval vllm $MODEL_ARGS "custom|math_500|0|0" \
+    --custom-tasks src/open_r1/evaluate.py \
+    --use-chat-template \
+    --output-dir $OUTPUT_DIR
 ```
 
+Alternatively, you can launch Slurm jobs as follows:
 
+```shell
+python scripts/run_benchmarks.py --model-id={model_id}  --benchmarks math_500
+```
+
+### GPQA Diamond
+
+We are able to reproduce Deepseek's reported results on the GPQA Diamond benchmark within ~1-3 standard deviations:
+
+| Model                         | GPQA Diamond (🤗 LightEval) | GPQA Diamond (DeepSeek Reported) |
+|:------------------------------|:---------------------------:|:--------------------------------:|
+| DeepSeek-R1-Distill-Qwen-1.5B |            33.3             |               33.8               |
+| DeepSeek-R1-Distill-Qwen-7B   |            48.4             |               49.1               |
+| DeepSeek-R1-Distill-Qwen-14B  |            55.6             |               59.1               |
+| DeepSeek-R1-Distill-Qwen-32B  |            58.6             |               62.1               |
+| DeepSeek-R1-Distill-Llama-8B  |            51.0             |               49.0               |
+| DeepSeek-R1-Distill-Llama-70B |            65.2             |               65.2               |
+
+To reproduce these results use the following command:
+
+```shell
+NUM_GPUS=1 # Set to 8 for 32B and 70B models
+MODEL=deepseek-ai/{model_name}
+MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=32768,gpu_memory_utilisation=0.8,tensor_parallel_size=$NUM_GPUS"
+OUTPUT_DIR=data/evals/$MODEL
+
+lighteval vllm $MODEL_ARGS "custom|gpqa:diamond|0|0" \
+    --custom-tasks src/open_r1/evaluate.py \
+    --use-chat-template \
+    --output-dir $OUTPUT_DIR
+```
+
+```shell
+python scripts/run_benchmarks.py --model-id={model_id}  --benchmarks gpqa
+```
 
 ## Data generation
 

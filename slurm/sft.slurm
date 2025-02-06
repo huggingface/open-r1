@@ -72,7 +72,7 @@ export NCCL_ASYNC_ERROR_HANDLING=1
 
 # Specific configuration optimized for the Hugging Face Compute Cluster
 # Be ye warned this may not work on other clusters!
-module load cuda/12.1
+module load cuda/12.4
 
 # srun error handling:
 # --wait=60: wait 60 sec after the first task terminates before terminating all remaining tasks

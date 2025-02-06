@@ -122,7 +122,7 @@ echo "-------------------"
 
 set -ex
 
-module load cuda/12.1
+module load cuda/12.4
 
 export LD_LIBRARY_PATH=.venv/lib/python3.11/site-packages/nvidia/nvjitlink/lib
 
