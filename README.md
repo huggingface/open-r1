@@ -66,9 +66,7 @@ export LD_LIBRARY_PATH=$(python -c "import site; print(site.getsitepackages()[0]
 This will also install PyTorch `v2.5.1` and it is **very important** to use this version since the vLLM binaries are compiled for it. You can then install the remaining dependencies for your specific use case via `pip install -e .[LIST OF MODES]`. For most contributors, we recommend:
 
 ```shell
-uv pip install -e ".[dev]" --link-mode=copy
-# Temporary fix until lighteval is updated
-uv pip install latex2sympy2_extended==1.0.5
+GIT_LFS_SKIP_SMUDGE=1 uv pip install -e ".[dev]" --link-mode=copy
 ```
 
 Next, log into your Hugging Face and Weights and Biases accounts as follows:
@@ -134,8 +132,8 @@ You can find more model configurations in the [recipes](./recipes).
 We use `lighteval` to evaluate models, with custom tasks defined in `src/open_r1/evaluate.py`. For models which fit on a single GPU, run:
 
 ```shell
-MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B
-MODEL_ARGS="pretrained=$MODEL,dtype=float16,max_model_length=32768,gpu_memory_utilisation=0.8"
+MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-14B
+MODEL_ARGS="pretrained=$MODEL,dtype=float16,max_model_length=32768,gpu_memory_utilisation=0.8,tensor_parallel_size=2"
 OUTPUT_DIR=data/evals/$MODEL
 
 # AIME 2024
@@ -191,7 +189,6 @@ export VLLM_WORKER_MULTIPROC_METHOD=spawn
 lighteval vllm $MODEL_ARGS "custom|$TASK|0|0" \
     --custom-tasks src/open_r1/evaluate.py \
     --use-chat-template \
-    --system-prompt="Please reason step by step, and put your final answer within \boxed{}." \
     --output-dir $OUTPUT_DIR 
 ```
 
@@ -221,9 +218,9 @@ make evaluate MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-32B TASK=aime24 PARALLE
 
 We are able to reproduce Deepseek's reported results on the MATH-500 benchmark within ~1 standard deviation:
 
-| Model                         | MATH-500 (HF lighteval) | MATH-500 (DeepSeek Reported) |
+| Model                         | MATH-500 (🤗 LightEval) | MATH-500 (DeepSeek Reported) |
 |:------------------------------|:-----------------------:|:----------------------------:|
-| DeepSeek-R1-Distill-Qwen-1.5B |          81.6           |             83.9             |
+| DeepSeek-R1-Distill-Qwen-1.5B |          81.8           |             83.9             |
 | DeepSeek-R1-Distill-Qwen-7B   |          91.8           |             92.8             |
 | DeepSeek-R1-Distill-Qwen-14B  |          94.2           |             93.9             |
 | DeepSeek-R1-Distill-Qwen-32B  |          95.0           |             94.3             |
@@ -233,36 +230,52 @@ We are able to reproduce Deepseek's reported results on the MATH-500 benchmark w
 To reproduce these results use the following command:
 
 ```shell
-sbatch slurm/evaluate.slurm deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B math_500
-sbatch slurm/evaluate.slurm deepseek-ai/DeepSeek-R1-Distill-Qwen-7B math_500
-sbatch slurm/evaluate.slurm deepseek-ai/DeepSeek-R1-Distill-Qwen-14B math_500
-sbatch slurm/evaluate.slurm deepseek-ai/DeepSeek-R1-Distill-Qwen-32B math_500 tp
-sbatch slurm/evaluate.slurm deepseek-ai/DeepSeek-R1-Distill-Llama-8B math_500
-sbatch slurm/evaluate.slurm deepseek-ai/DeepSeek-R1-Distill-Llama-70B math_500 tp
+NUM_GPUS=8
+MODEL=deepseek-ai/{model_name}
+MODEL_ARGS="pretrained=$MODEL,dtype=float16,max_model_length=32768,gpu_memory_utilisation=0.8,tensor_parallel_size=$NUM_GPUS"
+OUTPUT_DIR=data/evals/$MODEL
+
+lighteval vllm $MODEL_ARGS "custom|math_500|0|0" \
+    --custom-tasks src/open_r1/evaluate.py \
+    --use-chat-template \
+    --output-dir $OUTPUT_DIR
+```
+
+Alternatively, you can launch Slurm jobs as follows:
+
+```shell
+python scripts/run_benchmarks.py --model-id={model_id}  --benchmarks math_500
 ```
 
 ### GPQA Diamond
 
 We are able to reproduce Deepseek's reported results on the GPQA Diamond benchmark within ~1 standard deviation:
 
-| Model                         | GPQA Diamond (HF lighteval) | GPQA Diamond (DeepSeek Reported) |
+| Model                         | GPQA Diamond (🤗 LightEval) | GPQA Diamond (DeepSeek Reported) |
 |:------------------------------|:---------------------------:|:--------------------------------:|
 | DeepSeek-R1-Distill-Qwen-1.5B |            33.33            |               33.8               |
-| DeepSeek-R1-Distill-Qwen-7B   |            45.45            |               49.1               |
-| DeepSeek-R1-Distill-Qwen-14B  |              x              |               59.1               |
-| DeepSeek-R1-Distill-Qwen-32B  |              x              |               62.1               |
-| DeepSeek-R1-Distill-Llama-8B  |            48.99            |               49.0               |
+| DeepSeek-R1-Distill-Qwen-7B   |            48.48            |               49.1               |
+| DeepSeek-R1-Distill-Qwen-14B  |            55.56            |               59.1               |
+| DeepSeek-R1-Distill-Qwen-32B  |            58.59            |               62.1               |
+| DeepSeek-R1-Distill-Llama-8B  |            51.01            |               49.0               |
 | DeepSeek-R1-Distill-Llama-70B |              x              |               65.2               |
 
 To reproduce these results use the following command:
 
 ```shell
-sbatch slurm/evaluate.slurm deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B math_500
-sbatch slurm/evaluate.slurm deepseek-ai/DeepSeek-R1-Distill-Qwen-7B math_500
-sbatch slurm/evaluate.slurm deepseek-ai/DeepSeek-R1-Distill-Qwen-14B math_500
-sbatch slurm/evaluate.slurm deepseek-ai/DeepSeek-R1-Distill-Qwen-32B math_500 tp
-sbatch slurm/evaluate.slurm deepseek-ai/DeepSeek-R1-Distill-Llama-8B math_500
-sbatch slurm/evaluate.slurm deepseek-ai/DeepSeek-R1-Distill-Llama-70B math_500 tp
+NUM_GPUS=8
+MODEL=deepseek-ai/{model_name}
+MODEL_ARGS="pretrained=$MODEL,dtype=float16,max_model_length=32768,gpu_memory_utilisation=0.8,tensor_parallel_size=$NUM_GPUS"
+OUTPUT_DIR=data/evals/$MODEL
+
+lighteval vllm $MODEL_ARGS "custom|gpqa:diamond|0|0" \
+    --custom-tasks src/open_r1/evaluate.py \
+    --use-chat-template \
+    --output-dir $OUTPUT_DIR
+```
+
+```shell
+python scripts/run_benchmarks.py --model-id={model_id}  --benchmarks gpqa
 ```
 
 ## Data generation
