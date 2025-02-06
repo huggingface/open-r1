@@ -45,23 +45,47 @@ We will use the DeepSeek-R1 [tech report](https://github.com/deepseek-ai/DeepSee
 
 **Note: Libraries rely on CUDA 12.1. Double check your system if you get segmentation faults.**
 
-To run the code in this project, first, create a Python virtual environment using e.g. `uv`.
-To install `uv`, follow the [UV Installation Guide](https://docs.astral.sh/uv/getting-started/installation/).
+First, create a virtual environment, either with Conda or `uv`.
 
+### Using `conda`
+
+Use your existing venv or create a new one with:
+
+```shell
+conda create -n openr1 python=3.11
+```
+
+### Using `uv`
+
+To install `uv`, follow the [UV Installation Guide](https://docs.astral.sh/uv/getting-started/installation/).
 
 ```shell
 uv venv openr1 --python 3.11 && source openr1/bin/activate && uv pip install --upgrade pip
 ```
 
-Next, install vLLM:
+### Dependencies
+
+From here, the easiest way to get started is to run:
 
 ```shell
-uv pip install vllm>=0.7.0
-
-# For CUDA 12.1
-pip install vllm>=0.7.0 --extra-index-url https://download.pytorch.org/whl/cu121
-export LD_LIBRARY_PATH=$(python -c "import site; print(site.getsitepackages()[0] + '/nvidia/nvjitlink/lib')"):$LD_LIBRARY_PATH
+./setup.sh
 ```
+
+OR, do it manually:
+<details>
+<summary>Bash</summary>
+
+```shell
+# Install pinned vllm
+pip install "vllm>=0.7.1" --extra-index-url https://download.pytorch.org/whl/cu121
+
+# nvJitLink
+export LD_LIBRARY_PATH=$(python -c "import site; print(site.getsitepackages()[0] + '/nvidia/nvjitlink/lib')"):$LD_LIBRARY_PATH
+
+# Install dependencies
+pip install -e ".[dev]"
+```
+</details>
 
 This will also install PyTorch `v2.5.1` and it is **very important** to use this version since the vLLM binaries are compiled for it. You can then install the remaining dependencies for your specific use case via `pip install -e .[LIST OF MODES]`. For most contributors, we recommend:
 
