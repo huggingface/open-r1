@@ -14,7 +14,7 @@
 set -x -e
 
 source ~/.bashrc
-conda activate openr1
+source openr1/bin/activate
 module load cuda/12.1
 echo "START TIME: $(date)"
 echo "PYTHON ENV: $(which python)"
