@@ -45,9 +45,7 @@ class GRPOScriptArguments(ScriptArguments):
 
     reward_funcs: list[str] = field(
         default_factory=lambda: ["accuracy", "format"],
-        metadata={
-            "help": f"List of reward functions. Possible values: {', '.join(REWARD_FUNCS_REGISTRY.keys())}"
-        },
+        metadata={"help": f"List of reward functions. Possible values: {', '.join(REWARD_FUNCS_REGISTRY.keys())}"},
     )
 
 
