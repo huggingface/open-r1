@@ -53,8 +53,8 @@ _deps = [
     "huggingface-hub[cli]>=0.19.2,<1.0",
     "isort>=5.12.0",
     "liger_kernel==0.5.2",
-    "lighteval @ git+https://github.com/huggingface/lighteval.git@0e462692436e1f0575bdb4c6ef63453ad9bde7d4#egg=lighteval[math]",
-    "math-verify>=0.3.3",  # Used for math verification in grpo
+    "lighteval @ git+https://github.com/huggingface/lighteval.git@cb35beae9f1bf8133f840de1ea5ad840e37c1e07#egg=lighteval[math]",
+    "math-verify==0.5.1",  # Used for math verification in grpo
     "packaging>=23.0",
     "parameterized>=0.9.0",
     "pytest",
