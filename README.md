@@ -50,7 +50,7 @@ To install `uv`, follow the [UV Installation Guide](https://docs.astral.sh/uv/ge
 
 
 ```shell
-uv venv openr1 --python 3.11 && source openr1/bin/activate && uv pip install --upgrade pip
+uv venv openr1 --python 3.11 && source openr1/bin/activate && uv pip install --upgrade pip --link-mode=copy
 ```
 
 Next, install vLLM:
@@ -59,7 +59,7 @@ Next, install vLLM:
 uv pip install vllm==0.7.1
 
 # For CUDA 12.1
-uv pip install vllm==0.7.1 --extra-index-url https://download.pytorch.org/whl/cu121 --index-strategy unsafe-best-match
+uv pip install vllm==0.7.1 --extra-index-url https://download.pytorch.org/whl/cu121 --index-strategy unsafe-best-match --link-mode=copy
 export LD_LIBRARY_PATH=$(python -c "import site; print(site.getsitepackages()[0] + '/nvidia/nvjitlink/lib')"):$LD_LIBRARY_PATH
 ```
 
@@ -238,7 +238,7 @@ We are able to reproduce Deepseek's reported results on the MATH-500 benchmark w
 To reproduce these results use the following command:
 
 ```shell
-NUM_GPUS=8
+NUM_GPUS=1 # Set to 8 for 32B and 70B models
 MODEL=deepseek-ai/{model_name}
 MODEL_ARGS="pretrained=$MODEL,dtype=float16,max_model_length=32768,gpu_memory_utilisation=0.8,tensor_parallel_size=$NUM_GPUS"
 OUTPUT_DIR=data/evals/$MODEL
@@ -271,7 +271,7 @@ We are able to reproduce Deepseek's reported results on the GPQA Diamond benchma
 To reproduce these results use the following command:
 
 ```shell
-NUM_GPUS=8
+NUM_GPUS=1 # Set to 8 for 32B and 70B models
 MODEL=deepseek-ai/{model_name}
 MODEL_ARGS="pretrained=$MODEL,dtype=float16,max_model_length=32768,gpu_memory_utilisation=0.8,tensor_parallel_size=$NUM_GPUS"
 OUTPUT_DIR=data/evals/$MODEL
