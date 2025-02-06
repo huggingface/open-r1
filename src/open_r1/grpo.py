@@ -68,7 +68,7 @@ def accuracy_reward(completions, solution, **kwargs):
                             malformed_operators=False,
                             basic_latex=True,
                             equations=True,
-                            boxed=True,
+                            boxed="all",
                             units=True,
                         ),
                         # Ensures that boxed is tried first
