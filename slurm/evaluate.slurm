@@ -6,11 +6,6 @@
 #SBATCH --err=./logs/%x-%j.err
 #SBATCH --requeue
 
-nvidia-smi
-echo "CUDA devices: $(CUDA_VISIBLE_DEVICES)"
-python -c "import torch; print(torch.cuda.device_count())"
-
-
 set -x -e
 source ~/.bashrc
 source openr1/bin/activate
