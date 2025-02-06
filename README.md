@@ -56,17 +56,17 @@ uv venv openr1 --python 3.11 && source openr1/bin/activate && uv pip install --u
 Next, install vLLM:
 
 ```shell
-uv pip install vllm>=0.7.0
+uv pip install 'vllm>=0.7.1'
 
 # For CUDA 12.1
-uv pip install vllm>=0.7.0 --extra-index-url https://download.pytorch.org/whl/cu121
+uv pip install vllm==0.7.1 --extra-index-url https://download.pytorch.org/whl/cu121 --index-strategy unsafe-best-match
 export LD_LIBRARY_PATH=$(python -c "import site; print(site.getsitepackages()[0] + '/nvidia/nvjitlink/lib')"):$LD_LIBRARY_PATH
 ```
 
 This will also install PyTorch `v2.5.1` and it is **very important** to use this version since the vLLM binaries are compiled for it. You can then install the remaining dependencies for your specific use case via `pip install -e .[LIST OF MODES]`. For most contributors, we recommend:
 
 ```shell
-pip install -e ".[dev]"
+GIT_LFS_SKIP_SMUDGE=1 uv pip install -e ".[dev]"
 ```
 
 Next, log into your Hugging Face and Weights and Biases accounts as follows:
@@ -150,7 +150,10 @@ lighteval vllm $MODEL_ARGS "custom|$TASK|0|0" \
     --custom-tasks src/open_r1/evaluate.py \
     --use-chat-template \
     --system-prompt="Please reason step by step, and put your final answer within \boxed{}." \
-    --output-dir $OUTPUT_DIR 
+    --output-dir $OUTPUT_DIR \
+    --save-details \
+    --push-to-hub \
+    --results-org lewtun
 
 # GPQA Diamond
 TASK=gpqa:diamond
@@ -169,7 +172,7 @@ To increase throughput across multiple GPUs, use _data parallel_ as follows:
 NUM_GPUS=8
 MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B
 MODEL_ARGS="pretrained=$MODEL,dtype=float16,data_parallel_size=$NUM_GPUS,max_model_length=32768,gpu_memory_utilisation=0.8"
-TASK=aime24
+TASK=math_500
 OUTPUT_DIR=data/evals/$MODEL
 
 lighteval vllm $MODEL_ARGS "custom|$TASK|0|0" \

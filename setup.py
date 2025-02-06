@@ -53,7 +53,7 @@ _deps = [
     "huggingface-hub[cli]>=0.19.2,<1.0",
     "isort>=5.12.0",
     "liger_kernel==0.5.2",
-    "lighteval @ git+https://github.com/huggingface/lighteval.git@0e462692436e1f0575bdb4c6ef63453ad9bde7d4#egg=lighteval[math]",
+    "lighteval @ git+https://github.com/huggingface/lighteval.git@1ce7331f0a30aaee6256b2fb736b19047b4d98b4#egg=lighteval[math]",
     "math-verify>=0.3.3",  # Used for math verification in grpo
     "packaging>=23.0",
     "parameterized>=0.9.0",
@@ -63,7 +63,7 @@ _deps = [
     "torch>=2.5.1",
     "transformers @ git+https://github.com/huggingface/transformers.git@main",
     "trl @ git+https://github.com/huggingface/trl.git@main",
-    "vllm>=0.7.1",
+    "vllm==0.7.1",
     "wandb>=0.19.1",
 ]
 
