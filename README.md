@@ -133,7 +133,7 @@ We use `lighteval` to evaluate models, with custom tasks defined in `src/open_r1
 
 ```shell
 MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B
-MODEL_ARGS="pretrained=$MODEL,dtype=float16,max_model_length=32768,gpu_memory_utilisation=0.8"
+MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=32768,gpu_memory_utilisation=0.8"
 OUTPUT_DIR=data/evals/$MODEL
 
 # AIME 2024
@@ -171,7 +171,7 @@ To increase throughput across multiple GPUs, use _data parallel_ as follows:
 ```shell
 NUM_GPUS=8
 MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B
-MODEL_ARGS="pretrained=$MODEL,dtype=float16,data_parallel_size=$NUM_GPUS,max_model_length=32768,gpu_memory_utilisation=0.8"
+MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,data_parallel_size=$NUM_GPUS,max_model_length=32768,gpu_memory_utilisation=0.8"
 TASK=math_500
 OUTPUT_DIR=data/evals/$MODEL
 
@@ -187,7 +187,7 @@ For large models which require sharding across GPUs, use _tensor parallel_ and r
 ```shell
 NUM_GPUS=8
 MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-32B
-MODEL_ARGS="pretrained=$MODEL,dtype=float16,tensor_parallel_size=$NUM_GPUS,max_model_length=32768,gpu_memory_utilisation=0.8"
+MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,tensor_parallel_size=$NUM_GPUS,max_model_length=32768,gpu_memory_utilisation=0.8"
 TASK=aime24
 OUTPUT_DIR=data/evals/$MODEL
 
@@ -223,7 +223,7 @@ make evaluate MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-32B TASK=aime24 PARALLE
 
 ### MATH-500
 
-We are able to reproduce Deepseek's reported results on the MATH-500 benchmark:
+We are able to reproduce Deepseek's reported results on the MATH-500 benchmark within ~1 standard deviation:
 
 | Model                         | MATH-500 (HF lighteval) | MATH-500 (DeepSeek Reported) |
 |:------------------------------|:-----------------------:|:----------------------------:|
