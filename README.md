@@ -43,7 +43,7 @@ We will use the DeepSeek-R1 [tech report](https://github.com/deepseek-ai/DeepSee
 
 ## Installation
 
-**Note: Libraries rely on CUDA 12.1. Double check your system if you get segmentation faults.**
+**Note: Libraries rely on CUDA 12.4. Double check your system if you get segmentation faults.**
 
 To run the code in this project, first, create a Python virtual environment using e.g. `uv`.
 To install `uv`, follow the [UV Installation Guide](https://docs.astral.sh/uv/getting-started/installation/).
