@@ -10,10 +10,6 @@ set -x -e
 source ~/.bashrc
 source openr1/bin/activate
 
-# Specific configuration optimized for the Hugging Face Compute Cluster
-# Be ye warned this may not work on other clusters!
-module load cuda/12.4
-
 TASK_NAME=$1
 TASKS=$2
 MODEL_ID=$3
