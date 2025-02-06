@@ -8,6 +8,9 @@
 #SBATCH --time=01:59:00
 #SBATCH --output=./logs/evaluate/%x-%j.out
 #SBATCH --err=./logs/evaluate/%x-%j.err
+#SBATCH --mem=128G
+#SBATCH --cpus-per-task=16
+#SBATCH --dependency=singleton
 
 # Usage: sbatch slurm/evaluate.slurm deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B aime24
 

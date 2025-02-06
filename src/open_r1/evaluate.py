@@ -56,6 +56,7 @@ def prompt_fn(line, task_name: str = None):
 
 
 def aime_prompt_fn(line, task_name: str = None):
+    """Prompt function for AIME tasks."""
     return Doc(
         task_name=task_name,
         query=line["problem"],

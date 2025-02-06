@@ -49,6 +49,9 @@ class GRPOScriptArguments(ScriptArguments):
         default_factory=lambda: ["accuracy", "format"],
         metadata={"help": "List of reward functions. Possible values: 'accuracy', 'format'"},
     )
+    optimization_level: Optional[str] = field(
+        default="O1", metadata={"help": "Optimization level to use for training."}
+    )
 
 
 def accuracy_reward(completions, solution, **kwargs):
@@ -175,6 +178,7 @@ def main(script_args, training_args, model_args):
         attn_implementation=model_args.attn_implementation,
         torch_dtype=torch_dtype,
         use_cache=False if training_args.gradient_checkpointing else True,
+        optimization_level=script_args.optimization_level,
     )
     training_args.model_init_kwargs = model_kwargs
 

@@ -100,7 +100,7 @@ def main(script_args, training_args, model_args):
     ################
     # Load datasets
     ################
-    dataset = load_dataset(script_args.dataset_name, name=script_args.dataset_config)
+    dataset = load_dataset(script_args.dataset_name, name=script_args.dataset_config, streaming=True)
 
     ################
     # Load tokenizer
@@ -126,6 +126,7 @@ def main(script_args, training_args, model_args):
         use_cache=False if training_args.gradient_checkpointing else True,
         device_map=get_kbit_device_map() if quantization_config is not None else None,
         quantization_config=quantization_config,
+        optimization_level=script_args.optimization_level,
     )
     training_args.model_init_kwargs = model_kwargs
 

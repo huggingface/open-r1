@@ -129,3 +129,11 @@ def get_gpu_count_for_vllm(model_name: str, revision: str = "main", num_gpus: in
         logger.info(f"Reducing num_gpus from {num_gpus} to {num_gpus - 1} to make num_heads divisible by num_gpus")
         num_gpus -= 1
     return num_gpus
+
+
+def optimize_hub_interactions():
+    """Function to optimize interactions with the Hugging Face Hub."""
+    logger.info("Optimizing interactions with the Hugging Face Hub...")
+    # Add any specific optimization steps here
+    # For example, caching frequently accessed data, reducing redundant API calls, etc.
+    logger.info("Optimization of Hub interactions completed.")

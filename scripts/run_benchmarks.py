@@ -34,6 +34,9 @@ class ScriptArguments:
     system_prompt: Optional[str] = field(
         default=None, metadata={"help": "The system prompt to use for the benchmark."}
     )
+    optimization_level: Optional[str] = field(
+        default="O1", metadata={"help": "Optimization level to use for benchmarks."}
+    )
 
 
 def main():
@@ -54,6 +57,7 @@ def main():
     run_benchmark_jobs(
         benchmark_args,
         ModelConfig(model_name_or_path="", model_revision="", trust_remote_code=args.trust_remote_code),
+        optimization_level=args.optimization_level,
     )
 
 

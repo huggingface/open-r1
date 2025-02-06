@@ -33,6 +33,7 @@ def build_distilabel_pipeline(
     client_replicas: int = 1,
     timeout: int = 900,
     retries: int = 0,
+    optimization_level: Optional[str] = None,
 ) -> Pipeline:
     generation_kwargs = {"max_new_tokens": max_new_tokens}
 
@@ -41,6 +42,9 @@ def build_distilabel_pipeline(
 
     if top_p is not None:
         generation_kwargs["top_p"] = top_p
+
+    if optimization_level is not None:
+        generation_kwargs["optimization_level"] = optimization_level
 
     with Pipeline().ray() as pipeline:
         TextGeneration(
@@ -167,6 +171,11 @@ if __name__ == "__main__":
         action="store_true",
         help="Whether to make the output dataset private when pushing to HF Hub",
     )
+    parser.add_argument(
+        "--optimization-level",
+        type=str,
+        help="Optimization level to use for generation",
+    )
 
     args = parser.parse_args()
 
@@ -192,6 +201,7 @@ if __name__ == "__main__":
         client_replicas=args.client_replicas,
         timeout=args.timeout,
         retries=args.retries,
+        optimization_level=args.optimization_level,
     )
 
     print("Running generation pipeline...")

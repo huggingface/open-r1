@@ -15,6 +15,7 @@
    - [Generate data from a smol distilled R1 model](#generate-data-from-a-smol-distilled-r1-model)  
    - [Generate data from DeepSeek-R1](#generate-data-from-deepseek-r1)  
 8. [Contributing](#contributing)
+9. [Optimization Techniques](#optimization-techniques)
 
 ## Overview
 
@@ -308,3 +309,55 @@ sbatch slurm/generate.slurm \
 ## Contributing
 
 Contributions are welcome. Please refer to https://github.com/huggingface/open-r1/issues/23.
+
+## Optimization Techniques
+
+This section provides guidelines on optimization techniques and best practices to enhance the performance of your models and scripts.
+
+### General Optimization Tips
+
+1. **Use Mixed Precision Training**: Mixed precision training can significantly speed up training and reduce memory usage. Use the `--fp16` or `--bf16` flag in your training scripts.
+2. **Gradient Accumulation**: If you are limited by GPU memory, use gradient accumulation to simulate a larger batch size.
+3. **Optimize Data Loading**: Ensure that data loading is not a bottleneck. Use efficient data loaders and consider pre-processing data to reduce on-the-fly computation.
+4. **Profile Your Code**: Use profiling tools to identify bottlenecks in your code. Optimize the parts of the code that consume the most time.
+5. **Use Efficient Libraries**: Leverage optimized libraries and functions. For example, use `torch.einsum` for efficient tensor operations.
+
+### Model-Specific Optimization
+
+1. **Layer-wise Learning Rate Decay**: Apply different learning rates to different layers of the model. Typically, lower layers have smaller learning rates.
+2. **Knowledge Distillation**: Use a smaller, distilled model for inference to reduce latency and memory usage.
+3. **Quantization**: Quantize your model to reduce its size and increase inference speed. Use tools like `torch.quantization` for this purpose.
+4. **Pruning**: Prune less important weights in your model to reduce its size and improve inference speed.
+
+### Hardware-Specific Optimization
+
+1. **Use Multiple GPUs**: Distribute the workload across multiple GPUs to speed up training and inference.
+2. **Optimize GPU Utilization**: Ensure that your GPUs are fully utilized. Use tools like `nvidia-smi` to monitor GPU usage.
+3. **Use TPUs**: For large-scale training, consider using TPUs which can offer significant speedups over GPUs.
+
+### Example: Mixed Precision Training
+
+To enable mixed precision training in your training script, add the following flag:
+
+```shell
+--fp16
+```
+
+Or, if you are using PyTorch, you can enable mixed precision training as follows:
+
+```python
+from torch.cuda.amp import GradScaler, autocast
+
+scaler = GradScaler()
+
+for data, target in dataloader:
+    optimizer.zero_grad()
+    with autocast():
+        output = model(data)
+        loss = loss_fn(output, target)
+    scaler.scale(loss).backward()
+    scaler.step(optimizer)
+    scaler.update()
+```
+
+By following these optimization techniques and best practices, you can enhance the performance of your models and scripts, making them more efficient and effective.
