@@ -86,7 +86,45 @@ sudo apt-get install git-lfs
 
 ## Training models
 
-We support training models with either DDP or DeepSpeed (ZeRO-2 and ZeRO-3). To switch between methods, simply change the path to the `accelerate` YAML config in `configs`.
+We support training models with either DDP or DeepSpeed (ZeRO-2 and ZeRO-3). For example, to run SFT on a dataset distilled from DeepSeek-R1 with reasoning traces such as [Bespoke-Stratos-17k](https://huggingface.co/datasets/bespokelabs/Bespoke-Stratos-17k), run:
+
+```shell
+# Train via command line
+accelerate launch --config_file=recipes/accelerate_configs/zero3.yaml src/open_r1/sft.py \
+    --model_name_or_path Qwen/Qwen2.5-1.5B-Instruct \
+    --dataset_name HuggingFaceH4/Bespoke-Stratos-17k \
+    --learning_rate 2.0e-5 \
+    --num_train_epochs 1 \
+    --packing \
+    --max_seq_length 4096 \
+    --per_device_train_batch_size 2 \
+    --gradient_accumulation_steps 8 \
+    --gradient_checkpointing \
+    --bf16 \
+    --output_dir data/Qwen2.5-1.5B-Open-R1-Distill
+
+# Train via YAML config
+accelerate launch --config_file recipes/accelerate_configs/zero3.yaml src/openr1/sft.py \
+    recipes/Qwen/Qwen2.5-1.5B-Instruct/sft/config_demo.yaml
+```
+
+Currently, the following tasks are supported:
+
+* Supervised Fine-Tuning `sft`
+* Group Relative Policy Optimization `grpo`
+
+> [!TIP]
+> If you scale up/down the number of GPUs, we recommend also scaling up the per-device batch size or number of gradient accumulation steps to keep the global batch size constant.
+
+By default, these scripts will push each model to your Hugging Face Hub username, i.e. `{username}/{model_name}-{task}`. You can override the parameters in each YAML config by appending them to the command as follows: 
+
+```shell
+# Change batch size, number of epochs etc
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/zero3.yaml \
+    src/openr1/{task}.py \
+    recipes/{model_name}/{task}/config_{suffix}.yaml \
+    --per_device_train_batch_size=1 --num_train_epochs=5
+```
 
 > [!NOTE]
 > The training commands below are configured for a node of 8 x H100s (80GB). For different hardware and topologies, you may need to tune the batch size and number of gradient accumulation steps.
@@ -96,40 +134,50 @@ We support training models with either DDP or DeepSpeed (ZeRO-2 and ZeRO-3). To 
 To run SFT on a dataset distilled from DeepSeek-R1 with reasoning traces such as [Bespoke-Stratos-17k](https://huggingface.co/datasets/bespokelabs/Bespoke-Stratos-17k), run:
 
 ```shell
-ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/zero3.yaml src/open_r1/sft.py --config recipes/qwen/Qwen2.5-1.5B-Instruct/sft/config_full.yaml
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/zero3.yaml \
+    src/open_r1/sft.py \
+    --config recipes/Qwen2.5-1.5B-Instruct/sft/config_demo.yaml
 ```
-
-To launch a Slurm job, run:
-
-```shell
-sbatch --output=/path/to/logs/%x-%j.out --err=/path/to/logs/%x-%j.err slurm/sft.slurm {model} {dataset} {accelerator}
-```
-
-Here `{model}` and `{dataset}` refer to the model and dataset IDs on the Hugging Face Hub, while `{accelerator}` refers to the choice of an 🤗 Accelerate config file in configs. 
 
 ### GRPO
 
 To train via the GRPO trainer, we use one GPU to run vLLM for faster generation and the remaining GPUs for training. For example, one a node with 8 GPUs, use the `recipes/accelerate_configs/zero3.yaml` config and then overwrite `num_processes` to run on 7 devices:
 
 ```shell
-ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/zero3.yaml --num_processes=7 src/open_r1/grpo.py --config recipes/qwen/Qwen2.5-1.5B-Instruct/grpo/confg_full.yaml
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/zero3.yaml \
+    --num_processes=7 src/open_r1/grpo.py \
+    --config recipes/Qwen2.5-1.5B-Instruct/grpo/config_demo.yaml
 ```
 
 We provide a minimal reproducible experiment using GRPO for mathematical reasoning, referencing the approach from [SimpleRL-Reason](https://hkust-nlp.notion.site/simplerl-reason) which uses a 7B model trained on 8K examples. Running this on 8 H100 80G GPU takes about 3 hours:
 
 ```shell
-ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/zero2.yaml --num_processes=7 src/open_r1/grpo.py --config recipes/deepseek/DeepSeek-R1-Distill-Qwen-7B/grpo/config_base_math_smalllr.yaml
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/zero2.yaml \
+    --num_processes=7 src/open_r1/grpo.py \
+    --config recipes/Qwen2.5-Math-7B/grpo/config_simple_rl.yaml
 ```
 
-Our final [model](Dongwei/Qwen-2.5-7B_Base_Math_smalllr), while using different learning rates, loss functions and reward structures, achieves 69.4% accuracy on Math_500, demonstrating a 17%+ improvement over the base model.
+Our final [model](https://huggingface.co/Dongwei/Qwen-2.5-7B_Base_Math_smalllr), while using different learning rates, loss functions and reward structures, achieves 69.4% accuracy on MATH-500, demonstrating a 17%+ improvement over the base model.
 
-To launch a Slurm job, run:
+### Launching jobs on a Slurm cluster
+
+If you have access to a Slurm cluster, we provide a `slurm/train.slurm` script that will automatically queue training jobs for you. Here's how you can use it:
 
 ```shell
-sbatch --output=/path/to/logs/%x-%j.out --err=/path/to/logs/%x-%j.err slurm/grpo.slurm {model} {dataset} {accelerator}
+sbatch --job-name=open_r1 --nodes=1 slurm/train.slurm {model_name} {task} {config_suffix} {accelerator}
 ```
 
-You can find more model configurations in the [recipes](./recipes).
+Here `{model_name}` and `{task}` are defined as above, while `{config_suffix}` refers to the specific config and `{accelerator}` refers to the choice of 🤗 Accelerate config in `recipes/accelerate_configs`. If you wish to override the default config parameters, you can provide them by appending a space-separated string like `'--arg1=value1 --arg2=value2'`. Here's a concrete example to run SFT on 1 node of 8 GPUs:
+
+```shell
+# Launch on Slurm and override default hyperparameters
+sbatch --job-name=open_r1 --nodes=1 slurm/train.slurm Qwen2.5-1.5B-Instruct sft demo zero3 '--per_device_train_batch_size=1 --num_train_epochs=5'
+```
+
+You can scale the number of nodes by increasing the `--nodes` flag.
+
+> [!NOTE]
+> The configuration in `slurm/train.slurm` is optimised for the Hugging Face Compute Cluster and may require tweaking to be adapted to your own compute nodes.
 
 ## Evaluating models
 
