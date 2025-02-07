@@ -1,6 +1,6 @@
 import unittest
 
-from open_r1.rewards import accuracy_reward, cosine_scaled_reward, format_reward, reasoning_steps_reward
+from open_r1.rewards import accuracy_reward, format_reward, get_cosine_scaled_reward, reasoning_steps_reward
 
 
 class TestRewards(unittest.TestCase):
@@ -94,7 +94,7 @@ class TestRewards(unittest.TestCase):
             padded_content = content + " " * (content_len - len(content))
             completion = [[{"content": padded_content}]]
 
-            rewards = cosine_scaled_reward(completion, [solution], **test_params)
+            rewards = get_cosine_scaled_reward(**test_params)(completion, [solution])
             self.assertAlmostEqual(rewards[0], expected_reward, places=2)
 
 
