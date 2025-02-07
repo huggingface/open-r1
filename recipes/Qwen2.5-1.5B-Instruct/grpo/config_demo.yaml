@@ -27,7 +27,7 @@ hub_model_id: Qwen2.5-1.5B-Open-R1-GRPO
 hub_strategy: every_save
 learning_rate: 2.0e-05
 log_level: info
-logging_steps: 10
+logging_steps: 5
 logging_strategy: steps
 lr_scheduler_type: cosine
 max_prompt_length: 512

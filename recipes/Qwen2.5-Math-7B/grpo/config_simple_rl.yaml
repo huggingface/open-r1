@@ -27,7 +27,7 @@ hub_model_id: Qwen-2.5-7B-Simple-RL
 hub_strategy: every_save
 learning_rate: 3.0e-06
 log_level: info
-logging_steps: 10
+logging_steps: 5
 logging_strategy: steps
 lr_scheduler_type: cosine
 max_prompt_length: 512
