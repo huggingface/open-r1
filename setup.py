@@ -87,15 +87,15 @@ extras = {}
 extras["tests"] = deps_list("pytest", "parameterized")
 extras["torch"] = deps_list("torch")
 extras["quality"] = deps_list("ruff", "isort", "flake8")
+extras["train"] = deps_list("flash_attn")
 extras["eval"] = deps_list("lighteval", "math-verify")
-extras["dev"] = extras["quality"] + extras["tests"] + extras["eval"]
+extras["dev"] = extras["quality"] + extras["tests"] + extras["eval"] + extras["train"]
 
 # core dependencies shared across the whole project - keep this to a bare minimum :)
 install_requires = [
     deps["accelerate"],
     deps["bitsandbytes"],
     deps["einops"],
-    deps["flash_attn"],
     deps["datasets"],
     deps["deepspeed"],
     deps["hf_transfer"],
