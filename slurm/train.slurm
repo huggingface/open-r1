@@ -51,7 +51,7 @@ MASTER_ADDR=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)
 MASTER_PORT=6000
 
 export CMD=" \
-    src/open_r1/$TASK.py $CONFIG_FILE $OPTIONAL_ARGS
+    src/open_r1/$TASK.py --config $CONFIG_FILE $OPTIONAL_ARGS
     "
 
 export LAUNCHER="HF_HUB_ENABLE_HF_TRANSFER=1 ACCELERATE_LOG_LEVEL=info TRANSFORMERS_VERBOSITY=info accelerate launch \
