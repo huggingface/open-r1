@@ -15,7 +15,7 @@ quality:
 	flake8 --max-line-length 119 $(check_dirs) setup.py
 
 test:
-	pytest tests/
+	pytest -sv tests/
 
 # Evaluation
 
