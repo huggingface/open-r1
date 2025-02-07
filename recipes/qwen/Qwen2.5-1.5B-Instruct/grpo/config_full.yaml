@@ -35,7 +35,7 @@ max_steps: -1
 num_train_epochs: 1
 output_dir: data/Qwen2.5-1.5B-Open-R1-GRPO
 overwrite_output_dir: true
-per_device_eval_batch_size: 4   
+per_device_eval_batch_size: 4
 per_device_train_batch_size: 1
 push_to_hub: true
 report_to:
