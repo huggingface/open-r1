@@ -16,7 +16,6 @@ import logging
 import os
 import sys
 from dataclasses import dataclass, field
-from functools import partial
 
 import datasets
 import torch
