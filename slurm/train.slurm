@@ -8,6 +8,10 @@
 #SBATCH --err=./logs/%x-%j.err
 #SBATCH --requeue
 
+# Specific configuration optimized for the Hugging Face Compute Cluster
+# Be ye warned this may not work on other clusters!
+module load cuda/12.4
+
 
 set -x -e
 
@@ -71,10 +75,6 @@ export NCCL_ASYNC_ERROR_HANDLING=1
 # export NCCL_SOCKET_NTHREADS=1
 # export NCCL_NSOCKS_PERTHREAD=1
 # export CUDA_LAUNCH_BLOCKING=1
-
-# Specific configuration optimized for the Hugging Face Compute Cluster
-# Be ye warned this may not work on other clusters!
-module load cuda/12.4
 
 # srun error handling:
 # --wait=60: wait 60 sec after the first task terminates before terminating all remaining tasks
