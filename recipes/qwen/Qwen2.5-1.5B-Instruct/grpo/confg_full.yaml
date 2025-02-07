@@ -12,7 +12,7 @@ num_processes: 7
 
 # GRPO trainer config
 bf16: true
-use_vllm: true
+use_vllm: false
 vllm_device: auto
 vllm_gpu_memory_utilization: 0.7
 do_eval: true
