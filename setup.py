@@ -53,7 +53,6 @@ _deps = [
     "huggingface-hub[cli]>=0.19.2,<1.0",
     "isort>=5.12.0",
     "latex2sympy2_extended>=1.0.6",
-    "math-verify>=0.5.2",
     "liger_kernel==0.5.2",
     "lighteval @ git+https://github.com/huggingface/lighteval.git@86f62259f105ae164f655e0b91c92a823a742724#egg=lighteval[math]",
     "math-verify==0.5.2",  # Used for math verification in grpo

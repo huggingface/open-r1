@@ -1,5 +1,5 @@
 # Model arguments
-model_name_or_path: deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B
+model_name_or_path: Qwen/Qwen2.5-1.5B-Instruct
 model_revision: main
 torch_dtype: bfloat16
 attn_implementation: flash_attention_2
