@@ -104,7 +104,7 @@ accelerate launch --config_file=recipes/accelerate_configs/zero3.yaml src/open_r
     --output_dir data/Qwen2.5-1.5B-Open-R1-Distill
 
 # Train via YAML config
-accelerate launch --config_file recipes/accelerate_configs/zero3.yaml src/openr1/sft.py \
+accelerate launch --config_file recipes/accelerate_configs/zero3.yaml src/open_r1/sft.py \
     recipes/Qwen/Qwen2.5-1.5B-Instruct/sft/config_demo.yaml
 ```
 
@@ -120,7 +120,7 @@ By default, these scripts will push each model to your Hugging Face Hub username
 
 ```shell
 # Change batch size, number of epochs etc
-accelerate launch --config_file recipes/accelerate_configs/zero3.yaml src/openr1/sft.py \
+accelerate launch --config_file recipes/accelerate_configs/zero3.yaml src/open_r1/sft.py \
     recipes/Qwen/Qwen2.5-1.5B-Instruct/sft/config_demo.yaml
     --per_device_train_batch_size=1 --num_train_epochs=5
 ```
