@@ -10,7 +10,7 @@
    - [SFT](#sft)  
    - [GRPO](#grpo)  
 5. [Evaluating models](#evaluating-models)  
-6. [Reproducing Deepseek's evaluation results on MATH-500](#reproducing-deepseeks-evaluation-results-on-math-500)  
+6. [Reproducing Deepseek's evaluation results](#reproducing-deepseeks-evaluation-results)  
 7. [Data generation](#data-generation)  
    - [Generate data from a smol distilled R1 model](#generate-data-from-a-smol-distilled-r1-model)  
    - [Generate data from DeepSeek-R1](#generate-data-from-deepseek-r1)  
@@ -43,7 +43,8 @@ We will use the DeepSeek-R1 [tech report](https://github.com/deepseek-ai/DeepSee
 
 ## Installation
 
-**Note: Libraries rely on CUDA 12.4. Double check your system if you get segmentation faults.**
+> [!CAUTION]
+> Libraries rely on CUDA 12.4. If you see errors related to segmentation faults, double check the version your system is running with `nvcc --version`.
 
 To run the code in this project, first, create a Python virtual environment using e.g. `uv`.
 To install `uv`, follow the [UV Installation Guide](https://docs.astral.sh/uv/getting-started/installation/).
