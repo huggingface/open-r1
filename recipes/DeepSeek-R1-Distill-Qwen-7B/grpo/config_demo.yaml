@@ -31,12 +31,12 @@ lr_scheduler_type: cosine
 max_prompt_length: 512
 max_completion_length: 1024
 max_steps: -1
-num_generations: 2
+num_generations: 7
 num_train_epochs: 1
 output_dir: data/DeepSeek-R1-Distill-Qwen-7B-GRPO
 overwrite_output_dir: true
-per_device_eval_batch_size: 4
-per_device_train_batch_size: 2
+per_device_eval_batch_size: 32
+per_device_train_batch_size: 16
 push_to_hub: true
 report_to:
 - wandb

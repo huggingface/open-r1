@@ -37,8 +37,8 @@ num_generations: 7
 num_train_epochs: 1
 output_dir: data/Qwen-2.5-7B-Simple-RL
 overwrite_output_dir: true
-per_device_eval_batch_size: 2
-per_device_train_batch_size: 2
+per_device_eval_batch_size: 16
+per_device_train_batch_size: 16
 push_to_hub: true
 report_to:
 - wandb
