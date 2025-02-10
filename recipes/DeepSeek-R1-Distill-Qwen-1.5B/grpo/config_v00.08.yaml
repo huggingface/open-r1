@@ -1,0 +1,53 @@
+# Model arguments
+model_name_or_path: deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B
+model_revision: main
+torch_dtype: bfloat16
+attn_implementation: flash_attention_2
+# Data training arguments
+dataset_name: AI-MO/NuminaMath-TIR
+dataset_configs:
+- all
+num_processes: 7
+ddp_find_unused_parameters: false
+# GRPO trainer config
+use_vllm: true
+vllm_device: auto
+vllm_gpu_memory_utilization: 0.7
+bf16: true
+do_eval: false
+eval_strategy: "no"
+gradient_accumulation_steps: 8
+gradient_checkpointing: true
+gradient_checkpointing_kwargs:
+  use_reentrant: false
+hub_model_id: open-r1/DeepSeek-R1-Distill-Qwen-1.5-GRPO-v00.08
+hub_strategy: every_save
+learning_rate: 1.0e-06
+log_level: info
+logging_steps: 1
+logging_strategy: steps
+lr_scheduler_type: cosine
+max_prompt_length: 1024
+max_completion_length: 16368
+max_steps: -1
+num_train_epochs: 0.1
+num_generations: 7
+output_dir: data/DeepSeek-R1-Distill-Qwen-1.5-GRPO-v00.08
+overwrite_output_dir: true
+per_device_eval_batch_size: 4
+per_device_train_batch_size: 2
+push_to_hub: true
+report_to:
+- wandb
+seed: 42
+warmup_ratio: 0.1
+
+# Saving and eval callbacks
+save_strategy: "steps"
+save_steps: 25
+callbacks:
+- push_to_hub_revision
+benchmarks:
+- math_500
+- aime24
+- gpqa
