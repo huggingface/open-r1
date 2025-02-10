@@ -197,3 +197,21 @@ def get_repetition_penalty_reward(ngram_size: int, max_penalty: float):
         return rewards
 
     return repetition_penalty_reward
+
+
+def create_weighted_reward(func, weight):
+    """Create a weighted version of a reward function.
+
+    Args:
+        func: The reward function to weight
+        weight: The weight to apply to the reward
+
+    Returns:
+        A new function that applies the weight to the reward
+    """
+
+    def weighted_reward(*args, **kwargs):
+        rewards = func(*args, **kwargs)
+        return [r * weight for r in rewards]
+
+    return weighted_reward
