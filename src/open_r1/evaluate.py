@@ -106,6 +106,20 @@ aime24 = LightevalTaskConfig(
     metric=[expr_gold_metric],
     version=1,
 )
+aime25 = LightevalTaskConfig(
+    name="aime25",
+    suite=["custom"],
+    prompt_function=aime_prompt_fn,
+    hf_repo="TIGER-Lab/AIME25",
+    hf_subset="default",
+    hf_avail_splits=["train"],
+    evaluation_splits=["train"],
+    few_shots_split=None,
+    few_shots_select=None,
+    generation_size=32768,
+    metric=[expr_gold_metric],
+    version=1,
+)
 math_500 = LightevalTaskConfig(
     name="math_500",
     suite=["custom"],
@@ -141,6 +155,7 @@ gpqa_diamond = LightevalTaskConfig(
 # Add tasks to the table
 TASKS_TABLE = []
 TASKS_TABLE.append(aime24)
+TASKS_TABLE.append(aime25)
 TASKS_TABLE.append(math_500)
 TASKS_TABLE.append(gpqa_diamond)
 
