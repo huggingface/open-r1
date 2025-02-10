@@ -45,10 +45,7 @@ async def process_example(example, session, args, output_file, pbar):
     prompt = args.prompt_template.format(prompt=example[args.prompt_column])
 
     try:
-        tasks = [
-            generate_completion(session, prompt, args)
-            for _ in range(args.num_generations)
-        ]
+        tasks = [generate_completion(session, prompt, args) for _ in range(args.num_generations)]
 
         completions = await asyncio.gather(*tasks)
 
@@ -142,26 +139,20 @@ async def main():
 
     async with aiohttp.ClientSession(
         timeout=aiohttp.ClientTimeout(total=60 * 60),
-        connector=aiohttp.TCPConnector(
-            limit=args.max_concurrent, ttl_dns_cache=300, keepalive_timeout=60 * 60
-        ),
+        connector=aiohttp.TCPConnector(limit=args.max_concurrent, ttl_dns_cache=300, keepalive_timeout=60 * 60),
     ) as session:
         for example in dataset:
             if example["uuid"] not in processed_uuids:
                 # Wait if we've hit the concurrency limit
                 while len(active_tasks) >= args.max_concurrent:
-                    done, active_tasks = await asyncio.wait(
-                        active_tasks, return_when=asyncio.FIRST_COMPLETED
-                    )
+                    done, active_tasks = await asyncio.wait(active_tasks, return_when=asyncio.FIRST_COMPLETED)
                     for task in done:
                         try:
                             await task
                         except Exception as e:
                             print(f"Task failed: {e}")
 
-                task = asyncio.create_task(
-                    process_example(example, session, args, args.output_file, pbar)
-                )
+                task = asyncio.create_task(process_example(example, session, args, args.output_file, pbar))
                 active_tasks.add(task)
                 task.add_done_callback(active_tasks.discard)
 
