@@ -32,6 +32,12 @@ WORLD_SIZE=$(($NUM_NODES*$GPUS_PER_NODE))
 # Due to conflicts between Accelerate's DeepSpeed configs and Transformers' TrainingArguments, we need to parse the gradient accumulation steps from the config file to ensure they match
 CONFIG_FILE=recipes/$MODEL/$TASK/config_$CONFIG_SUFFIX.yaml
 GRAD_ACC_STEPS=$(grep 'gradient_accumulation_steps' $CONFIG_FILE | awk '{print $2}')
+USE_VLLM=$(grep 'use_vllm:\s*true' $CONFIG_FILE) # Match "use_vllm: true" (with optional whitespace)
+
+if [ -n "$USE_VLLM" ]; then  # Check if USE_VLLM is *not* empty (found)
+    NUM_PROCESSES=7
+else
+    NUM_PROCESSES=$WORLD_SIZE
 
 # Split the string into individual arguments
 IFS=' ' read -ra ARGS <<< "$OPTIONAL_ARGS"
@@ -58,7 +64,7 @@ export LAUNCHER="HF_HUB_ENABLE_HF_TRANSFER=1 ACCELERATE_LOG_LEVEL=info TRANSFORM
     --config_file recipes/accelerate_configs/$ACCELERATOR.yaml  \
     --gradient_accumulation_steps $GRAD_ACC_STEPS \
     --num_machines $NUM_NODES \
-    --num_processes $WORLD_SIZE \
+    --num_processes $NUM_PROCESSES \
     --main_process_ip $MASTER_ADDR \
     --main_process_port $MASTER_PORT \
     --machine_rank \$SLURM_PROCID \
