@@ -178,8 +178,9 @@ def get_repetition_penalty_reward(ngram_size: int, max_penalty: float):
             completions: List of model completions
         """
 
+        contents = [completion[0]["content"] for completion in completions]
         rewards = []
-        for completion in completions:
+        for completion in contents:
             if completion == "":
                 rewards.append(0.0)
                 continue
