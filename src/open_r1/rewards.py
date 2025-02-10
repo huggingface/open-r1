@@ -172,7 +172,7 @@ def get_repetition_penalty_reward(ngram_size: int, max_penalty: float):
 
         This function is parameterized by the following arguments:
             ngram_size: size of the n-grams
-            max_penalty: Maximum penalty for wrong answers
+            max_penalty: Maximum (negative) penalty for wrong answers
         """
 
         rewards = []
