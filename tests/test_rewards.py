@@ -140,6 +140,17 @@ class TestRewards(unittest.TestCase):
         rewards = format_reward(completion)
         self.assertEqual(rewards[0], 1.0)
 
+    def test_weighted_reward_preserves_name(self):
+        """Test that create_weighted_reward preserves the original function name."""
+        base_reward_func = format_reward
+        weighted_reward_func = create_weighted_reward(base_reward_func, 2.0)
+        
+        self.assertEqual(
+            weighted_reward_func.__name__, 
+            base_reward_func.__name__,
+            "Weighted reward function should preserve the original function name"
+        )
+
 
 class TestRepetitionPenaltyReward(unittest.TestCase):
     def test_positive_max_penalty_raises_value_error(self):
