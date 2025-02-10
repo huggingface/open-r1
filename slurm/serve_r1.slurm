@@ -9,7 +9,6 @@
 #SBATCH --error=./logs/%x_%j_%n.err
 #SBATCH --time=7-00:00:00
 #SBATCH --ntasks-per-node=1
-#SBATCH --requeue
 
 set -exuo pipefail
 
@@ -18,8 +17,6 @@ CONDA_ENV="sglang124"
 ROUTER_ADDRESS=""
 SERVER_PORT=39877
 DIST_PORT=45000
-
-trap 'scontrol requeue ${SLURM_JOB_ID}; exit 15' SIGUSR1
 
 # TODO: Adjust these variables to your cluster configuration
 export OUTLINES_CACHE_DIR=/scratch/serve_r1/ocache/

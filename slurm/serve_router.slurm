@@ -33,7 +33,6 @@ conda activate "$CONDA_ENV" || { echo "Failed to activate conda env $CONDA_ENV";
 python -m sglang_router.launch_router \
     --port "$ROUTER_PORT" \
     --host 0.0.0.0 \
-    --policy "round_robin" \
     --worker-startup-timeout-secs 300
 
 # Keep the job running with health checks

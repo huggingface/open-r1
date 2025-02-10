@@ -9,7 +9,6 @@
 #SBATCH --error=./logs/%x_%j_%n.err
 #SBATCH --time=7-00:00:00
 #SBATCH --ntasks-per-node=1
-#SBATCH --requeue
 
 set -exuo pipefail
 
@@ -18,8 +17,6 @@ CONDA_ENV="vllm7"
 SERVER_PORT=8000
 RAY_PORT=6379
 RAY_DASHBOARD_PORT=8265
-
-trap 'scontrol requeue ${SLURM_JOB_ID}; exit 15' SIGUSR1
 
 while getopts "m:e:h" opt; do
     case $opt in
