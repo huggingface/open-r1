@@ -2,6 +2,7 @@
 model_name_or_path: Qwen/Qwen2.5-1.5B-Instruct
 model_revision: main
 torch_dtype: bfloat16
+attn_implementation: flash_attention_2
 
 # Data training arguments
 dataset_name: HuggingFaceH4/Bespoke-Stratos-17k
@@ -14,7 +15,7 @@ bf16: true
 do_eval: true
 eval_strategy: steps
 eval_steps: 100
-gradient_accumulation_steps: 4
+gradient_accumulation_steps: 8
 gradient_checkpointing: true
 gradient_checkpointing_kwargs:
   use_reentrant: false
@@ -31,8 +32,9 @@ max_steps: -1
 num_train_epochs: 1
 output_dir: data/Qwen2.5-1.5B-Open-R1-Distill
 overwrite_output_dir: true
+packing: true
 per_device_eval_batch_size: 4
-per_device_train_batch_size: 4
+per_device_train_batch_size: 2
 push_to_hub: true
 report_to:
 - wandb

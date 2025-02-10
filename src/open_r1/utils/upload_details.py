@@ -39,7 +39,7 @@ class ScriptArguments:
 
 def main():
     parser = HfArgumentParser(ScriptArguments)
-    args = parser.parse()
+    args = parser.parse_args_into_dataclasses()[0]
 
     if all(file.endswith(".json") for file in args.data_files):
         ds = load_dataset("json", data_files=args.data_files)

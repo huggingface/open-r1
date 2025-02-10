@@ -18,15 +18,15 @@ Supervised fine-tuning script for decoder language models.
 Usage:
 
 # One 1 node of 8 x H100s
-accelerate launch --config_file=configs/zero3.yaml src/open_r1/sft.py \
+accelerate launch --config_file=recipes/accelerate_configs/zero3.yaml src/open_r1/sft.py \
     --model_name_or_path Qwen/Qwen2.5-1.5B-Instruct \
     --dataset_name HuggingFaceH4/Bespoke-Stratos-17k \
     --learning_rate 2.0e-5 \
     --num_train_epochs 1 \
     --packing \
     --max_seq_length 4096 \
-    --per_device_train_batch_size 4 \
-    --gradient_accumulation_steps 4 \
+    --per_device_train_batch_size 2 \
+    --gradient_accumulation_steps 8 \
     --gradient_checkpointing \
     --bf16 \
     --logging_steps 5 \
@@ -167,9 +167,7 @@ def main(script_args, training_args, model_args):
 
     # Save everything else on main process
     kwargs = {
-        "finetuned_from": model_args.model_name_or_path,
-        "dataset": list(script_args.dataset_name),
-        "dataset_tags": list(script_args.dataset_name),
+        "dataset_name": script_args.dataset_name,
         "tags": ["open-r1"],
     }
     if trainer.accelerator.is_main_process:

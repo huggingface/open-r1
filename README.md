@@ -10,7 +10,7 @@
    - [SFT](#sft)  
    - [GRPO](#grpo)  
 5. [Evaluating models](#evaluating-models)  
-6. [Reproducing Deepseek's evaluation results on MATH-500](#reproducing-deepseeks-evaluation-results-on-math-500)  
+6. [Reproducing Deepseek's evaluation results](#reproducing-deepseeks-evaluation-results)  
 7. [Data generation](#data-generation)  
    - [Generate data from a smol distilled R1 model](#generate-data-from-a-smol-distilled-r1-model)  
    - [Generate data from DeepSeek-R1](#generate-data-from-deepseek-r1)  
@@ -43,30 +43,27 @@ We will use the DeepSeek-R1 [tech report](https://github.com/deepseek-ai/DeepSee
 
 ## Installation
 
-**Note: Libraries rely on CUDA 12.1. Double check your system if you get segmentation faults.**
+> [!CAUTION]
+> Libraries rely on CUDA 12.4. If you see errors related to segmentation faults, double check the version your system is running with `nvcc --version`.
 
 To run the code in this project, first, create a Python virtual environment using e.g. `uv`.
 To install `uv`, follow the [UV Installation Guide](https://docs.astral.sh/uv/getting-started/installation/).
 
 
 ```shell
-uv venv openr1 --python 3.11 && source openr1/bin/activate && uv pip install --upgrade pip
+uv venv openr1 --python 3.11 && source openr1/bin/activate && uv pip install --upgrade pip --link-mode=copy
 ```
 
 Next, install vLLM:
 
 ```shell
-uv pip install vllm>=0.7.0
-
-# For CUDA 12.1
-pip install vllm>=0.7.0 --extra-index-url https://download.pytorch.org/whl/cu121
-export LD_LIBRARY_PATH=$(python -c "import site; print(site.getsitepackages()[0] + '/nvidia/nvjitlink/lib')"):$LD_LIBRARY_PATH
+uv pip install vllm==0.7.1 --link-mode=copy
 ```
 
 This will also install PyTorch `v2.5.1` and it is **very important** to use this version since the vLLM binaries are compiled for it. You can then install the remaining dependencies for your specific use case via `pip install -e .[LIST OF MODES]`. For most contributors, we recommend:
 
 ```shell
-pip install -e ".[dev]"
+GIT_LFS_SKIP_SMUDGE=1 uv pip install -e ".[dev]" --link-mode=copy
 ```
 
 Next, log into your Hugging Face and Weights and Biases accounts as follows:
@@ -90,7 +87,44 @@ sudo apt-get install git-lfs
 
 ## Training models
 
-We support training models with either DDP or DeepSpeed (ZeRO-2 and ZeRO-3). To switch between methods, simply change the path to the `accelerate` YAML config in `configs`.
+We support training models with either DDP or DeepSpeed (ZeRO-2 and ZeRO-3). For example, to run SFT on a dataset distilled from DeepSeek-R1 with reasoning traces such as [Bespoke-Stratos-17k](https://huggingface.co/datasets/bespokelabs/Bespoke-Stratos-17k), run:
+
+```shell
+# Train via command line
+accelerate launch --config_file=recipes/accelerate_configs/zero3.yaml src/open_r1/sft.py \
+    --model_name_or_path Qwen/Qwen2.5-1.5B-Instruct \
+    --dataset_name HuggingFaceH4/Bespoke-Stratos-17k \
+    --learning_rate 2.0e-5 \
+    --num_train_epochs 1 \
+    --packing \
+    --max_seq_length 4096 \
+    --per_device_train_batch_size 2 \
+    --gradient_accumulation_steps 8 \
+    --gradient_checkpointing \
+    --bf16 \
+    --output_dir data/Qwen2.5-1.5B-Open-R1-Distill
+
+# Train via YAML config
+accelerate launch --config_file recipes/accelerate_configs/zero3.yaml src/open_r1/sft.py \
+    --config recipes/Qwen2.5-1.5B-Instruct/sft/config_demo.yaml
+```
+
+Currently, the following tasks are supported:
+
+* Supervised Fine-Tuning `sft`
+* Group Relative Policy Optimization `grpo`
+
+> [!TIP]
+> If you scale up/down the number of GPUs, we recommend also scaling up the per-device batch size or number of gradient accumulation steps to keep the global batch size constant.
+
+By default, these scripts will push each model to your Hugging Face Hub username, i.e. `{username}/{model_name}-{task}`. You can override the parameters in each YAML config by appending them to the command as follows: 
+
+```shell
+# Change batch size, number of epochs etc
+accelerate launch --config_file recipes/accelerate_configs/zero3.yaml src/open_r1/sft.py \
+    --config recipes/Qwen2.5-1.5B-Instruct/sft/config_demo.yaml
+    --per_device_train_batch_size=1 --num_train_epochs=5
+```
 
 > [!NOTE]
 > The training commands below are configured for a node of 8 x H100s (80GB). For different hardware and topologies, you may need to tune the batch size and number of gradient accumulation steps.
@@ -100,32 +134,50 @@ We support training models with either DDP or DeepSpeed (ZeRO-2 and ZeRO-3). To 
 To run SFT on a dataset distilled from DeepSeek-R1 with reasoning traces such as [Bespoke-Stratos-17k](https://huggingface.co/datasets/bespokelabs/Bespoke-Stratos-17k), run:
 
 ```shell
-ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/zero3.yaml src/open_r1/sft.py --config recipes/qwen/Qwen2.5-1.5B-Instruct/sft/config_full.yaml
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/zero3.yaml \
+    src/open_r1/sft.py \
+    --config recipes/Qwen2.5-1.5B-Instruct/sft/config_demo.yaml
 ```
-
-To launch a Slurm job, run:
-
-```shell
-sbatch --output=/path/to/logs/%x-%j.out --err=/path/to/logs/%x-%j.err slurm/sft.slurm {model} {dataset} {accelerator}
-```
-
-Here `{model}` and `{dataset}` refer to the model and dataset IDs on the Hugging Face Hub, while `{accelerator}` refers to the choice of an 🤗 Accelerate config file in configs. 
 
 ### GRPO
 
 To train via the GRPO trainer, we use one GPU to run vLLM for faster generation and the remaining GPUs for training. For example, one a node with 8 GPUs, use the `recipes/accelerate_configs/zero3.yaml` config and then overwrite `num_processes` to run on 7 devices:
 
 ```shell
-ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/zero3.yaml --num_processes=7 src/open_r1/grpo.py --config recipes/qwen/Qwen2.5-1.5B-Instruct/grpo/confg_full.yaml
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/zero3.yaml \
+    --num_processes=7 src/open_r1/grpo.py \
+    --config recipes/Qwen2.5-1.5B-Instruct/grpo/config_demo.yaml
 ```
 
-To launch a Slurm job, run:
+We provide a minimal reproducible experiment using GRPO for mathematical reasoning, referencing the approach from [SimpleRL-Reason](https://hkust-nlp.notion.site/simplerl-reason) which uses a 7B model trained on 8K examples. Running this on 8 H100 80G GPU takes about 3 hours:
 
 ```shell
-sbatch --output=/path/to/logs/%x-%j.out --err=/path/to/logs/%x-%j.err slurm/grpo.slurm {model} {dataset} {accelerator}
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/zero2.yaml \
+    --num_processes=7 src/open_r1/grpo.py \
+    --config recipes/Qwen2.5-Math-7B/grpo/config_simple_rl.yaml
 ```
 
-You can find more model configurations in the [recipes](./recipes).
+Our final [model](https://huggingface.co/Dongwei/Qwen-2.5-7B_Base_Math_smalllr), while using different learning rates, loss functions and reward structures, achieves 69.4% accuracy on MATH-500, demonstrating a 17%+ improvement over the base model.
+
+### Launching jobs on a Slurm cluster
+
+If you have access to a Slurm cluster, we provide a `slurm/train.slurm` script that will automatically queue training jobs for you. Here's how you can use it:
+
+```shell
+sbatch --job-name=open_r1 --nodes=1 slurm/train.slurm {model_name} {task} {config_suffix} {accelerator}
+```
+
+Here `{model_name}` and `{task}` are defined as above, while `{config_suffix}` refers to the specific config and `{accelerator}` refers to the choice of 🤗 Accelerate config in `recipes/accelerate_configs`. If you wish to override the default config parameters, you can provide them by appending a space-separated string like `'--arg1=value1 --arg2=value2'`. Here's a concrete example to run SFT on 1 node of 8 GPUs:
+
+```shell
+# Launch on Slurm and override default hyperparameters
+sbatch --job-name=open_r1 --nodes=1 slurm/train.slurm Qwen2.5-1.5B-Instruct sft demo zero3 '--per_device_train_batch_size=1 --num_train_epochs=5'
+```
+
+You can scale the number of nodes by increasing the `--nodes` flag.
+
+> [!NOTE]
+> The configuration in `slurm/train.slurm` is optimised for the Hugging Face Compute Cluster and may require tweaking to be adapted to your own compute nodes.
 
 ## Evaluating models
 
@@ -133,30 +185,46 @@ We use `lighteval` to evaluate models, with custom tasks defined in `src/open_r1
 
 ```shell
 MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B
-MODEL_ARGS="pretrained=$MODEL,dtype=float16,max_model_length=32768,gpu_memory_utilisation=0.8"
-TASK=aime24
+MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=32768,gpu_memory_utilisation=0.8"
 OUTPUT_DIR=data/evals/$MODEL
 
+# AIME 2024
+TASK=aime24
 lighteval vllm $MODEL_ARGS "custom|$TASK|0|0" \
     --custom-tasks src/open_r1/evaluate.py \
     --use-chat-template \
-    --system-prompt="Please reason step by step, and put your final answer within \boxed{}." \
+    --output-dir $OUTPUT_DIR
+
+# MATH-500
+TASK=math_500
+lighteval vllm $MODEL_ARGS "custom|$TASK|0|0" \
+    --custom-tasks src/open_r1/evaluate.py \
+    --use-chat-template \
+    --output-dir $OUTPUT_DIR
+
+# GPQA Diamond
+TASK=gpqa:diamond
+lighteval vllm $MODEL_ARGS "custom|$TASK|0|0" \
+    --custom-tasks src/open_r1/evaluate.py \
+    --use-chat-template \
     --output-dir $OUTPUT_DIR 
 ```
+
+> [!IMPORTANT]
+> You must set `max_model_length=32768` in the `vllm` command to align with the `generation_size` we define per eval. Without this, `lighteval` will throw an error.
 
 To increase throughput across multiple GPUs, use _data parallel_ as follows:
 
 ```shell
 NUM_GPUS=8
 MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B
-MODEL_ARGS="pretrained=$MODEL,dtype=float16,data_parallel_size=$NUM_GPUS,max_model_length=32768,gpu_memory_utilisation=0.8"
+MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,data_parallel_size=$NUM_GPUS,max_model_length=32768,gpu_memory_utilisation=0.8"
 TASK=aime24
 OUTPUT_DIR=data/evals/$MODEL
 
 lighteval vllm $MODEL_ARGS "custom|$TASK|0|0" \
     --custom-tasks src/open_r1/evaluate.py \
     --use-chat-template \
-    --system-prompt="Please reason step by step, and put your final answer within \boxed{}." \
     --output-dir $OUTPUT_DIR 
 ```
 
@@ -165,7 +233,7 @@ For large models which require sharding across GPUs, use _tensor parallel_ and r
 ```shell
 NUM_GPUS=8
 MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-32B
-MODEL_ARGS="pretrained=$MODEL,dtype=float16,tensor_parallel_size=$NUM_GPUS,max_model_length=32768,gpu_memory_utilisation=0.8"
+MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,tensor_parallel_size=$NUM_GPUS,max_model_length=32768,gpu_memory_utilisation=0.8"
 TASK=aime24
 OUTPUT_DIR=data/evals/$MODEL
 
@@ -173,50 +241,97 @@ export VLLM_WORKER_MULTIPROC_METHOD=spawn
 lighteval vllm $MODEL_ARGS "custom|$TASK|0|0" \
     --custom-tasks src/open_r1/evaluate.py \
     --use-chat-template \
-    --system-prompt="Please reason step by step, and put your final answer within \boxed{}." \
     --output-dir $OUTPUT_DIR 
 ```
 
 You can also launch an evaluation with `make evaluate`, specifying the model, task, and optionally the parallelism technique and number of GPUs.
 
 To evaluate on a single GPU:
+
 ```shell
 make evaluate MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-32B TASK=aime24
 ```
 
 To use Data Parallelism:
+
 ```shell
 make evaluate MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-32B TASK=aime24 PARALLEL=data NUM_GPUS=8
 ```
 
 To use Tensor Parallelism:
+
 ```shell
 make evaluate MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-32B TASK=aime24 PARALLEL=tensor NUM_GPUS=8
 ```
-## Reproducing Deepseek's evaluation results on MATH-500
-We are able to reproduce Deepseek's reported results on the MATH-500 Benchmark:
-| Model                      | MATH-500 (HF lighteval) | MATH-500 (DeepSeek Reported) |
-| :-------------------------- | :-------: | :----------------------------: |
-| DeepSeek-R1-Distill-Qwen-1.5B  |  81.6   |              83.9              |
-| DeepSeek-R1-Distill-Qwen-7B    |  91.8   |              92.8              |
-| DeepSeek-R1-Distill-Qwen-14B   |  94.2   |              93.9              |
-| DeepSeek-R1-Distill-Qwen-32B   |  95.0   |              94.3              |
-| DeepSeek-R1-Distill-Llama-8B   |  85.8   |              89.1              |
-| DeepSeek-R1-Distill-Llama-70B  |  93.4   |              94.5              |
 
+## Reproducing Deepseek's evaluation results
 
+> [!NOTE]
+> The DeepSeek-R1 paper uses sampling with a temperature of 0.6, a top-p value of 0.95, and 64 responses per query to estimate `pass@1`. Below, we report the results from greedy decoding, which likely explains the small 1-3σ discrepancies between our results and theirs.
+
+### MATH-500
+
+We are able to reproduce Deepseek's reported results on the MATH-500 benchmark within ~1-3 standard deviations:
+
+| Model                         | MATH-500 (🤗 LightEval) | MATH-500 (DeepSeek Reported) |
+|:------------------------------|:-----------------------:|:----------------------------:|
+| DeepSeek-R1-Distill-Qwen-1.5B |          81.2           |             83.9             |
+| DeepSeek-R1-Distill-Qwen-7B   |          91.8           |             92.8             |
+| DeepSeek-R1-Distill-Qwen-14B  |          94.2           |             93.9             |
+| DeepSeek-R1-Distill-Qwen-32B  |          95.0           |             94.3             |
+| DeepSeek-R1-Distill-Llama-8B  |          85.4           |             89.1             |
+| DeepSeek-R1-Distill-Llama-70B |          93.4           |             94.5             |
 
 To reproduce these results use the following command:
+
 ```shell
-sbatch slurm/evaluate.slurm deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B math_500
-sbatch slurm/evaluate.slurm deepseek-ai/DeepSeek-R1-Distill-Qwen-7B math_500
-sbatch slurm/evaluate.slurm deepseek-ai/DeepSeek-R1-Distill-Qwen-14B math_500
-sbatch slurm/evaluate.slurm deepseek-ai/DeepSeek-R1-Distill-Qwen-32B math_500 tp
-sbatch slurm/evaluate.slurm deepseek-ai/DeepSeek-R1-Distill-Llama-8B math_500
-sbatch slurm/evaluate.slurm deepseek-ai/DeepSeek-R1-Distill-Llama-70B math_500 tp
+NUM_GPUS=1 # Set to 8 for 32B and 70B models
+MODEL=deepseek-ai/{model_name}
+MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=32768,gpu_memory_utilisation=0.8,tensor_parallel_size=$NUM_GPUS"
+OUTPUT_DIR=data/evals/$MODEL
+
+lighteval vllm $MODEL_ARGS "custom|math_500|0|0" \
+    --custom-tasks src/open_r1/evaluate.py \
+    --use-chat-template \
+    --output-dir $OUTPUT_DIR
 ```
 
+Alternatively, you can launch Slurm jobs as follows:
 
+```shell
+python scripts/run_benchmarks.py --model-id={model_id}  --benchmarks math_500
+```
+
+### GPQA Diamond
+
+We are able to reproduce Deepseek's reported results on the GPQA Diamond benchmark within ~1-3 standard deviations:
+
+| Model                         | GPQA Diamond (🤗 LightEval) | GPQA Diamond (DeepSeek Reported) |
+|:------------------------------|:---------------------------:|:--------------------------------:|
+| DeepSeek-R1-Distill-Qwen-1.5B |            33.3             |               33.8               |
+| DeepSeek-R1-Distill-Qwen-7B   |            48.4             |               49.1               |
+| DeepSeek-R1-Distill-Qwen-14B  |            55.6             |               59.1               |
+| DeepSeek-R1-Distill-Qwen-32B  |            58.6             |               62.1               |
+| DeepSeek-R1-Distill-Llama-8B  |            51.0             |               49.0               |
+| DeepSeek-R1-Distill-Llama-70B |            65.2             |               65.2               |
+
+To reproduce these results use the following command:
+
+```shell
+NUM_GPUS=1 # Set to 8 for 32B and 70B models
+MODEL=deepseek-ai/{model_name}
+MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=32768,gpu_memory_utilisation=0.8,tensor_parallel_size=$NUM_GPUS"
+OUTPUT_DIR=data/evals/$MODEL
+
+lighteval vllm $MODEL_ARGS "custom|gpqa:diamond|0|0" \
+    --custom-tasks src/open_r1/evaluate.py \
+    --use-chat-template \
+    --output-dir $OUTPUT_DIR
+```
+
+```shell
+python scripts/run_benchmarks.py --model-id={model_id}  --benchmarks gpqa
+```
 
 ## Data generation
 

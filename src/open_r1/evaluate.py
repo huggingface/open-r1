@@ -14,8 +14,11 @@
 
 """Custom evaluation tasks for LightEval."""
 
+import random
+
 from lighteval.metrics.dynamic_metrics import (
     ExprExtractionConfig,
+    IndicesExtractionConfig,
     LatexExtractionConfig,
     multilingual_extractive_match_metric,
 )
@@ -44,6 +47,13 @@ expr_gold_metric = multilingual_extractive_match_metric(
     aggregation_function=max,
 )
 
+gpqa_metric = multilingual_extractive_match_metric(
+    language=Language.ENGLISH,
+    gold_extraction_target=[IndicesExtractionConfig(prefix_for_extraction="NativeLetters")],
+    pred_extraction_target=[IndicesExtractionConfig(prefix_for_extraction="NativeLetters")],
+    precision=5,
+)
+
 
 def prompt_fn(line, task_name: str = None):
     """Assumes the model is either prompted to emit \\boxed{answer} or does so automatically"""
@@ -64,12 +74,44 @@ def aime_prompt_fn(line, task_name: str = None):
     )
 
 
+def gpqa_prompt_fn(line, task_name: str = None):
+    """Prompt template adapted from simple-evals: https://github.com/openai/simple-evals/blob/83ed7640a7d9cd26849bcb3340125002ef14abbe/common.py#L14"""
+    gold_index = random.randint(0, 3)
+    choices = [line["Incorrect Answer 1"], line["Incorrect Answer 2"], line["Incorrect Answer 3"]]
+    choices.insert(gold_index, line["Correct Answer"])
+    query_template = "Answer the following multiple choice question. The last line of your response should be of the following format: 'Answer: $LETTER' (without quotes) where LETTER is one of ABCD. Think step by step before answering.\n\n{Question}\n\nA) {A}\nB) {B}\nC) {C}\nD) {D}"
+    query = query_template.format(A=choices[0], B=choices[1], C=choices[2], D=choices[3], Question=line["Question"])
+
+    return Doc(
+        task_name=task_name,
+        query=query,
+        choices=["A", "B", "C", "D"],
+        gold_index=gold_index,
+        instruction=query,
+    )
+
+
 # Define tasks
 aime24 = LightevalTaskConfig(
     name="aime24",
     suite=["custom"],
     prompt_function=aime_prompt_fn,
     hf_repo="HuggingFaceH4/aime_2024",
+    hf_subset="default",
+    hf_avail_splits=["train"],
+    evaluation_splits=["train"],
+    few_shots_split=None,
+    few_shots_select=None,
+    generation_size=32768,
+    metric=[expr_gold_metric],
+    version=1,
+)
+# Part I from AIME 2025 exam: https://artofproblemsolving.com/wiki/index.php/2025_AIME_I?srsltid=AfmBOoof5gaaqlt3-l6LH7Tt6qmJZtl_2PQEDYlLFlMqhq9dLL8FMCRR
+aime25_part1 = LightevalTaskConfig(
+    name="aime25:part1",
+    suite=["custom"],
+    prompt_function=aime_prompt_fn,
+    hf_repo="open-r1/aime_2025_1",
     hf_subset="default",
     hf_avail_splits=["train"],
     evaluation_splits=["train"],
@@ -93,11 +135,30 @@ math_500 = LightevalTaskConfig(
     metric=[latex_gold_metric],
     version=1,
 )
+gpqa_diamond = LightevalTaskConfig(
+    name="gpqa:diamond",
+    suite=["custom"],
+    prompt_function=gpqa_prompt_fn,
+    hf_repo="Idavidrein/gpqa",
+    hf_subset="gpqa_diamond",
+    hf_avail_splits=["train"],
+    evaluation_splits=["train"],
+    few_shots_split=None,
+    few_shots_select=None,
+    generation_size=32768,  # needed for reasoning models like R1
+    metric=[gpqa_metric],
+    stop_sequence=[],  # no stop sequence, will use eos token
+    trust_dataset=True,
+    version=1,
+)
+
 
 # Add tasks to the table
 TASKS_TABLE = []
 TASKS_TABLE.append(aime24)
+TASKS_TABLE.append(aime25_part1)
 TASKS_TABLE.append(math_500)
+TASKS_TABLE.append(gpqa_diamond)
 
 # MODULE LOGIC
 if __name__ == "__main__":

@@ -48,6 +48,8 @@ LIGHTEVAL_TASKS = {}
 
 register_lighteval_task(LIGHTEVAL_TASKS, "custom", "math_500", "math_500", 0)
 register_lighteval_task(LIGHTEVAL_TASKS, "custom", "aime24", "aime24", 0)
+register_lighteval_task(LIGHTEVAL_TASKS, "custom", "aime25_part1", "aime25:part1", 0)
+register_lighteval_task(LIGHTEVAL_TASKS, "custom", "gpqa", "gpqa:diamond", 0)
 
 
 def get_lighteval_tasks():
@@ -74,7 +76,7 @@ def run_lighteval_job(
     cmd_args = [
         f"--gres=gpu:{num_gpus}",
         f"--job-name=or1_{benchmark}_{model_name.split('/')[-1]}_{model_revision}",
-        "slurm/eval_callback.slurm",
+        "slurm/evaluate.slurm",
         benchmark,
         f'"{task_list}"',
         model_name,

@@ -1,56 +1,67 @@
 #!/bin/bash
 #SBATCH --job-name=open-r1-sft
-#SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --exclusive
 #SBATCH --gres=gpu:8
-#SBATCH --partition=hopper-prod 
+#SBATCH --partition=hopper-prod  # Adjust this for your cluster
 #SBATCH --output=./logs/%x-%j.out
 #SBATCH --err=./logs/%x-%j.err
+#SBATCH --requeue
+
+# Specific configuration optimized for the Hugging Face Compute Cluster
+# Be ye warned this may not work on other clusters!
+module load cuda/12.4
+
 
 set -x -e
 
 source ~/.bashrc
-conda activate openr1
+source openr1/bin/activate
 echo "START TIME: $(date)"
-echo "PYTHON ENV: $(which python)"
 
-MODEL_PATH=$1
-DATASET_PATH=$2
-ACCELERATOR=$3
+MODEL=$1
+TASK=$2
+CONFIG_SUFFIX=$3
+ACCELERATOR=$4
+OPTIONAL_ARGS=$5
 
 # Training setup
 NUM_NODES=$SLURM_NNODES
 GPUS_PER_NODE=8
 WORLD_SIZE=$(($NUM_NODES*$GPUS_PER_NODE))
+# Due to conflicts between Accelerate's DeepSpeed configs and Transformers' TrainingArguments, we need to parse the gradient accumulation steps from the config file to ensure they match
+CONFIG_FILE=recipes/$MODEL/$TASK/config_$CONFIG_SUFFIX.yaml
+GRAD_ACC_STEPS=$(grep 'gradient_accumulation_steps' $CONFIG_FILE | awk '{print $2}')
+USE_VLLM=$(grep 'use_vllm:\s*true' $CONFIG_FILE) # Match "use_vllm: true" (with optional whitespace)
 
+if [ -n "$USE_VLLM" ]; then  # Check if USE_VLLM is *not* empty (found)
+    WORLD_SIZE=$(($WORLD_SIZE-1))
+fi
+
+# Split the string into individual arguments
+IFS=' ' read -ra ARGS <<< "$OPTIONAL_ARGS"
+
+# Loop through the arguments and find the one with "--gradient_accumulation_steps"
+for arg in "${ARGS[@]}"; do
+    if [[ "$arg" == "--gradient_accumulation_steps="* ]]; then
+        # Extract the value after the equals sign
+        GRAD_ACC_STEPS="${arg#*=}"
+        break  # Exit the loop once we find the desired argument
+    fi
+done
+
+echo "Gradient accumulation steps: $GRAD_ACC_STEPS"
 # so processes know who to talk to
 MASTER_ADDR=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)
 MASTER_PORT=6000
 
 export CMD=" \
-    src/open_r1/sft.py \
-    --model_name_or_path $MODEL_PATH \
-    --dataset_name $DATASET_PATH \
-    --use_liger_kernel true \
-    --learning_rate 2.0e-5 \
-    --num_train_epochs 1 \
-    --packing \
-    --max_seq_length 4096 \
-    --per_device_train_batch_size 4 \
-    --per_device_eval_batch_size 4 \
-    --gradient_accumulation_steps 4 \
-    --gradient_checkpointing \
-    --bf16 \
-    --logging_steps 5 \
-    --eval_strategy steps \
-    --eval_steps 100 \
-    --output_dir data/Qwen2.5-1.5B-Open-R1-Distill
+    src/open_r1/$TASK.py --config $CONFIG_FILE $OPTIONAL_ARGS
     "
 
 export LAUNCHER="HF_HUB_ENABLE_HF_TRANSFER=1 ACCELERATE_LOG_LEVEL=info TRANSFORMERS_VERBOSITY=info accelerate launch \
     --config_file recipes/accelerate_configs/$ACCELERATOR.yaml  \
-    --gradient_accumulation_steps 4 \
+    --gradient_accumulation_steps $GRAD_ACC_STEPS \
     --num_machines $NUM_NODES \
     --num_processes $WORLD_SIZE \
     --main_process_ip $MASTER_ADDR \
@@ -69,10 +80,6 @@ export NCCL_ASYNC_ERROR_HANDLING=1
 # export NCCL_SOCKET_NTHREADS=1
 # export NCCL_NSOCKS_PERTHREAD=1
 # export CUDA_LAUNCH_BLOCKING=1
-
-# Specific configuration optimized for the Hugging Face Compute Cluster
-# Be ye warned this may not work on other clusters!
-module load cuda/12.1
 
 # srun error handling:
 # --wait=60: wait 60 sec after the first task terminates before terminating all remaining tasks
