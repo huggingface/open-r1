@@ -151,6 +151,14 @@ def get_cosine_scaled_reward(
 
 
 def get_repetition_penalty_reward(ngram_size: int, max_penalty: float):
+    """
+    Computes N-gram repetition penalty as described in Appendix C.2 of https://arxiv.org/abs/2502.03373. 
+    Reference implementation from: https://github.com/eddycmu/demystify-long-cot/blob/release/openrlhf/openrlhf/reward/repetition.py
+    
+    Args:
+    ngram_size: size of the n-grams
+    max_penalty: Maximum (negative) penalty for wrong answers
+    """
     if max_penalty > 0:
         raise ValueError(f"max_penalty {max_penalty} should not be positive")
 
@@ -161,14 +169,13 @@ def get_repetition_penalty_reward(ngram_size: int, max_penalty: float):
         words = text.lower().split()
         return zip(*[words[i:] for i in range(ngram_size)])
 
-    def repetition_penalty_reward(completions, *args, **kwargs):
+    def repetition_penalty_reward(completions, **kwargs) -> float:
         """
         reward function the penalizes repetitions
         ref implementation: https://github.com/eddycmu/demystify-long-cot/blob/release/openrlhf/openrlhf/reward/repetition.py
 
         Args:
             completions: List of model completions
-            solution: List of ground truth solutions
 
         This function is parameterized by the following arguments:
             ngram_size: size of the n-grams

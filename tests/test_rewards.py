@@ -125,15 +125,13 @@ class TestRepetitionPenaltyReward(unittest.TestCase):
     def test_no_repetition(self):
         reward_fn = get_repetition_penalty_reward(ngram_size=2, max_penalty=-1.0)
         completions = ["this is a test sentence"]
-        solution = []  # Solution is not used in the reward calculation
-        rewards = reward_fn(completions, solution)
+        rewards = reward_fn(completions)
         self.assertEqual(rewards, [0.0])
 
     def test_full_repetition(self):
         reward_fn = get_repetition_penalty_reward(ngram_size=2, max_penalty=-1.0)
         completions = ["this this this this this"]
-        solution = []
-        rewards = reward_fn(completions, solution)
+        rewards = reward_fn(completions)
         # (1 - 1/4) * -1 = -0.75
         self.assertEqual(rewards, [-0.75])
 
@@ -142,8 +140,7 @@ class TestRepetitionPenaltyReward(unittest.TestCase):
         completions = [
             "this is a this is a test"
         ]  # 2-grams: (this, is), (is, a), (a, this), (this, is), (is, a), (a, test)
-        solution = []
-        rewards = reward_fn(completions, solution)
+        rewards = reward_fn(completions)
         # Unique 2-grams: (this, is), (is, a), (a, this), (a, test).  4 unique out of 6 total
         # (1 - 4/6) * -1 = -1/3 = -0.3333...
         self.assertAlmostEqual(rewards[0], -1 / 3)
@@ -151,8 +148,7 @@ class TestRepetitionPenaltyReward(unittest.TestCase):
     def test_multiple_completions(self):
         reward_fn = get_repetition_penalty_reward(ngram_size=3, max_penalty=-0.5)
         completions = ["this is a test", "test test test test"]
-        solution = []
-        rewards = reward_fn(completions, solution)
+        rewards = reward_fn(completions)
         # Completion 1:  (this, is, a), (is, a, test) -> 2 unique / 2 total -> (1 - 2/2) * -0.5 = 0
         # Completion 2: (test, test, test) -> 1 unique / 2 total -> (1 - 1/2) * -0.5 = -0.25
         self.assertAlmostEqual(rewards[0], 0.0)
@@ -161,8 +157,7 @@ class TestRepetitionPenaltyReward(unittest.TestCase):
     def test_empty_completion(self):
         reward_fn = get_repetition_penalty_reward(ngram_size=2, max_penalty=-1.0)
         completions = [""]
-        solution = []
-        rewards = reward_fn(completions, solution)
+        rewards = reward_fn(completions)
         self.assertEqual(rewards, [0.0])
 
     def test_different_ngram_size(self):
@@ -170,8 +165,7 @@ class TestRepetitionPenaltyReward(unittest.TestCase):
         completions = [
             "this is a this is a test"
         ]  # 3-grams:(this, is, a) (is, a, this) (a, this, is) (this, is, a) (is, a, test)
-        solution = []
-        rewards = reward_fn(completions, solution)
+        rewards = reward_fn(completions)
         # Unique 3-grams: (this, is, a), (is, a, this), (a, this, is), (is, a, test) = 4.  Total 3-grams: 5
         # (1 - 4/5) * -2 = -0.4
         self.assertAlmostEqual(rewards[0], -0.4)
@@ -179,74 +173,64 @@ class TestRepetitionPenaltyReward(unittest.TestCase):
     def test_mixed_case(self):
         reward_fn = get_repetition_penalty_reward(ngram_size=2, max_penalty=-1.0)
         completions = ["This is A Test", "this IS a test"]
-        solution = []
-        rewards = reward_fn(completions, solution)
+        rewards = reward_fn(completions)
         # both completions should produce the same reward, because the text gets lowercased
         self.assertAlmostEqual(rewards[0], rewards[1])
 
     def test_one_word_completion(self):
         reward_fn = get_repetition_penalty_reward(ngram_size=3, max_penalty=-1.0)
         completions = ["word"]
-        solutions = []
-        rewards = reward_fn(completions, solutions)
+        rewards = reward_fn(completions)
         self.assertEqual(rewards, [0.0])
 
     def test_two_word_completion(self):
         reward_fn = get_repetition_penalty_reward(ngram_size=3, max_penalty=-1.0)
         completions = ["two words"]
-        solutions = []
-        rewards = reward_fn(completions, solutions)
+        rewards = reward_fn(completions)
         self.assertEqual(rewards, [0.0])
 
     def test_three_word_completion(self):
         reward_fn = get_repetition_penalty_reward(ngram_size=3, max_penalty=-1.0)
         completions = ["three different words"]
-        solutions = []
-        rewards = reward_fn(completions, solutions)
+        rewards = reward_fn(completions)
         self.assertEqual(rewards, [0.0])
 
     def test_three_word_repetition_completion(self):
         reward_fn = get_repetition_penalty_reward(ngram_size=3, max_penalty=-1.0)
         completions = ["word word word word"]
-        solutions = []
-        rewards = reward_fn(completions, solutions)
+        rewards = reward_fn(completions)
         self.assertEqual(rewards, [-0.5])
 
     def test_four_word_completion_with_repetition(self):
         reward_fn = get_repetition_penalty_reward(ngram_size=3, max_penalty=-1.0)
         completions = ["one two one two"]
-        solutions = []
-        rewards = reward_fn(completions, solutions)
+        rewards = reward_fn(completions)
         # ngrams are (one two one) (two one two). unique is 2 and count is 2, therefore (1-1) * -1.
         self.assertEqual(rewards, [0.0])
 
     def test_five_word_completion_with_repetition(self):
         reward_fn = get_repetition_penalty_reward(ngram_size=3, max_penalty=-0.5)
         completions = ["A B C A B"]
-        solutions = []
-        rewards = reward_fn(completions, solutions)
+        rewards = reward_fn(completions)
         # (A B C) (B C A) (C A B). unique is 3. count is 3 (1-1) * -.5 = 0
         self.assertEqual(rewards, [0.0])
 
     def test_six_word_completion_with_repetition(self):
         reward_fn = get_repetition_penalty_reward(ngram_size=3, max_penalty=-1.0)
         completions = ["A B C A B C"]
-        solutions = []
-        rewards = reward_fn(completions, solutions)
+        rewards = reward_fn(completions)
         self.assertEqual(rewards, [-0.25])
 
     def test_long_completion_with_repetition(self):
         reward_fn = get_repetition_penalty_reward(ngram_size=3, max_penalty=-1.0)
         completions = ["A B C A B C E F G A B C A B C"]
-        solutions = []
-        rewards = reward_fn(completions, solutions)
+        rewards = reward_fn(completions)
         self.assertAlmostEqual(rewards[0], -0.3846, places=4)
 
     def test_long_completion_without_repetition(self):
         reward_fn = get_repetition_penalty_reward(ngram_size=3, max_penalty=-1.0)
         completions = ["A B C D E F G H I J K L"]
-        solutions = []
-        rewards = reward_fn(completions, solutions)
+        rewards = reward_fn(completions)
         self.assertEqual(rewards, [0.0])
 
 
