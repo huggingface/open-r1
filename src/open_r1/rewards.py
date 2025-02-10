@@ -155,26 +155,26 @@ def get_repetition_penalty_reward(ngram_size: int, max_penalty: float):
         raise ValueError(f"max_penalty {max_penalty} should not be positive")
 
     if max_penalty == 0:
-        return 0    
-    
+        return 0
+
     def zipngram(text: str, ngram_size: int):
         words = text.lower().split()
         return zip(*[words[i:] for i in range(ngram_size)])
-    
+
     def repetition_penalty_reward(completions, *args, **kwargs):
         """
-            reward function the penalizes repetitions
-            ref implementation: https://github.com/eddycmu/demystify-long-cot/blob/release/openrlhf/openrlhf/reward/repetition.py
-            
-            Args:
-                completions: List of model completions
-                solution: List of ground truth solutions
+        reward function the penalizes repetitions
+        ref implementation: https://github.com/eddycmu/demystify-long-cot/blob/release/openrlhf/openrlhf/reward/repetition.py
 
-            This function is parameterized by the following arguments:
-                ngram_size: size of the n-grams
-                max_penalty: Maximum penalty for wrong answers
+        Args:
+            completions: List of model completions
+            solution: List of ground truth solutions
+
+        This function is parameterized by the following arguments:
+            ngram_size: size of the n-grams
+            max_penalty: Maximum penalty for wrong answers
         """
-        
+
         rewards = []
         for completion in completions:
             if completion == "":
@@ -183,7 +183,7 @@ def get_repetition_penalty_reward(ngram_size: int, max_penalty: float):
             if len(completion.split()) < ngram_size:
                 rewards.append(0.0)
                 continue
-            
+
             ngrams = set()
             total = 0
             for ng in zipngram(completion, ngram_size):
@@ -194,5 +194,5 @@ def get_repetition_penalty_reward(ngram_size: int, max_penalty: float):
             reward = scaling * max_penalty
             rewards.append(reward)
         return rewards
-        
+
     return repetition_penalty_reward
