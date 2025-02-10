@@ -48,6 +48,7 @@ LIGHTEVAL_TASKS = {}
 
 register_lighteval_task(LIGHTEVAL_TASKS, "custom", "math_500", "math_500", 0)
 register_lighteval_task(LIGHTEVAL_TASKS, "custom", "aime24", "aime24", 0)
+register_lighteval_task(LIGHTEVAL_TASKS, "custom", "aime25_part1", "aime25:part1", 0)
 register_lighteval_task(LIGHTEVAL_TASKS, "custom", "gpqa", "gpqa:diamond", 0)
 
 

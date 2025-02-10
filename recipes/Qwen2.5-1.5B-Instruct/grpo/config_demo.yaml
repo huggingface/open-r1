@@ -1,12 +1,13 @@
 # Model arguments
-model_name_or_path: Qwen/Qwen2.5-Math-7B
+model_name_or_path: Qwen/Qwen2.5-1.5B-Instruct
 model_revision: main
 torch_dtype: bfloat16
+attn_implementation: flash_attention_2
 
 # Data training arguments
-dataset_name: DigitalLearningGmbH/MATH-lighteval
+dataset_name: AI-MO/NuminaMath-TIR
 dataset_configs:
-- train
+- all
 # Num processes is less by 1 as vLLM is using 1 GPU
 num_processes: 7
 
@@ -22,21 +23,22 @@ gradient_accumulation_steps: 16
 gradient_checkpointing: true
 gradient_checkpointing_kwargs:
   use_reentrant: false
-hub_model_id: Qwen-2.5-7B_Base_Math_smalllr
+hub_model_id: Qwen2.5-1.5B-Open-R1-GRPO
 hub_strategy: every_save
-learning_rate: 3.0e-06
+learning_rate: 2.0e-05
 log_level: info
-logging_steps: 10
+logging_steps: 5
 logging_strategy: steps
 lr_scheduler_type: cosine
 max_prompt_length: 512
 max_completion_length: 1024
 max_steps: -1
+num_generations: 2
 num_train_epochs: 1
-output_dir: data/Qwen-2.5-7B_Base_Math_smalllr
+output_dir: data/Qwen2.5-1.5B-Open-R1-GRPO
 overwrite_output_dir: true
-per_device_eval_batch_size: 1
-per_device_train_batch_size: 1
+per_device_eval_batch_size: 4   
+per_device_train_batch_size: 2
 push_to_hub: true
 report_to:
 - wandb
