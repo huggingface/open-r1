@@ -162,9 +162,6 @@ def get_repetition_penalty_reward(ngram_size: int, max_penalty: float):
     if max_penalty > 0:
         raise ValueError(f"max_penalty {max_penalty} should not be positive")
 
-    if max_penalty == 0:
-        return 0
-
     def zipngram(text: str, ngram_size: int):
         words = text.lower().split()
         return zip(*[words[i:] for i in range(ngram_size)])
