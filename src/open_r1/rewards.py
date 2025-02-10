@@ -58,12 +58,12 @@ def format_reward(completions, **kwargs):
 
 
 def reasoning_steps_reward(completions, **kwargs):
-    """Reward function that checks for clear step-by-step reasoning.
+    r"""Reward function that checks for clear step-by-step reasoning.
     Regex pattern:
-        Step \\d+: - matches "Step 1:", "Step 2:", etc.
-        ^\\d+\\. - matches numbered lists like "1.", "2.", etc. at start of line
-        \\n- - matches bullet points with hyphens
-        \\n\\* - matches bullet points with asterisks
+        Step \d+: - matches "Step 1:", "Step 2:", etc.
+        ^\d+\. - matches numbered lists like "1.", "2.", etc. at start of line
+        \n- - matches bullet points with hyphens
+        \n\* - matches bullet points with asterisks
         First,|Second,|Next,|Finally, - matches transition words
     """
     pattern = r"(Step \d+:|^\d+\.|\n-|\n\*|First,|Second,|Next,|Finally,)"
