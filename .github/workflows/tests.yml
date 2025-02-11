@@ -1,4 +1,4 @@
-name: Quality
+name: Tests
 
 on:
   push:
@@ -11,8 +11,8 @@ on:
 
 jobs:
 
-  check_code_quality:
-    name: Check code quality
+  tests:
+    name: Run tests and quality checks
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -24,8 +24,11 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install ".[quality]"
+          python -m pip install ".[quality,tests]"
       - name: Code quality
         run: |
           make quality
+      - name: Run tests
+        run: |
+          make test
 

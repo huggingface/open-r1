@@ -83,7 +83,7 @@ def deps_list(*pkgs):
 
 
 extras = {}
-extras["tests"] = deps_list("pytest", "parameterized")
+extras["tests"] = deps_list("pytest", "parameterized", "math-verify")
 extras["torch"] = deps_list("torch")
 extras["quality"] = deps_list("ruff", "isort", "flake8")
 extras["train"] = deps_list("flash_attn")

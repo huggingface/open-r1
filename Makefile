@@ -14,6 +14,8 @@ quality:
 	isort --check-only $(check_dirs) setup.py
 	flake8 --max-line-length 119 $(check_dirs) setup.py
 
+test:
+	pytest -sv tests/
 
 # Evaluation
 
