@@ -1,4 +1,5 @@
 import unittest
+
 import torch
 
 
@@ -7,6 +8,7 @@ class TestGRPOScriptArguments(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         from open_r1.grpo import GRPOScriptArguments
+
         cls.GRPOScriptArguments = GRPOScriptArguments
 
     def test_default_weights(self):
