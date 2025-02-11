@@ -210,6 +210,7 @@ def create_weighted_reward(func, weight):
     Returns:
         A new function that applies the weight to the reward
     """
+
     @wraps(func)
     def weighted_reward(*args, **kwargs):
         rewards = func(*args, **kwargs)
