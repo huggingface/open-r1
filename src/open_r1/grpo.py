@@ -61,7 +61,6 @@ class GRPOScriptArguments(ScriptArguments):
             Maximum reward for cosine scaling for correct answers.
         cosine_max_len (`int`):
             Maximum length for cosine scaling.
-
     """
 
     reward_funcs: list[str] = field(

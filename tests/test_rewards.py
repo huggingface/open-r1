@@ -141,7 +141,7 @@ class TestRewards(unittest.TestCase):
         self.assertEqual(rewards[0], 1.0)
 
     def test_weighted_reward_preserves_name(self):
-        """Test that create_weighted_reward preserves the original function name."""
+        """Test that create_weighted_reward preserves the original function name. Important for logging."""
         base_reward_func = format_reward
         weighted_reward_func = create_weighted_reward(base_reward_func, 2.0)
 
