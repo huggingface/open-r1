@@ -161,11 +161,7 @@ def get_repetition_penalty_reward(ngram_size: int, max_penalty: float):
     """
     if max_penalty > 0:
         raise ValueError(f"max_penalty {max_penalty} should not be positive")
-
-    def zipngram(text: str, ngram_size: int):
-        words = text.lower().split()
-        return zip(*[words[i:] for i in range(ngram_size)])
-
+        
     def repetition_penalty_reward(completions, **kwargs) -> float:
         """
         reward function the penalizes repetitions
@@ -181,16 +177,13 @@ def get_repetition_penalty_reward(ngram_size: int, max_penalty: float):
             if completion == "":
                 rewards.append(0.0)
                 continue
-            if len(completion.split()) < ngram_size:
+            words = completion.lower().split()
+            if len(words) < ngram_size:
                 rewards.append(0.0)
                 continue
-
-            ngrams = set()
-            total = 0
-            for ng in zipngram(completion, ngram_size):
-                ngrams.add(ng)
-                total += 1
-
+    
+            ngrams = set(zip(*[words[i:] for i in range(ngram_size)]))
+            total = len(words) - ngram_size + 1
             scaling = 1 - len(ngrams) / total
             reward = scaling * max_penalty
             rewards.append(reward)
