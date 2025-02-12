@@ -74,6 +74,78 @@ def reasoning_steps_reward(completions, **kwargs):
     return [min(1.0, count / 3) for count in matches]
 
 
+def len_reward(completions, solution, **kwargs):
+    """Compute length-based rewards to discourage overthinking and promote token efficiency.
+
+    Args:
+        completions: List of model completions
+        solution: List of ground truth solutions
+
+    Returns:
+        List of rewards where:
+        - For correct answers: reward = 0.5 - (len - min_len)/(max_len - min_len)
+        - For incorrect answers: reward = min(0, 0.5 - (len - min_len)/(max_len - min_len))
+    """
+    contents = [completion[0]["content"] for completion in completions]
+
+    # First check correctness of answers
+    correctness = []
+    for content, sol in zip(contents, solution):
+        gold_parsed = parse(
+            sol,
+            extraction_mode="first_match",
+            extraction_config=[LatexExtractionConfig()],
+        )
+        if len(gold_parsed) == 0:
+            # Skip unparseable examples
+            correctness.append(True)  # Treat as correct to avoid penalizing
+            print("Failed to parse gold solution: ", sol)
+            continue
+
+        answer_parsed = parse(
+            content,
+            extraction_config=[
+                LatexExtractionConfig(
+                    normalization_config=NormalizationConfig(
+                        nits=False,
+                        malformed_operators=False,
+                        basic_latex=True,
+                        equations=True,
+                        boxed=True,
+                        units=True,
+                    ),
+                    boxed_match_priority=0,
+                    try_extract_without_anchor=False,
+                )
+            ],
+            extraction_mode="first_match",
+        )
+        correctness.append(verify(answer_parsed, gold_parsed))
+
+    # Calculate lengths
+    lengths = [len(content) for content in contents]
+    min_len = min(lengths)
+    max_len = max(lengths)
+
+    # If all responses have the same length, return zero rewards
+    if max_len == min_len:
+        return [0.0] * len(completions)
+
+    rewards = []
+    for length, is_correct in zip(lengths, correctness):
+        # Calculate lambda = 0.5 - (len - min_len)/(max_len - min_len)
+        lambda_val = 0.5 - (length - min_len) / (max_len - min_len)
+
+        if is_correct:
+            reward = lambda_val
+        else:
+            reward = min(0, lambda_val)
+
+        rewards.append(float(reward))
+
+    return rewards
+
+
 def get_cosine_scaled_reward(
     min_value_wrong: float = -1.0,
     max_value_wrong: float = -0.5,
