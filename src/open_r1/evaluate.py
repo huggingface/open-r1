@@ -102,7 +102,7 @@ aime24 = LightevalTaskConfig(
     evaluation_splits=["train"],
     few_shots_split=None,
     few_shots_select=None,
-    generation_size=32768,
+    generation_size=4096,
     metric=[expr_gold_metric],
     version=1,
 )
@@ -117,7 +117,7 @@ aime25_part1 = LightevalTaskConfig(
     evaluation_splits=["train"],
     few_shots_split=None,
     few_shots_select=None,
-    generation_size=32768,
+    generation_size=4096,
     metric=[expr_gold_metric],
     version=1,
 )
@@ -131,7 +131,7 @@ math_500 = LightevalTaskConfig(
     evaluation_splits=["test"],
     few_shots_split=None,
     few_shots_select=None,
-    generation_size=32768,
+    generation_size=4096,
     metric=[latex_gold_metric],
     version=1,
 )
@@ -145,7 +145,7 @@ gpqa_diamond = LightevalTaskConfig(
     evaluation_splits=["train"],
     few_shots_split=None,
     few_shots_select=None,
-    generation_size=32768,  # needed for reasoning models like R1
+    generation_size=4096,  # needed for reasoning models like R1
     metric=[gpqa_metric],
     stop_sequence=[],  # no stop sequence, will use eos token
     trust_dataset=True,
