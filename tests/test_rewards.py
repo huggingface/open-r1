@@ -5,6 +5,7 @@ from open_r1.rewards import (
     format_reward,
     get_cosine_scaled_reward,
     get_repetition_penalty_reward,
+    len_reward,
     reasoning_steps_reward,
 )
 
@@ -109,6 +110,75 @@ class TestRewards(unittest.TestCase):
         completion = [[{"content": inputs}]]
         rewards = format_reward(completion)
         self.assertEqual(rewards[0], 1.0)
+
+    def test_same_length_responses(self):
+        """Test len_reward when all responses have the same length."""
+        completions = [[{"content": r"\boxed{\frac{63}{400}}"}], [{"content": r"\boxed{\frac{64}{400}}"}]]
+        solutions = [r"\frac{63}{400}", r"\frac{63}{400}"]
+
+        rewards = len_reward(completions, solutions)
+        self.assertEqual(rewards, [0.0, 0.0])
+
+    def test_different_lengths_correct_answers(self):
+        """Test len_reward with different length correct answers."""
+        completions = [
+            [{"content": r"\boxed{\frac{63}{400}}"}],  # shorter
+            [{"content": r"\boxed{\frac{63}{400}}  " + "x" * 10}],  # longer
+        ]
+        solutions = [r"\frac{63}{400}", r"\frac{63}{400}"]
+
+        rewards = len_reward(completions, solutions)
+        self.assertGreater(rewards[0], rewards[1])  # shorter answer should get higher reward
+        self.assertAlmostEqual(rewards[0], 0.5)  # shortest correct answer gets maximum reward
+
+    def test_different_lengths_incorrect_answers(self):
+        """Test len_reward with different length incorrect answers."""
+        completions = [
+            [{"content": r"\boxed{\frac{64}{400}}"}],  # shorter
+            [{"content": r"\boxed{\frac{64}{400}}  " + "x" * 10}],  # longer
+        ]
+        solutions = [r"\frac{63}{400}", r"\frac{63}{400}"]
+
+        rewards = len_reward(completions, solutions)
+        self.assertLessEqual(rewards[0], 0.0)  # incorrect answers should get non-positive rewards
+        self.assertLessEqual(rewards[1], 0.0)
+        self.assertGreater(rewards[0], rewards[1])  # shorter answer should still be penalized less
+
+    def test_mixed_correctness(self):
+        """Test len_reward with mix of correct and incorrect answers of different lengths."""
+        completions = [
+            [{"content": r"\boxed{\frac{63}{400}}"}],  # correct, shorter
+            [{"content": r"\boxed{\frac{63}{400}}  " + "x" * 10}],  # correct, longer
+            [{"content": r"\boxed{\frac{64}{400}}"}],  # incorrect, shorter
+            [{"content": r"\boxed{\frac{64}{400}}  " + "x" * 10}],  # incorrect, longer
+        ]
+        solutions = [r"\frac{63}{400}"] * 4
+
+        rewards = len_reward(completions, solutions)
+
+        # Shortest correct answer should get positive reward
+        self.assertGreater(rewards[0], 0.0)
+
+        # Longer correct answer might get negative reward:
+        self.assertGreater(rewards[2], rewards[1])
+        self.assertGreaterEqual(rewards[1], rewards[3])
+
+        # Incorrect answers should get non-positive rewards
+        self.assertLessEqual(rewards[2], 0.0)
+        self.assertLessEqual(rewards[3], 0.0)
+
+        # Shorter answers should get better rewards within their correctness category
+        self.assertGreater(rewards[0], rewards[1])  # correct answers
+        self.assertGreater(rewards[2], rewards[3])  # incorrect answers
+
+    def test_unparseable_solution(self):
+        """Test len_reward with unparseable solution."""
+        completions = [[{"content": r"\boxed{answer}"}], [{"content": r"\boxed{answer} " + "x" * 10}]]
+        solutions = ["unparseable_latex", "unparseable_latex"]
+
+        rewards = len_reward(completions, solutions)
+        self.assertGreater(rewards[0], rewards[1])  # shorter answer should still get better reward
+        self.assertAlmostEqual(rewards[0], 0.5)  # treated as correct, shortest gets maximum reward
 
 
 class TestRepetitionPenaltyReward(unittest.TestCase):
