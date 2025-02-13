@@ -312,13 +312,6 @@ def code_reward(completions, **kwargs):
                     continue
 
                 output = process.stdout.strip()
-                print("output")
-                print(output)
-                print()
-                print("case")
-                print(case["output"])
-                print()
-                print(output.strip() == case["output"].strip())
                 if output.strip() == case["output"].strip():
                     passed += 1
 
@@ -331,7 +324,6 @@ def code_reward(completions, **kwargs):
         evaluate_code(code_snippet, test_cases)
         """
         code_snippets = [extract_code(completion[-1]["content"]) for completion in completions]
-        # gold_code_snippets = [extract_code(sol) for sol in kwargs["gold_standard_solution"]]
         verification_info = kwargs["verification_info"]
         scripts = [
             evaluation_script_template.format(
@@ -340,18 +332,13 @@ def code_reward(completions, **kwargs):
             for code, info in zip(code_snippets, verification_info)
         ]
         with Sandbox(timeout=30, request_timeout=3) as sbx:
-            for code, script in zip(code_snippets, scripts):
-                print("Running code in sandbox")
+            for script in scripts:
                 execution = sbx.run_code(script, request_timeout=3)
-                print("Execution completed")
-
                 try:
                     output = float(execution.text)
                 except (TypeError, ValueError):
                     output = 0.0
                 rewards.append(output)
-
-            # print(f"Rewards: {rewards}")
     except Exception as e:
         print(f"Error: {e}")
         rewards = [0.0] * len(completions)
