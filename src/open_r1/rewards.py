@@ -5,6 +5,7 @@ import re
 
 from latex2sympy2_extended import NormalizationConfig
 from math_verify import LatexExtractionConfig, parse, verify
+from e2b_code_interpreter import Sandbox
 
 
 def accuracy_reward(completions, solution, **kwargs):
@@ -197,3 +198,68 @@ def get_repetition_penalty_reward(ngram_size: int, max_penalty: float):
         return rewards
 
     return repetition_penalty_reward
+
+
+def extract_code(completion : str) -> str:
+    pattern = re.compile(r"```python\n(.*?)```", re.DOTALL)
+    matches = pattern.findall(completion)
+    extracted_answer = matches[-1] if len(matches) >= 1 else ""
+    return extracted_answer
+
+import json
+
+def code_reward(completions, **kwargs):
+    from e2b_code_interpreter import Sandbox
+
+    sbx = Sandbox()
+    """Returns a reward function that evaluates code snippets in a sandbox."""
+    evaluation_script_template = """import subprocess
+    import json
+
+    def evaluate_code(code, test_cases):
+        passed = 0
+        total = len(test_cases)
+
+        for case in test_cases:
+            process = subprocess.run(
+                ["python3", "-c", code],
+                input=case["input"],
+                text=True,
+                capture_output=True
+            )
+
+            if process.returncode != 0:  # Error in execution
+                continue
+
+            output = process.stdout.strip()
+            if output == case["output"]:
+                passed += 1
+
+        success_rate = (passed / total)
+
+    code_snippet = {code}
+    test_cases = json.loads({test_cases})
+
+    evaluate_code(code_snippet, test_cases)
+    """
+    code_snippets = [extract_code(completion) for completion in completions]
+    test_cases = kwargs["verification_info"]["test_cases"]
+    scripts = [evaluation_script_template.format(code=json.dumps(code), test_cases=json.dumps(json.dumps(test_cases))) for code in code_snippets]
+    rewards = []
+    for script in scripts:
+        execution = sbx.run_code(script, on_stdout=lambda data: print('stdout:', data)) # Execute Python inside the sandbox
+
+        output = ""
+        if len(execution.logs.stdout) > 0:
+            output += "\n".join(execution.logs.stdout)
+        if len(execution.logs.stderr) > 0:
+            output += "\n".join(execution.logs.stderr)
+        if execution.error is not None:
+            output += execution.error.traceback
+
+        # convert output to float
+        output = float(output)
+        rewards.append(output)
+    return rewards
+
+

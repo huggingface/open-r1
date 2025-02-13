@@ -31,6 +31,7 @@ from open_r1.rewards import (
     get_cosine_scaled_reward,
     get_repetition_penalty_reward,
     reasoning_steps_reward,
+    code_reward
 )
 from open_r1.utils.callbacks import get_callbacks
 from open_r1.utils.logging import init_wandb_training
@@ -162,6 +163,7 @@ def main(script_args, training_args, model_args):
             ngram_size=script_args.repetition_n_grams,
             max_penalty=script_args.repetition_max_penalty,
         ),
+        "code_reward": code_reward,
     }
     reward_funcs = [REWARD_FUNCS_REGISTRY[func] for func in script_args.reward_funcs]
 
