@@ -10,42 +10,46 @@ dataset_configs:
 - all
 
 # GRPO trainer config
+benchmarks:
+- gpqa
 bf16: true
-use_vllm: true
-vllm_device: auto
-vllm_gpu_memory_utilization: 0.7
-do_eval: true
-eval_strategy: 'no' #steps
-eval_steps: 100
+callbacks:
+- push_to_hub_revision
+eval_strategy: 'no'
 gradient_accumulation_steps: 1
 gradient_checkpointing: true
 gradient_checkpointing_kwargs:
   use_reentrant: false
-hub_model_id: Qwen2.5-Coder-3B-Open-R1-GRPO
+hub_model_id: open-r1/Qwen2.5-Coder-3B-GRPO
 hub_strategy: every_save
 learning_rate: 1.0e-06
 log_completions: true
 log_level: info
 logging_steps: 1
 logging_strategy: steps
-lr_scheduler_type: cosine
+lr_scheduler_type: constant
 max_prompt_length: 1024
 max_completion_length: 2048
 max_steps: -1
 num_generations: 14
 num_train_epochs: 1
-output_dir: data/Qwen2.5-Coder-3B-Open-R1-GRPO
+output_dir: data/Qwen2.5-Coder-3B-GRPO
 overwrite_output_dir: true
-per_device_train_batch_size: 8
-push_to_hub: false #true
+per_device_train_batch_size: 16
+push_to_hub: true
 report_to:
 - wandb
 reward_funcs:
 - format
 - code
 reward_weights:
-- 0.1
+- 0.25
 - 1.0
-save_strategy: "no"
+save_strategy: "steps"
+save_steps: 10
+save_total_limit: 1
 seed: 42
-warmup_ratio: 0.1
+use_vllm: true
+vllm_device: auto
+vllm_gpu_memory_utilization: 0.7
+warmup_ratio: 0.0
