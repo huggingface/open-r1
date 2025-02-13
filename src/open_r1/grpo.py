@@ -159,7 +159,7 @@ def main(script_args, training_args, model_args):
             ngram_size=script_args.repetition_n_grams,
             max_penalty=script_args.repetition_max_penalty,
         ),
-        "len_reward": len_reward,
+        "length": len_reward,
     }
     reward_funcs = [REWARD_FUNCS_REGISTRY[func] for func in script_args.reward_funcs]
 
