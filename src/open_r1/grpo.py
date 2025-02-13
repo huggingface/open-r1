@@ -16,7 +16,6 @@ import logging
 import os
 import sys
 from dataclasses import dataclass, field
-from typing import Optional
 
 import datasets
 import torch
@@ -28,7 +27,6 @@ from transformers.trainer_utils import get_last_checkpoint
 from open_r1.configs import GRPOConfig
 from open_r1.rewards import (
     accuracy_reward,
-    create_weighted_reward,
     format_reward,
     get_cosine_scaled_reward,
     get_repetition_penalty_reward,
@@ -51,8 +49,6 @@ class GRPOScriptArguments(ScriptArguments):
     Args:
         reward_funcs (`list[str]`):
             List of reward functions. Possible values: 'accuracy', 'format', 'reasoning_steps', 'cosine', 'repetition_penalty', 'length'.
-        reward_weights (`list[float]` or `None`, *optional*):
-            List of weights for each reward function. If not provided, defaults to 1.0 for each reward function.
         cosine_min_value_wrong (`float`):
             Minimum reward for cosine scaling for wrong answers.
         cosine_max_value_wrong (`float`):
@@ -69,12 +65,6 @@ class GRPOScriptArguments(ScriptArguments):
         default_factory=lambda: ["accuracy", "format"],
         metadata={
             "help": "List of reward functions. Possible values: 'accuracy', 'format', 'reasoning_steps', 'cosine', 'repetition_penalty', 'length'"
-        },
-    )
-    reward_weights: Optional[list[float]] = field(
-        default=None,
-        metadata={
-            "help": "List of weights for each reward function. If not provided, defaults to 1.0 for each function."
         },
     )
     cosine_min_value_wrong: float = field(
@@ -97,17 +87,6 @@ class GRPOScriptArguments(ScriptArguments):
         default=1000,
         metadata={"help": "Maximum length for scaling"},
     )
-
-    def __post_init__(self):
-        # If no weights were provided, default to 1.0 for each reward function
-        if self.reward_weights is None:
-            self.reward_weights = [1.0] * len(self.reward_funcs)
-        # If weights were provided, validate the length
-        elif len(self.reward_weights) != len(self.reward_funcs):
-            raise ValueError(
-                f"Number of reward weights ({len(self.reward_weights)}: {self.reward_weights}) must match "
-                f"number of reward functions ({len(self.reward_funcs)}: {self.reward_funcs})"
-            )
 
     repetition_n_grams: int = field(
         default=3,
@@ -168,7 +147,7 @@ def main(script_args, training_args, model_args):
     # Load the dataset
     dataset = load_dataset(script_args.dataset_name, name=script_args.dataset_config)
 
-    # Create weighted reward functions
+    # Get reward functions
     REWARD_FUNCS_REGISTRY = {
         "accuracy": accuracy_reward,
         "format": format_reward,
@@ -186,10 +165,7 @@ def main(script_args, training_args, model_args):
         ),
         "length": len_reward,
     }
-    reward_funcs = [
-        create_weighted_reward(REWARD_FUNCS_REGISTRY[func], weight)
-        for func, weight in zip(script_args.reward_funcs, script_args.reward_weights)
-    ]
+    reward_funcs = [REWARD_FUNCS_REGISTRY[func] for func in script_args.reward_funcs]
 
     # Format into conversation
     def make_conversation(example):

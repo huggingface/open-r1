@@ -2,7 +2,6 @@ import unittest
 
 from open_r1.rewards import (
     accuracy_reward,
-    create_weighted_reward,
     format_reward,
     get_cosine_scaled_reward,
     get_repetition_penalty_reward,
@@ -77,35 +76,6 @@ class TestRewards(unittest.TestCase):
         self.assertEqual(rewards[0], 1.0)
         self.assertEqual(rewards[1], 0.0)
 
-    def test_weighted_reward(self):
-        """Test create_weighted_reward with different weights."""
-        # Test with weight = 2.0
-        completion = [[{"content": "<think>Some reasoning</think><answer>The answer</answer>"}]]
-        base_reward_func = format_reward
-        weighted_reward_func = create_weighted_reward(base_reward_func, 2.0)
-
-        base_rewards = base_reward_func(completion)
-        weighted_rewards = weighted_reward_func(completion)
-
-        self.assertEqual(base_rewards[0], 1.0)
-        self.assertEqual(weighted_rewards[0], 2.0)
-
-        # Test with weight = 0.5
-        weighted_reward_func = create_weighted_reward(base_reward_func, 0.5)
-        weighted_rewards = weighted_reward_func(completion)
-        self.assertEqual(weighted_rewards[0], 0.5)
-
-        # Test with multiple completions
-        completions = [
-            [{"content": "<think>Some reasoning</think><answer>The answer</answer>"}],
-            [{"content": "Invalid format"}],
-        ]
-        weighted_reward_func = create_weighted_reward(base_reward_func, 2.0)
-        weighted_rewards = weighted_reward_func(completions)
-
-        self.assertEqual(weighted_rewards[0], 2.0)
-        self.assertEqual(weighted_rewards[1], 0.0)
-
     def test_cosine_scaled_reward(self):
         """Test cosine_scaled_reward with various cases."""
         # Test parameters
@@ -140,17 +110,6 @@ class TestRewards(unittest.TestCase):
         completion = [[{"content": inputs}]]
         rewards = format_reward(completion)
         self.assertEqual(rewards[0], 1.0)
-
-    def test_weighted_reward_preserves_name(self):
-        """Test that create_weighted_reward preserves the original function name. Important for logging."""
-        base_reward_func = format_reward
-        weighted_reward_func = create_weighted_reward(base_reward_func, 2.0)
-
-        self.assertEqual(
-            weighted_reward_func.__name__,
-            base_reward_func.__name__,
-            "Weighted reward function should preserve the original function name",
-        )
 
     def test_same_length_responses(self):
         """Test len_reward when all responses have the same length."""
