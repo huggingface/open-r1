@@ -81,7 +81,7 @@ echo "Uploading details to Hugging Face Hub..."
 DETAILS_FILEPATHS=$(find $OUTPUT_DIR/details/ -type f \( -name "*.parquet" \))
 echo "DETAILS_FILEPATHS: $DETAILS_FILEPATHS"
 TIMESTAMP=$(date +"%Y-%m-%dT%H-%M-%S")
-python src/open_r1/utils/upload_details.py --data_files $DETAILS_FILEPATHS --hub_repo_id $DETAILS_REPO_ID --config_name $MODEL_REVISION.$TASK_NAME.$TIMESTAMP
+python scripts/upload_details.py --data_files $DETAILS_FILEPATHS --hub_repo_id $DETAILS_REPO_ID --config_name $MODEL_REVISION.$TASK_NAME.$TIMESTAMP
     
 echo "Cleaning up ..."
 rm -rf $OUTPUT_DIR
