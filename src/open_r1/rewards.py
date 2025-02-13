@@ -283,11 +283,14 @@ def extract_code(completion : str) -> str:
 import json
 
 def code_reward(completions, **kwargs):
+    from dotenv import load_dotenv
+    load_dotenv()
     from e2b_code_interpreter import Sandbox
 
     sbx = Sandbox()
     """Returns a reward function that evaluates code snippets in a sandbox."""
-    evaluation_script_template = """import subprocess
+    evaluation_script_template = """
+    import subprocess
     import json
 
     def evaluate_code(code, test_cases):
@@ -310,30 +313,38 @@ def code_reward(completions, **kwargs):
                 passed += 1
 
         success_rate = (passed / total)
+        return success_rate
 
     code_snippet = {code}
     test_cases = json.loads({test_cases})
 
     evaluate_code(code_snippet, test_cases)
     """
-    code_snippets = [extract_code(completion) for completion in completions]
-    test_cases = kwargs["verification_info"]["test_cases"]
-    scripts = [evaluation_script_template.format(code=json.dumps(code), test_cases=json.dumps(json.dumps(test_cases))) for code in code_snippets]
+    code_snippets = [extract_code(completion[-1]["content"]) for completion in completions]
+    verification_info = kwargs["verification_info"]
+    scripts = [evaluation_script_template.format(code=json.dumps(code), test_cases=json.dumps(json.dumps(info["test_cases"]))) for code, info in zip(code_snippets, verification_info)]
     rewards = []
     for script in scripts:
-        execution = sbx.run_code(script, on_stdout=lambda data: print('stdout:', data)) # Execute Python inside the sandbox
+        print(f"=== Script ===\n{script}\n=== End of Script ===")
 
-        output = ""
-        if len(execution.logs.stdout) > 0:
-            output += "\n".join(execution.logs.stdout)
-        if len(execution.logs.stderr) > 0:
-            output += "\n".join(execution.logs.stderr)
-        if execution.error is not None:
-            output += execution.error.traceback
+        execution = sbx.run_code(script, on_stdout=lambda data: print('stdout:', data), request_timeout=3) # Execute Python inside the sandbox
+
+        print(f"=== Execution ===\n{execution}\n=== End of Execution ===")
+
+        output = execution.text
+
+        # if len(execution.logs.stdout) > 0:
+        #     output += "\n".join(execution.logs.stdout)
+        # if len(execution.logs.stderr) > 0:
+        #     output += "\n".join(execution.logs.stderr)
+        # if execution.error is not None:
+        #     output += execution.error.traceback
 
         # convert output to float
         output = float(output)
         rewards.append(output)
+    
+    print(f"Rewards: {rewards}")
     return rewards
 
 
