@@ -1,12 +1,17 @@
 """Reward functions for GRPO training."""
 
+import json
 import math
 import re
 from typing import Dict
 
+from dotenv import load_dotenv
 from e2b_code_interpreter import Sandbox
 from latex2sympy2_extended import NormalizationConfig
 from math_verify import LatexExtractionConfig, parse, verify
+
+
+load_dotenv()
 
 
 def accuracy_reward(completions, solution, **kwargs):
@@ -281,66 +286,75 @@ def extract_code(completion: str) -> str:
     return extracted_answer
 
 
-import json
-
-
 def code_reward(completions, **kwargs):
-    from dotenv import load_dotenv
-
-    load_dotenv()
-    from e2b_code_interpreter import Sandbox
-
-    sbx = Sandbox()
-    """Returns a reward function that evaluates code snippets in a sandbox."""
-    evaluation_script_template = """
-    import subprocess
-    import json
-
-    def evaluate_code(code, test_cases):
-        passed = 0
-        total = len(test_cases)
-
-        for case in test_cases:
-            process = subprocess.run(
-                ["python3", "-c", code],
-                input=case["input"],
-                text=True,
-                capture_output=True
-            )
-
-            if process.returncode != 0:  # Error in execution
-                continue
-
-            output = process.stdout.strip()
-            if output == case["output"]:
-                passed += 1
-
-        success_rate = (passed / total)
-        return success_rate
-
-    code_snippet = {code}
-    test_cases = json.loads({test_cases})
-
-    evaluate_code(code_snippet, test_cases)
-    """
-    code_snippets = [extract_code(completion[-1]["content"]) for completion in completions]
-    verification_info = kwargs["verification_info"]
-    scripts = [
-        evaluation_script_template.format(code=json.dumps(code), test_cases=json.dumps(json.dumps(info["test_cases"])))
-        for code, info in zip(code_snippets, verification_info)
-    ]
     rewards = []
-    for script in scripts:
-        # print(f"=== Script ===\n{script}\n=== End of Script ===")
+    try:
+        sbx = Sandbox(timeout=30, request_timeout=3)
+        """Returns a reward function that evaluates code snippets in a sandbox."""
+        evaluation_script_template = """
+        import subprocess
+        import json
 
-        execution = sbx.run_code(
-            script, on_stdout=lambda data: print("stdout:", data), request_timeout=3
-        )  # Execute Python inside the sandbox
+        def evaluate_code(code, test_cases):
+            passed = 0
+            total = len(test_cases)
 
-        # print(f"=== Execution ===\n{execution}\n=== End of Execution ===")
+            for case in test_cases:
+                process = subprocess.run(
+                    ["python3", "-c", code],
+                    input=case["input"],
+                    text=True,
+                    capture_output=True
+                )
 
-        output = float(execution.text)
-        rewards.append(output)
+                if process.returncode != 0:  # Error in execution
+                    continue
 
-    # print(f"Rewards: {rewards}")
+                output = process.stdout.strip()
+                print("output")
+                print(output)
+                print()
+                print("case")
+                print(case["output"])
+                print()
+                print(output.strip() == case["output"].strip())
+                if output.strip() == case["output"].strip():
+                    passed += 1
+
+            success_rate = (passed / total)
+            return success_rate
+
+        code_snippet = {code}
+        test_cases = json.loads({test_cases})
+
+        evaluate_code(code_snippet, test_cases)
+        """
+        code_snippets = [extract_code(completion[-1]["content"]) for completion in completions]
+        # gold_code_snippets = [extract_code(sol) for sol in kwargs["gold_standard_solution"]]
+        verification_info = kwargs["verification_info"]
+        scripts = [
+            evaluation_script_template.format(
+                code=json.dumps(code), test_cases=json.dumps(json.dumps(info["test_cases"]))
+            )
+            for code, info in zip(code_snippets, verification_info)
+        ]
+        for script in scripts:
+            # print(f"=== Script ===\n{script}\n=== End of Script ===")
+
+            execution = sbx.run_code(
+                script, on_stdout=lambda data: print("stdout:", data)
+            )  # Execute Python inside the sandbox
+
+            # print(f"=== Execution ===\n{execution}\n=== End of Execution ===")
+
+            output = float(execution.text)
+            rewards.append(output)
+
+        # print(f"Rewards: {rewards}")
+
+        # Shutdown to stay in limits
+        sbx.kill()
+    except Exception as e:
+        print(f"Error: {e}")
+        rewards = [0.0] * len(completions)
     return rewards
