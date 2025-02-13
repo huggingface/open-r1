@@ -297,13 +297,15 @@ def code_reward(completions, **kwargs):
         def evaluate_code(code, test_cases):
             passed = 0
             total = len(test_cases)
+            exec_timeout = 5
 
             for case in test_cases:
                 process = subprocess.run(
                     ["python3", "-c", code],
                     input=case["input"],
                     text=True,
-                    capture_output=True
+                    capture_output=True,
+                    timeout=exec_timeout
                 )
 
                 if process.returncode != 0:  # Error in execution
@@ -338,12 +340,15 @@ def code_reward(completions, **kwargs):
             for code, info in zip(code_snippets, verification_info)
         ]
         with Sandbox(timeout=30, request_timeout=3) as sbx:
-            for script in scripts:
+            for code, script in zip(code_snippets, scripts):
                 print("Running code in sandbox")
-                execution = sbx.run_code(script)
+                execution = sbx.run_code(script, request_timeout=3)
                 print("Execution completed")
 
-                output = float(execution.text)
+                try:
+                    output = float(execution.text)
+                except (TypeError, ValueError):
+                    output = 0.0
                 rewards.append(output)
 
             # print(f"Rewards: {rewards}")
