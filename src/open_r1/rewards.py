@@ -76,6 +76,8 @@ def reasoning_steps_reward(completions, **kwargs):
 
 def len_reward(completions, solution, **kwargs):
     """Compute length-based rewards to discourage overthinking and promote token efficiency.
+    
+    Taken from from the Kimi 1.5 tech report: https://arxiv.org/abs/2501.12599
 
     Args:
         completions: List of model completions
