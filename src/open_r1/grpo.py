@@ -34,7 +34,7 @@ from open_r1.rewards import (
     reasoning_steps_reward,
 )
 from open_r1.utils.callbacks import get_callbacks
-from open_r1.utils.logging import init_wandb_training
+from open_r1.utils.wandb_logging import init_wandb_training
 from trl import GRPOTrainer, ModelConfig, ScriptArguments, TrlParser, get_peft_config
 
 
