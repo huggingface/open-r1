@@ -135,7 +135,6 @@ def len_reward(completions : list[Dict[str, str]], solutions : list[str], **kwar
 
     rewards = []
     for length, is_correct in zip(lengths, correctness):
-        # Calculate lambda = 0.5 - (len - min_len)/(max_len - min_len)
         lambda_val = 0.5 - (length - min_len) / (max_len - min_len)
 
         if is_correct:
