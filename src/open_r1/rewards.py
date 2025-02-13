@@ -92,7 +92,7 @@ def len_reward(completions : list[Dict[str, str]], solutions : list[str], **kwar
 
     # First check correctness of answers
     correctness = []
-    for content, sol in zip(contents, solution):
+    for content, sol in zip(contents, solutions):
         gold_parsed = parse(
             sol,
             extraction_mode="first_match",
