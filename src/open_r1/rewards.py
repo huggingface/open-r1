@@ -289,7 +289,6 @@ def extract_code(completion: str) -> str:
 def code_reward(completions, **kwargs):
     rewards = []
     try:
-        sbx = Sandbox(timeout=30, request_timeout=3)
         """Returns a reward function that evaluates code snippets in a sandbox."""
         evaluation_script_template = """
         import subprocess
@@ -338,22 +337,16 @@ def code_reward(completions, **kwargs):
             )
             for code, info in zip(code_snippets, verification_info)
         ]
-        for script in scripts:
-            # print(f"=== Script ===\n{script}\n=== End of Script ===")
+        with Sandbox(timeout=30, request_timeout=3) as sbx:
+            for script in scripts:
+                print("Running code in sandbox")
+                execution = sbx.run_code(script)
+                print("Execution completed")
 
-            execution = sbx.run_code(
-                script, on_stdout=lambda data: print("stdout:", data)
-            )  # Execute Python inside the sandbox
+                output = float(execution.text)
+                rewards.append(output)
 
-            # print(f"=== Execution ===\n{execution}\n=== End of Execution ===")
-
-            output = float(execution.text)
-            rewards.append(output)
-
-        # print(f"Rewards: {rewards}")
-
-        # Shutdown to stay in limits
-        sbx.kill()
+            # print(f"Rewards: {rewards}")
     except Exception as e:
         print(f"Error: {e}")
         rewards = [0.0] * len(completions)

@@ -1,5 +1,5 @@
 # Model arguments
-model_name_or_path: Qwen/Qwen2.5-Coder-1.5B-Instruct
+model_name_or_path: Qwen/Qwen2.5-Coder-3B-Instruct
 model_revision: main
 torch_dtype: bfloat16
 attn_implementation: flash_attention_2
@@ -46,5 +46,3 @@ reward_funcs:
 save_strategy: "no"
 seed: 42
 warmup_ratio: 0.1
-wandb_entity: huggingface 
-wandb_project: open-r1
