@@ -58,6 +58,7 @@ _deps = [
     "math-verify==0.5.2",  # Used for math verification in grpo
     "packaging>=23.0",
     "parameterized>=0.9.0",
+    "peft>=0.14.0",
     "pytest",
     "ruff>=0.9.0",
     "safetensors>=0.3.3",
