@@ -4,9 +4,9 @@ import math
 import re
 from typing import Dict
 
+from e2b_code_interpreter import Sandbox
 from latex2sympy2_extended import NormalizationConfig
 from math_verify import LatexExtractionConfig, parse, verify
-from e2b_code_interpreter import Sandbox
 
 
 def accuracy_reward(completions, solution, **kwargs):
@@ -274,16 +274,19 @@ def get_repetition_penalty_reward(ngram_size: int, max_penalty: float):
     return repetition_penalty_reward
 
 
-def extract_code(completion : str) -> str:
+def extract_code(completion: str) -> str:
     pattern = re.compile(r"```python\n(.*?)```", re.DOTALL)
     matches = pattern.findall(completion)
     extracted_answer = matches[-1] if len(matches) >= 1 else ""
     return extracted_answer
 
+
 import json
+
 
 def code_reward(completions, **kwargs):
     from dotenv import load_dotenv
+
     load_dotenv()
     from e2b_code_interpreter import Sandbox
 
@@ -322,29 +325,22 @@ def code_reward(completions, **kwargs):
     """
     code_snippets = [extract_code(completion[-1]["content"]) for completion in completions]
     verification_info = kwargs["verification_info"]
-    scripts = [evaluation_script_template.format(code=json.dumps(code), test_cases=json.dumps(json.dumps(info["test_cases"]))) for code, info in zip(code_snippets, verification_info)]
+    scripts = [
+        evaluation_script_template.format(code=json.dumps(code), test_cases=json.dumps(json.dumps(info["test_cases"])))
+        for code, info in zip(code_snippets, verification_info)
+    ]
     rewards = []
     for script in scripts:
-        print(f"=== Script ===\n{script}\n=== End of Script ===")
+        # print(f"=== Script ===\n{script}\n=== End of Script ===")
 
-        execution = sbx.run_code(script, on_stdout=lambda data: print('stdout:', data), request_timeout=3) # Execute Python inside the sandbox
+        execution = sbx.run_code(
+            script, on_stdout=lambda data: print("stdout:", data), request_timeout=3
+        )  # Execute Python inside the sandbox
 
-        print(f"=== Execution ===\n{execution}\n=== End of Execution ===")
+        # print(f"=== Execution ===\n{execution}\n=== End of Execution ===")
 
-        output = execution.text
-
-        # if len(execution.logs.stdout) > 0:
-        #     output += "\n".join(execution.logs.stdout)
-        # if len(execution.logs.stderr) > 0:
-        #     output += "\n".join(execution.logs.stderr)
-        # if execution.error is not None:
-        #     output += execution.error.traceback
-
-        # convert output to float
-        output = float(output)
+        output = float(execution.text)
         rewards.append(output)
-    
-    print(f"Rewards: {rewards}")
+
+    # print(f"Rewards: {rewards}")
     return rewards
-
-

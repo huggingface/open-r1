@@ -27,12 +27,12 @@ from transformers.trainer_utils import get_last_checkpoint
 from open_r1.configs import GRPOConfig
 from open_r1.rewards import (
     accuracy_reward,
+    code_reward,
     format_reward,
     get_cosine_scaled_reward,
     get_repetition_penalty_reward,
     len_reward,
     reasoning_steps_reward,
-    code_reward
 )
 from open_r1.utils.callbacks import get_callbacks
 from open_r1.utils.wandb_logging import init_wandb_training
