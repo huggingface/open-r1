@@ -2,6 +2,7 @@
 
 import math
 import re
+from typing import Dict
 
 from latex2sympy2_extended import NormalizationConfig
 from math_verify import LatexExtractionConfig, parse, verify
@@ -74,9 +75,9 @@ def reasoning_steps_reward(completions, **kwargs):
     return [min(1.0, count / 3) for count in matches]
 
 
-def len_reward(completions : list[Dict[str, str]], solutions : list[str], **kwargs) -> float:
+def len_reward(completions: list[Dict[str, str]], solutions: list[str], **kwargs) -> float:
     """Compute length-based rewards to discourage overthinking and promote token efficiency.
-    
+
     Taken from from the Kimi 1.5 tech report: https://arxiv.org/abs/2501.12599
 
     Args:
