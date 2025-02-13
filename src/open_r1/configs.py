@@ -40,6 +40,14 @@ class GRPOConfig(trl.GRPOConfig):
     )
     overwrite_hub_revision: bool = field(default=False, metadata={"help": "Whether to overwrite the Hub revision."})
     push_to_hub_revision: bool = field(default=False, metadata={"help": "Whether to push to a Hub revision/branch."})
+    wandb_entity: Optional[str] = field(
+        default=None,
+        metadata={"help": ("The entity to store runs under.")},
+    )
+    wandb_project: Optional[str] = field(
+        default=None,
+        metadata={"help": ("The project to store runs under.")},
+    )
 
 
 @dataclass
@@ -64,3 +72,11 @@ class SFTConfig(trl.SFTConfig):
     )
     overwrite_hub_revision: bool = field(default=False, metadata={"help": "Whether to overwrite the Hub revision."})
     push_to_hub_revision: bool = field(default=False, metadata={"help": "Whether to push to a Hub revision/branch."})
+    wandb_entity: Optional[str] = field(
+        default=None,
+        metadata={"help": ("The entity to store runs under.")},
+    )
+    wandb_project: Optional[str] = field(
+        default=None,
+        metadata={"help": ("The project to store runs under.")},
+    )

@@ -10,7 +10,7 @@
    - [SFT](#sft)  
    - [GRPO](#grpo)  
 5. [Evaluating models](#evaluating-models)  
-6. [Reproducing Deepseek's evaluation results on MATH-500](#reproducing-deepseeks-evaluation-results-on-math-500)  
+6. [Reproducing Deepseek's evaluation results](#reproducing-deepseeks-evaluation-results)  
 7. [Data generation](#data-generation)  
    - [Generate data from a smol distilled R1 model](#generate-data-from-a-smol-distilled-r1-model)  
    - [Generate data from DeepSeek-R1](#generate-data-from-deepseek-r1)  
@@ -43,7 +43,8 @@ We will use the DeepSeek-R1 [tech report](https://github.com/deepseek-ai/DeepSee
 
 ## Installation
 
-**Note: Libraries rely on CUDA 12.4. Double check your system if you get segmentation faults.**
+> [!CAUTION]
+> Libraries rely on CUDA 12.4. If you see errors related to segmentation faults, double check the version your system is running with `nvcc --version`.
 
 To run the code in this project, first, create a Python virtual environment using e.g. `uv`.
 To install `uv`, follow the [UV Installation Guide](https://docs.astral.sh/uv/getting-started/installation/).
@@ -104,8 +105,8 @@ accelerate launch --config_file=recipes/accelerate_configs/zero3.yaml src/open_r
     --output_dir data/Qwen2.5-1.5B-Open-R1-Distill
 
 # Train via YAML config
-accelerate launch --config_file recipes/accelerate_configs/zero3.yaml src/openr1/sft.py \
-    recipes/Qwen/Qwen2.5-1.5B-Instruct/sft/config_demo.yaml
+accelerate launch --config_file recipes/accelerate_configs/zero3.yaml src/open_r1/sft.py \
+    --config recipes/Qwen2.5-1.5B-Instruct/sft/config_demo.yaml
 ```
 
 Currently, the following tasks are supported:
@@ -120,9 +121,17 @@ By default, these scripts will push each model to your Hugging Face Hub username
 
 ```shell
 # Change batch size, number of epochs etc
-accelerate launch --config_file recipes/accelerate_configs/zero3.yaml src/openr1/sft.py \
-    recipes/Qwen/Qwen2.5-1.5B-Instruct/sft/config_demo.yaml
+accelerate launch --config_file recipes/accelerate_configs/zero3.yaml src/open_r1/sft.py \
+    --config recipes/Qwen2.5-1.5B-Instruct/sft/config_demo.yaml
     --per_device_train_batch_size=1 --num_train_epochs=5
+```
+
+If you also wish to override the Weights and Biases default settings, you can do so as follows:
+
+```shell
+accelerate launch --config_file recipes/accelerate_configs/zero3.yaml src/open_r1/sft.py \
+    --config recipes/Qwen2.5-1.5B-Instruct/sft/config_demo.yaml
+    --wandb_entity huggingface --wandb_project open-r1 --run_name Qwen2.5-1.5B-GRPO
 ```
 
 > [!NOTE]
@@ -140,10 +149,10 @@ ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_con
 
 ### GRPO
 
-To train via the GRPO trainer, we use one GPU to run vLLM for faster generation and the remaining GPUs for training. For example, one a node with 8 GPUs, use the `recipes/accelerate_configs/zero3.yaml` config and then overwrite `num_processes` to run on 7 devices:
+To train via the GRPO trainer, we use one GPU to run vLLM for faster generation and the remaining GPUs for training. For example, one a node with 8 GPUs, use the `recipes/accelerate_configs/zero2.yaml` config and then overwrite `num_processes` to run on 7 devices:
 
 ```shell
-ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/zero3.yaml \
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/zero2.yaml \
     --num_processes=7 src/open_r1/grpo.py \
     --config recipes/Qwen2.5-1.5B-Instruct/grpo/config_demo.yaml
 ```
