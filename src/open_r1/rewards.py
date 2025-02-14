@@ -3,11 +3,34 @@
 import math
 import re
 from typing import Dict
-
+from sentence_transformers import SentenceTransformer
 from latex2sympy2_extended import NormalizationConfig
 from math_verify import LatexExtractionConfig, parse, verify
 
-
+sentence_model = SentenceTransformer('BAAI/bge-large-zh-v1.5')
+similarity_scale=2.0
+similarity_threshold=0.5
+def similarity_func(text1,text2):
+    '''
+        calculate text similarity by using BAAI/bge-large-zh-v1.5 ie.
+        use similarity instead of parsing answer for more common task
+    '''
+    
+    embeddings_1 = sentence_model.encode(text1, normalize_embeddings=True)
+    embeddings_2 = sentence_model.encode(text2, normalize_embeddings=True)
+    similarity = embeddings_1 @ embeddings_2.T
+    return similarity
+def similarity_accuracy_reward(completions,answer,**kwargs):
+    contents=[completion[0]["content"] for completion in completions]
+    rewards=[]
+    for content,ans in zip(contents,answer):
+        sim=similarity_func(content,ans)
+        if sim<similarity_threshold:
+            rewards.append(0.0) #reward 0
+        else:
+            rewards.append(1.0) #reward 1 or just similarity? maybe an scale for different similarity threshold
+    return rewards
+    
 def accuracy_reward(completions, solution, **kwargs):
     """Reward function that checks if the completion is the same as the ground truth."""
     contents = [completion[0]["content"] for completion in completions]
