@@ -67,6 +67,8 @@ def main(script_args, training_args, model_args):
     # Set seed for reproducibility
     set_seed(training_args.seed)
 
+    training_args.lr_scheduler_kwargs = {"min_lr": training_args.learning_rate * 0.1}
+
     ###############
     # Setup logging
     ###############
