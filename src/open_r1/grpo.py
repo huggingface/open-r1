@@ -162,12 +162,13 @@ def main(script_args, training_args, model_args):
 
     # Format into conversation
     def make_conversation(example):
-        return {
-            "prompt": [
-                {"role": "system", "content": training_args.system_prompt},
-                {"role": "user", "content": example["problem"]},
-            ],
-        }
+        prompt = []
+
+        if training_args.system_prompt is not None:
+            prompt.append({"role": "system", "content": training_args.system_prompt})
+
+        prompt.append({"role": "user", "content": example["problem"]})
+        return {"prompt": prompt}
 
     dataset = dataset.map(make_conversation)
     for split in dataset:
