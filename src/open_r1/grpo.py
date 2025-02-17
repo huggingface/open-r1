@@ -171,6 +171,7 @@ def main(script_args, training_args, model_args):
         return {"prompt": prompt}
 
     dataset = dataset.map(make_conversation)
+
     for split in dataset:
         if "messages" in dataset[split].column_names:
             dataset[split] = dataset[split].remove_columns("messages")
