@@ -18,7 +18,7 @@ benchmarks:
 - math_500
 bf16: true
 do_eval: false
-eval_strategy: epoch
+eval_strategy: 'no'
 gradient_accumulation_steps: 1
 gradient_checkpointing: true
 gradient_checkpointing_kwargs:
