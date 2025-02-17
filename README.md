@@ -341,6 +341,36 @@ lighteval vllm $MODEL_ARGS "custom|gpqa:diamond|0|0" \
 python scripts/run_benchmarks.py --model-id={model_id}  --benchmarks gpqa
 ```
 
+### LiveCodeBench
+
+We are able to reproduce Deepseek's reported results on the LiveCodeBench code generation benchmark within ~1-3 standard deviations:
+
+| Model                         | LiveCodeBench (🤗 LightEval) | GPQA Diamond (DeepSeek Reported) |
+|:------------------------------|:---------------------------:|:--------------------------------:|
+| DeepSeek-R1-Distill-Qwen-1.5B |            16.3             |               16.9               |
+| DeepSeek-R1-Distill-Qwen-7B   |            36.6             |               37.6               |
+| DeepSeek-R1-Distill-Qwen-14B  |            51.5             |               53.1               |
+| DeepSeek-R1-Distill-Qwen-32B  |            -                |               57.2               |
+| DeepSeek-R1-Distill-Llama-8B  |            37.0             |               39.6               |
+| DeepSeek-R1-Distill-Llama-70B |            54.5             |               57.5               |
+
+To reproduce these results use the following command:
+
+```shell
+NUM_GPUS=1 # Set to 8 for 32B and 70B models, or data_parallel_size=8 with the smaller models for speed
+MODEL=deepseek-ai/{model_name}
+MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=32768,gpu_memory_utilisation=0.8,tensor_parallel_size=$NUM_GPUS,generation_parameters={temperature:0.6,top_p:0.95}"
+OUTPUT_DIR=data/evals/$MODEL
+
+lighteval vllm $MODEL_ARGS "extended|lcb:codegeneration|0|0" \
+    --use-chat-template \
+    --output-dir $OUTPUT_DIR
+```
+
+```shell
+python scripts/run_benchmarks.py --model-id={model_id}  --benchmarks lcb
+```
+
 ## Data generation
 
 ### Generate data from a smol distilled R1 model
