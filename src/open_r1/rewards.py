@@ -58,6 +58,15 @@ def format_reward(completions, **kwargs):
     return [1.0 if match else 0.0 for match in matches]
 
 
+def format_reward_deepseek(completions, **kwargs):
+    """Reward function that checks if the reasoning process is enclosed within <think> and </think> tags. Based on DeepSeek-R1 tech report: https://arxiv.org/abs/2501.12948"""
+    pattern = r"^<think>.*?</think>$"
+    # We prepend a <think> tag because DeepSeek and R1-distilled models prefill the assistant response with <think> and thus it's absent in the completion
+    completion_contents = [f"<think>\n{completion[0]['content']}" for completion in completions]
+    matches = [re.match(pattern, content, re.DOTALL | re.MULTILINE) for content in completion_contents]
+    return [1.0 if match else 0.0 for match in matches]
+
+
 def reasoning_steps_reward(completions, **kwargs):
     r"""Reward function that checks for clear step-by-step reasoning.
     Regex pattern:

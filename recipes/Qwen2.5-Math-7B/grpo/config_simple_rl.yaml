@@ -26,7 +26,9 @@ gradient_checkpointing_kwargs:
 hub_model_id: Qwen-2.5-7B-Simple-RL
 hub_strategy: every_save
 learning_rate: 3.0e-06
+log_completions: true
 log_level: info
+logging_first_step: true
 logging_steps: 5
 logging_strategy: steps
 lr_scheduler_type: cosine

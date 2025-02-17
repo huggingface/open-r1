@@ -32,8 +32,10 @@ class GRPOConfig(trl.GRPOConfig):
     callbacks: list[str] = field(
         default_factory=lambda: [], metadata={"help": "The callbacks to run during training."}
     )
+    chat_template: Optional[str] = field(default=None, metadata={"help": "The chat template to use."})
     system_prompt: Optional[str] = field(
-        default=None, metadata={"help": "The optional system prompt to use for benchmarking."}
+        default="You are a helpful AI Assistant, designed to provided well-reasoned and detailed responses. You FIRST think about the reasoning process as an internal monologue and then provide the user with the answer. The reasoning process MUST BE enclosed within <think> and </think> tags.",
+        metadata={"help": "The optional system prompt to use."},
     )
     hub_model_revision: Optional[str] = field(
         default="main", metadata={"help": "The Hub model branch to push the model to."}
@@ -62,6 +64,7 @@ class SFTConfig(trl.SFTConfig):
     callbacks: list[str] = field(
         default_factory=lambda: [], metadata={"help": "The callbacks to run during training."}
     )
+    chat_template: Optional[str] = field(default=None, metadata={"help": "The chat template to use."})
     system_prompt: Optional[str] = field(
         default=None,
         metadata={"help": "The optional system prompt to use for benchmarking."},
