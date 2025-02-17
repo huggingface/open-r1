@@ -350,7 +350,7 @@ We are able to reproduce Deepseek's reported results on the LiveCodeBench code g
 | DeepSeek-R1-Distill-Qwen-1.5B |            16.3             |               16.9               |
 | DeepSeek-R1-Distill-Qwen-7B   |            36.6             |               37.6               |
 | DeepSeek-R1-Distill-Qwen-14B  |            51.5             |               53.1               |
-| DeepSeek-R1-Distill-Qwen-32B  |            -                |               57.2               |
+| DeepSeek-R1-Distill-Qwen-32B  |            56.6                |               57.2               |
 | DeepSeek-R1-Distill-Llama-8B  |            37.0             |               39.6               |
 | DeepSeek-R1-Distill-Llama-70B |            54.5             |               57.5               |
 
