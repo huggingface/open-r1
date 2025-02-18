@@ -34,7 +34,7 @@ logging_strategy: steps
 lr_scheduler_type: cosine_with_min_lr
 lr_scheduler_kwargs:
   min_lr_rate: 0.1
-max_prompt_length: 512
+max_prompt_length: 1024
 max_completion_length: 2048
 max_steps: 500
 num_generations: 14
