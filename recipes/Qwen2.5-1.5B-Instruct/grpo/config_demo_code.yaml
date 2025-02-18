@@ -13,7 +13,7 @@ system_prompt: "You are a helpful AI Assistant that provides well-reasoned and d
 # GRPO trainer config
 callbacks:
 - push_to_hub_revision
-beta: 0.001
+beta: 0.01
 bf16: true
 use_vllm: true
 vllm_device: auto
