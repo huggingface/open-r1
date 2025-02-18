@@ -287,6 +287,10 @@ def extract_code(completion: str) -> str:
 
 
 def code_reward(completions, **kwargs):
+    """Reward function that evaluates code snippets using the E2B code interpreter.
+
+    Assumes the dataset contains a `verification_info` column with test cases.
+    """
     rewards = []
     try:
         """Returns a reward function that evaluates code snippets in a sandbox."""
@@ -340,6 +344,6 @@ def code_reward(completions, **kwargs):
                     output = 0.0
                 rewards.append(output)
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error from E2B executor: {e}")
         rewards = [0.0] * len(completions)
     return rewards
