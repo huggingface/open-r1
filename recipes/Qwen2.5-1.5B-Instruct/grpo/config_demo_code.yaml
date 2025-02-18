@@ -11,13 +11,15 @@ dataset_configs:
 system_prompt: "You are a helpful AI Assistant that provides well-reasoned and detailed responses. You first think about the reasoning process as an internal monologue and then provide the user with the answer. Respond in the following format: <think>\n...\n</think>\n<answer>\n...\n</answer>"
 
 # GRPO trainer config
+callbacks:
+- push_to_hub_revision
 beta: 0.001
 bf16: true
 use_vllm: true
 vllm_device: auto
 vllm_gpu_memory_utilization: 0.9
 do_eval: false
-gradient_accumulation_steps: 16
+gradient_accumulation_steps: 1
 gradient_checkpointing: true
 gradient_checkpointing_kwargs:
   use_reentrant: false
@@ -40,7 +42,7 @@ num_train_epochs: 1
 output_dir: data/Qwen2.5-1.5B-Open-R1-Code-GRPO
 overwrite_output_dir: true
 per_device_eval_batch_size: 4
-per_device_train_batch_size: 8
+per_device_train_batch_size: 16
 push_to_hub: true
 report_to:
 - wandb

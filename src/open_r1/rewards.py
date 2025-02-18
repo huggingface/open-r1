@@ -5,13 +5,14 @@ import math
 import re
 from typing import Dict
 
-from dotenv import load_dotenv
-from e2b_code_interpreter import Sandbox
 from latex2sympy2_extended import NormalizationConfig
 from math_verify import LatexExtractionConfig, parse, verify
+from .utils import is_e2b_available
 
-
-load_dotenv()
+if is_e2b_available():
+    from dotenv import load_dotenv
+    from e2b_code_interpreter import Sandbox
+    load_dotenv()
 
 
 def accuracy_reward(completions, solution, **kwargs):
@@ -337,13 +338,19 @@ def code_reward(completions, **kwargs):
         ]
         with Sandbox(timeout=30, request_timeout=3) as sbx:
             for script in scripts:
-                execution = sbx.run_code(script, request_timeout=3)
+                print("Running script")
+                execution = sbx.run_code(script)
+                print("Script run")
                 try:
                     output = float(execution.text)
                 except (TypeError, ValueError):
                     output = 0.0
+
+                print(f"Output: {output}")
                 rewards.append(output)
     except Exception as e:
         print(f"Error from E2B executor: {e}")
         rewards = [0.0] * len(completions)
+    
+    print("Rewards finished!")
     return rewards
