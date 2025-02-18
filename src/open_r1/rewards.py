@@ -51,7 +51,7 @@ def accuracy_reward(completions, solution, **kwargs):
 
 
 def format_reward(completions, **kwargs):
-    """Reward function that checks if the completion has a specific format."""
+    """Reward function that checks if the reasoning process is enclosed within <think> and </think> tags, while the final answer is enclosed within <answer> and </answer> tags."""
     pattern = r"^<think>.*?</think>\s*<answer>.*?</answer>$"
     completion_contents = [completion[0]["content"] for completion in completions]
     matches = [re.match(pattern, content, re.DOTALL | re.MULTILINE) for content in completion_contents]
@@ -61,7 +61,7 @@ def format_reward(completions, **kwargs):
 def format_reward_deepseek(completions, **kwargs):
     """Reward function that checks if the reasoning process is enclosed within <think> and </think> tags. Based on DeepSeek-R1 tech report: https://arxiv.org/abs/2501.12948"""
     pattern = r"^<think>.*?</think>$"
-    # We prepend a <think> tag because DeepSeek and R1-distilled models prefill the assistant response with <think> and thus it's absent in the completion
+    # We prepend a <think> tag because DeepSeek's distilled models prefill the assistant response with <think> and thus it's absent in the completion
     completion_contents = [f"<think>\n{completion[0]['content']}" for completion in completions]
     matches = [re.match(pattern, content, re.DOTALL | re.MULTILINE) for content in completion_contents]
     return [1.0 if match else 0.0 for match in matches]

@@ -5,19 +5,17 @@ torch_dtype: bfloat16
 attn_implementation: flash_attention_2
 
 # Data training arguments
-dataset_name: AI-MO/NuminaMath-TIR
+dataset_name: open-r1/OpenR1-Math-220k
 dataset_configs:
 - all
-system_prompt: "You are a helpful AI Assistant, designed to provided well-reasoned and detailed responses. You FIRST think about the reasoning process as an internal monologue and then provide the user with the answer. The reasoning process MUST BE enclosed within <think> and </think> tags."
+system_prompt: "You are a helpful AI Assistant, designed to provided well-reasoned and detailed responses. You FIRST think about the reasoning process as an internal monologue and then provide the user with the answer. Respond in the following format: <think>\n...\n</think>\n<answer>\n...\n</answer>"
 
 # GRPO trainer config
 bf16: true
 use_vllm: true
 vllm_device: auto
 vllm_gpu_memory_utilization: 0.7
-do_eval: true
-eval_strategy: steps
-eval_steps: 100
+do_eval: false
 gradient_accumulation_steps: 16
 gradient_checkpointing: true
 gradient_checkpointing_kwargs:
