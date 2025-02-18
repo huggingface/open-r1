@@ -87,17 +87,17 @@ sudo apt-get install git-lfs
 
 ## Training models
 
-We support training models with either DDP or DeepSpeed (ZeRO-2 and ZeRO-3). For example, to run SFT on a dataset distilled from DeepSeek-R1 with reasoning traces such as [simplescaling/s1K-1.1](https://huggingface.co/datasets/simplescaling/s1K-1.1), run:
+We support training models with either DDP or DeepSpeed (ZeRO-2 and ZeRO-3). For example, to run SFT on a dataset distilled from DeepSeek-R1 with reasoning traces such as [open-r1/OpenR1-Math-220k]](https://huggingface.co/datasets/open-r1/OpenR1-Math-220k), run:
 
 ```shell
 # Train via command line
 accelerate launch --config_file=recipes/accelerate_configs/zero3.yaml src/open_r1/sft.py \
     --model_name_or_path Qwen/Qwen2.5-1.5B-Instruct \
-    --dataset_name open-r1/s1K-1.1 \
+    --dataset_name open-r1/OpenR1-Math-220k \
     --learning_rate 1.0e-5 \
-    --num_train_epochs 15 \
+    --num_train_epochs 1 \
     --packing \
-    --max_seq_length 32768 \
+    --max_seq_length 16384 \
     --per_device_train_batch_size 2 \
     --gradient_accumulation_steps 1 \
     --gradient_checkpointing \
