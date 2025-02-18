@@ -169,10 +169,12 @@ def main(script_args, training_args, model_args):
 
     # Format into conversation
     def make_conversation(example):
+        # start the assistant with a <think> tag
         return {
             "prompt": [
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": example["problem"]},
+                {"role": "assistant", "content": "Let me solve this step by step.\n<think>"},
             ],
         }
 

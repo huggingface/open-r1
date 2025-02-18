@@ -29,9 +29,15 @@ class TestRewards(unittest.TestCase):
 
     def test_format_reward_correct(self):
         """Test format_reward with correct format."""
-        completion = [[{"content": "<think>Some reasoning</think><answer>The answer</answer>"}]]
-        rewards = format_reward(completion)
-        self.assertEqual(rewards[0], 1.0)
+        formats = [
+            "<think>Some reasoning</think><answer>The answer</answer>",
+            "Some reasoning</think><answer>The answer</answer>",
+            "<think><think>Some reasoning</think><answer>The answer</answer>",
+        ]
+        for fmt in formats:
+            completion = [[{"content": fmt}]]
+            rewards = format_reward(completion)
+            self.assertEqual(rewards[0], 1.0, msg=f"Expected format reward of 1.0 for {fmt}")
 
     def test_format_reward_incorrect(self):
         """Test format_reward with incorrect format."""
@@ -46,7 +52,7 @@ class TestRewards(unittest.TestCase):
         for fmt in incorrect_formats:
             completion = [[{"content": fmt}]]
             rewards = format_reward(completion)
-            self.assertEqual(rewards[0], 0.0)
+            self.assertEqual(rewards[0], 0.0, msg=f"Expected format reward of 0.0 for {fmt}")
 
     def test_reasoning_steps_reward(self):
         """Test reasoning_steps_reward with various formats."""
@@ -187,6 +193,12 @@ class TestRepetitionPenaltyReward(unittest.TestCase):
             get_repetition_penalty_reward(ngram_size=2, max_penalty=1.0)
         with self.assertRaisesRegex(ValueError, "max_penalty 1.5 should not be positive"):
             get_repetition_penalty_reward(ngram_size=2, max_penalty=1.5)
+
+    def test_zero_max_penalty_returns_zero(self):
+        reward_fn = get_repetition_penalty_reward(ngram_size=2, max_penalty=0.0)
+        completions = [[{"content": "this is a test sentence"}]]
+        rewards = reward_fn(completions)
+        self.assertEqual(rewards, [0.0])
 
     def test_no_repetition(self):
         reward_fn = get_repetition_penalty_reward(ngram_size=2, max_penalty=-1.0)
