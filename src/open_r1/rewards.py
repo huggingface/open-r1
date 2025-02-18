@@ -295,6 +295,12 @@ def code_reward(completions, **kwargs) -> list[float]:
 
     Assumes the dataset contains a `verification_info` column with test cases.
     """
+    if not is_e2b_available():
+        raise ImportError(
+            "E2B is not available and required for this reward function. Please install E2B with "
+            "`pip install e2b-code-interpreter` and add an API key to a `.env` file."
+        )
+
     rewards = []
     try:
         """Returns a reward function that evaluates code snippets in a sandbox."""
