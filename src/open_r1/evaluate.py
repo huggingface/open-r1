@@ -106,12 +106,11 @@ aime24 = LightevalTaskConfig(
     metric=[expr_gold_metric],
     version=1,
 )
-# Part I from AIME 2025 exam: https://artofproblemsolving.com/wiki/index.php/2025_AIME_I?srsltid=AfmBOoof5gaaqlt3-l6LH7Tt6qmJZtl_2PQEDYlLFlMqhq9dLL8FMCRR
-aime25_part1 = LightevalTaskConfig(
-    name="aime25:part1",
+aime25 = LightevalTaskConfig(
+    name="aime25",
     suite=["custom"],
     prompt_function=aime_prompt_fn,
-    hf_repo="open-r1/aime_2025_1",
+    hf_repo="yentinglin/aime_2025",
     hf_subset="default",
     hf_avail_splits=["train"],
     evaluation_splits=["train"],
@@ -156,7 +155,7 @@ gpqa_diamond = LightevalTaskConfig(
 # Add tasks to the table
 TASKS_TABLE = []
 TASKS_TABLE.append(aime24)
-TASKS_TABLE.append(aime25_part1)
+TASKS_TABLE.append(aime25)
 TASKS_TABLE.append(math_500)
 TASKS_TABLE.append(gpqa_diamond)
 
