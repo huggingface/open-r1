@@ -302,6 +302,7 @@ def code_reward(completions, **kwargs) -> list[float]:
         )
 
     rewards = []
+    # TODO: add support for other languages in E2B: https://e2b.dev/docs/code-interpreting/supported-languages
     try:
         """Returns a reward function that evaluates code snippets in a sandbox."""
         evaluation_script_template = """
