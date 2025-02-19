@@ -87,14 +87,13 @@ extras = {}
 extras["tests"] = deps_list("pytest", "parameterized", "math-verify")
 extras["torch"] = deps_list("torch")
 extras["quality"] = deps_list("ruff", "isort", "flake8")
-extras["train"] = deps_list("flash_attn")
+extras["train"] = deps_list("flash_attn", "bitsandbytes", "liger_kernel")
 extras["eval"] = deps_list("lighteval", "math-verify")
 extras["dev"] = extras["quality"] + extras["tests"] + extras["eval"] + extras["train"]
 
 # core dependencies shared across the whole project - keep this to a bare minimum :)
 install_requires = [
     deps["accelerate"],
-    deps["bitsandbytes"],
     deps["einops"],
     deps["datasets"],
     deps["deepspeed"],
@@ -102,7 +101,6 @@ install_requires = [
     deps["huggingface-hub"],
     deps["latex2sympy2_extended"],
     deps["math-verify"],
-    deps["liger_kernel"],
     deps["packaging"],  # utilities from PyPA to e.g., compare versions
     deps["safetensors"],
     deps["sentencepiece"],
