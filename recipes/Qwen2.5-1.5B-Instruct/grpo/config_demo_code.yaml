@@ -11,8 +11,6 @@ dataset_configs:
 system_prompt: "You are a helpful AI Assistant that provides well-reasoned and detailed responses. You first think about the reasoning process as an internal monologue and then provide the user with the answer. Respond in the following format: <think>\n...\n</think>\n<answer>\n...\n</answer>"
 
 # GRPO trainer config
-callbacks:
-- push_to_hub_revision
 beta: 0.01
 bf16: true
 use_vllm: true
