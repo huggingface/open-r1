@@ -199,7 +199,13 @@ Then make sure your dataset contains a `verification_info` column with the follo
 }
 ```
 
-See the [training config](./recipes/Qwen2.5-1.5B-Instruct/grpo/config_demo_code.yaml) for an example with `Qwen2.5-1.5B-Instruct`.
+For example, to train a smol model on Python problems, run:
+
+```shell
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/zero2.yaml \
+    --num_processes=7 src/open_r1/grpo.py \
+    --config recipes/Qwen2.5-1.5B-Instruct/grpo/config_demo_code.yaml
+```
 
 ### Launching jobs on a Slurm cluster
 
