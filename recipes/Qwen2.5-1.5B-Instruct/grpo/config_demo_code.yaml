@@ -23,7 +23,7 @@ gradient_accumulation_steps: 4
 gradient_checkpointing: true
 gradient_checkpointing_kwargs:
   use_reentrant: false
-hub_model_id: open-r1/Qwen2.5-1.5B-Open-R1-Code-GRPO
+hub_model_id: Qwen2.5-1.5B-Open-R1-Code-GRPO
 hub_strategy: every_save
 learning_rate: 5.0e-07
 log_completions: true
@@ -57,5 +57,3 @@ save_total_limit: 1
 seed: 42
 temperature: 1.0
 warmup_ratio: 0.03
-wandb_entity: huggingface 
-wandb_project: open-r1

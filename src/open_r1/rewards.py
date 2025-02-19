@@ -348,7 +348,7 @@ def code_reward(completions, **kwargs) -> list[float]:
         ]
         with Sandbox(timeout=30, request_timeout=3) as sbx:
             for script in scripts:
-                execution = sbx.run_code(script)
+                execution = sbx.run_code(script, language=verification_info["language"])
                 try:
                     output = float(execution.text)
                 except (TypeError, ValueError):
