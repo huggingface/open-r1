@@ -199,6 +199,8 @@ Then make sure your dataset contains a `verification_info` column with the follo
 }
 ```
 
+See the [training config](./recipes/Qwen2.5-1.5B-Instruct/grpo/config_demo_code.yaml) for an example with `Qwen2.5-1.5B-Instruct`.
+
 ### Launching jobs on a Slurm cluster
 
 If you have access to a Slurm cluster, we provide a `slurm/train.slurm` script that will automatically queue training jobs for you. Here's how you can use it:
