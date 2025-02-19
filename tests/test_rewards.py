@@ -3,6 +3,7 @@ import unittest
 from open_r1.rewards import (
     accuracy_reward,
     format_reward,
+    get_code_format_reward,
     get_cosine_scaled_reward,
     get_repetition_penalty_reward,
     len_reward,
@@ -311,6 +312,84 @@ class TestRepetitionPenaltyReward(unittest.TestCase):
 
         rewards = reward_fn(completions)
         self.assertEqual(rewards, [0.0])
+
+
+class TestCodeFormat(unittest.TestCase):
+    def test_correct_python_format(self):
+        """Test code format reward with correct Python format."""
+        completion = [
+            [
+                {
+                    "content": "<think>Let's solve this\nStep 1: First step</think>\n<answer>```python\ndef hello():\n    print('world')\n```</answer>"
+                }
+            ]
+        ]
+        reward_fn = get_code_format_reward(language="python")
+        rewards = reward_fn(completion)
+        self.assertEqual(rewards[0], 1.0)
+
+    def test_incorrect_formats(self):
+        """Test code format reward with various incorrect formats."""
+        incorrect_formats = [
+            # Missing think/answer tags
+            "```python\ndef hello():\n    print('world')\n```",
+            # Missing code block
+            "<think>Some thinking</think><answer>Just plain text</answer>",
+            # Wrong language
+            "<think>Analysis</think><answer>```javascript\nconsole.log('hello');\n```</answer>",
+            # Missing language identifier
+            "<think>Analysis</think><answer>```\ndef hello(): pass\n```</answer>",
+            # Wrong order of tags
+            "<answer>```python\ndef hello(): pass\n```</answer><think>Analysis</think>",
+        ]
+
+        reward_fn = get_code_format_reward(language="python")
+        for fmt in incorrect_formats:
+            completion = [[{"content": fmt}]]
+            rewards = reward_fn(completion)
+            self.assertEqual(rewards[0], 0.0)
+
+    def test_multiple_code_blocks(self):
+        """Test format reward with multiple code blocks in think and answer sections."""
+        completion = [
+            [
+                {
+                    "content": "<think>Here's an example:\n```python\nx = 1\n```\nNow the solution:</think>\n<answer>```python\ndef solution():\n    return 42\n```</answer>"
+                }
+            ]
+        ]
+        reward_fn = get_code_format_reward(language="python")
+        rewards = reward_fn(completion)
+        self.assertEqual(rewards[0], 1.0)
+
+    def test_different_languages(self):
+        """Test code format reward with different programming languages."""
+        completion = [
+            [{"content": "<think>Analysis</think><answer>```javascript\nconsole.log('hello');\n```</answer>"}]
+        ]
+
+        # Test with JavaScript
+        js_reward_fn = get_code_format_reward(language="javascript")
+        rewards = js_reward_fn(completion)
+        self.assertEqual(rewards[0], 1.0)
+
+        # Same completion should fail for Python
+        py_reward_fn = get_code_format_reward(language="python")
+        rewards = py_reward_fn(completion)
+        self.assertEqual(rewards[0], 0.0)
+
+    def test_multiline_code(self):
+        """Test format reward with complex multiline code blocks."""
+        completion = [
+            [
+                {
+                    "content": "<think>Here's the analysis</think>\n<answer>```python\nclass Solution:\n    def __init__(self):\n        self.value = 42\n        \n    def get_value(self):\n        return self.value\n```</answer>"
+                }
+            ]
+        ]
+        reward_fn = get_code_format_reward(language="python")
+        rewards = reward_fn(completion)
+        self.assertEqual(rewards[0], 1.0)
 
 
 if __name__ == "__main__":
