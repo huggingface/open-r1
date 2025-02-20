@@ -54,7 +54,7 @@ To install `uv`, follow the [UV Installation Guide](https://docs.astral.sh/uv/ge
 uv venv openr1 --python 3.11 && source openr1/bin/activate && uv pip install --upgrade pip
 ```
 
-Next, install vLLM and FlasAttention:
+Next, install vLLM and FlashAttention:
 
 ```shell
 uv pip install vllm==0.7.2
