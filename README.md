@@ -233,7 +233,7 @@ We use `lighteval` to evaluate models, with custom tasks defined in `src/open_r1
 
 ```shell
 MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B
-MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=32768,gpu_memory_utilisation=0.8"
+MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=4096,gpu_memory_utilisation=0.8"
 OUTPUT_DIR=data/evals/$MODEL
 
 # AIME 2024
@@ -259,14 +259,14 @@ lighteval vllm $MODEL_ARGS "custom|$TASK|0|0" \
 ```
 
 > [!IMPORTANT]
-> You must set `max_model_length=32768` in the `vllm` command to align with the `generation_size` we define per eval. Without this, `lighteval` will throw an error.
+> You must set `max_model_length=4096` in the `vllm` command to align with the `generation_size` we define per eval. Without this, `lighteval` will throw an error.
 
 To increase throughput across multiple GPUs, use _data parallel_ as follows:
 
 ```shell
 NUM_GPUS=8
 MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B
-MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,data_parallel_size=$NUM_GPUS,max_model_length=32768,gpu_memory_utilisation=0.8"
+MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,data_parallel_size=$NUM_GPUS,max_model_length=4096,gpu_memory_utilisation=0.8"
 TASK=aime24
 OUTPUT_DIR=data/evals/$MODEL
 
@@ -281,7 +281,7 @@ For large models which require sharding across GPUs, use _tensor parallel_ and r
 ```shell
 NUM_GPUS=8
 MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-32B
-MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,tensor_parallel_size=$NUM_GPUS,max_model_length=32768,gpu_memory_utilisation=0.8"
+MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,tensor_parallel_size=$NUM_GPUS,max_model_length=4096,gpu_memory_utilisation=0.8"
 TASK=aime24
 OUTPUT_DIR=data/evals/$MODEL
 
@@ -335,7 +335,7 @@ To reproduce these results use the following command:
 ```shell
 NUM_GPUS=1 # Set to 8 for 32B and 70B models
 MODEL=deepseek-ai/{model_name}
-MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=32768,gpu_memory_utilisation=0.8,tensor_parallel_size=$NUM_GPUS"
+MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=4096,gpu_memory_utilisation=0.8,tensor_parallel_size=$NUM_GPUS"
 OUTPUT_DIR=data/evals/$MODEL
 
 lighteval vllm $MODEL_ARGS "custom|math_500|0|0" \
@@ -368,7 +368,7 @@ To reproduce these results use the following command:
 ```shell
 NUM_GPUS=1 # Set to 8 for 32B and 70B models
 MODEL=deepseek-ai/{model_name}
-MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=32768,gpu_memory_utilisation=0.8,tensor_parallel_size=$NUM_GPUS"
+MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=4096,gpu_memory_utilisation=0.8,tensor_parallel_size=$NUM_GPUS"
 OUTPUT_DIR=data/evals/$MODEL
 
 lighteval vllm $MODEL_ARGS "custom|gpqa:diamond|0|0" \
