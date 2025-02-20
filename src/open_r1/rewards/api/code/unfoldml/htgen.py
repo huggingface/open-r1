@@ -95,7 +95,7 @@ def verify_triple_33(
             v = res.json()
         except JSONDecodeError:
             v = None
-        print(v)
+        return v
     # else: 
     except HTTPError as he:
         print(f"HTTP error: {he}")
