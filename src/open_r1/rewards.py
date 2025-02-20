@@ -92,7 +92,7 @@ def len_reward(completions: list[Dict[str, str]], solution: list[str], **kwargs)
 
     Args:
         completions: List of model completions
-        solution: List of ground truth solution
+        solution: List of ground truth solutions
 
     Returns:
         List of rewards where:
