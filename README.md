@@ -64,7 +64,7 @@ uv pip install setuptools && uv pip install flash-attn --no-build-isolation
 This will also install PyTorch `v2.5.1` and it is **very important** to use this version since the vLLM binaries are compiled for it. You can then install the remaining dependencies for your specific use case via `pip install -e .[LIST OF MODES]`. For most contributors, we recommend:
 
 ```shell
-uv pip install -e ".[dev]"
+GIT_LFS_SKIP_SMUDGE=1 uv pip install -e ".[dev]"
 ```
 
 Next, log into your Hugging Face and Weights and Biases accounts as follows:
@@ -400,7 +400,7 @@ To reproduce these results use the following command:
 ```shell
 NUM_GPUS=1 # Set to 8 for 32B and 70B models, or data_parallel_size=8 with the smaller models for speed
 MODEL=deepseek-ai/{model_name}
-MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=32768,gpu_memory_utilization=0.8,tensor_parallel_size=$NUM_GPUS,generation_parameters={temperature:0.6,top_p:0.95}"
+MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=32768,gpu_memory_utilization=0.8,data_parallel_size=$NUM_GPUS,generation_parameters={temperature:0.6,top_p:0.95}"
 OUTPUT_DIR=data/evals/$MODEL
 
 lighteval vllm $MODEL_ARGS "extended|lcb:codegeneration|0|0" \
