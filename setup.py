@@ -53,9 +53,10 @@ _deps = [
     "hf_transfer>=0.1.4",
     "huggingface-hub[cli]>=0.19.2,<1.0",
     "isort>=5.12.0",
+    "langdetect",  # Needed for LightEval's extended tasks
     "latex2sympy2_extended>=1.0.6",
     "liger_kernel==0.5.2",
-    "lighteval @ git+https://github.com/huggingface/lighteval.git@86f62259f105ae164f655e0b91c92a823a742724#egg=lighteval[math]",
+    "lighteval @ git+https://github.com/huggingface/lighteval.git@main",
     "math-verify==0.5.2",  # Used for math verification in grpo
     "packaging>=23.0",
     "parameterized>=0.9.0",
@@ -68,7 +69,7 @@ _deps = [
     "torch==2.5.1",
     "transformers @ git+https://github.com/huggingface/transformers.git@main",
     "trl @ git+https://github.com/huggingface/trl.git@main",
-    "vllm==0.7.1",
+    "vllm==0.7.2",
     "wandb>=0.19.1",
 ]
 
@@ -89,10 +90,9 @@ extras = {}
 extras["tests"] = deps_list("pytest", "parameterized", "math-verify")
 extras["torch"] = deps_list("torch")
 extras["quality"] = deps_list("ruff", "isort", "flake8")
-extras["train"] = deps_list("flash_attn")
 extras["code"] = deps_list("e2b-code-interpreter", "python-dotenv")
 extras["eval"] = deps_list("lighteval", "math-verify")
-extras["dev"] = extras["quality"] + extras["tests"] + extras["eval"] + extras["train"]
+extras["dev"] = extras["quality"] + extras["tests"] + extras["eval"]
 
 # core dependencies shared across the whole project - keep this to a bare minimum :)
 install_requires = [
@@ -103,6 +103,7 @@ install_requires = [
     deps["deepspeed"],
     deps["hf_transfer"],
     deps["huggingface-hub"],
+    deps["langdetect"],
     deps["latex2sympy2_extended"],
     deps["math-verify"],
     deps["liger_kernel"],
@@ -111,6 +112,7 @@ install_requires = [
     deps["sentencepiece"],
     deps["transformers"],
     deps["trl"],
+    deps["wandb"],
 ]
 
 setup(
