@@ -35,9 +35,10 @@ else
     MODEL_ARGS="pretrained=$MODEL_ID,revision=$MODEL_REVISION,trust_remote_code=$TRUST_REMOTE_CODE,dtype=bfloat16,data_parallel_size=$NUM_GPUS,max_model_length=32768,gpu_memory_utilization=0.8,generation_parameters={max_new_tokens:32768,temperature:0.0}"
 fi
 
-# FIXME: enable sampling for pass@1 (remove once this is fixed on lighteval side)
+# FIXME: enable sampling for pass@1 (remove once this is fixed on lighteval side). We use the defaults from Qwen2.5-Coder: https://github.com/QwenLM/Qwen2.5-Coder/blob/main/qwencoder-eval/instruct/livecode_bench/lcb_runner/runner/parser.py#L8
 if [ "$TASK_NAME" = "lcb" ]; then
-    MODEL_ARGS="${MODEL_ARGS/temperature:0.0/temperature:0.7}"
+    MODEL_ARGS="${MODEL_ARGS/temperature:0.0/temperature:0.2}"
+    MODEL_ARGS="${MODEL_ARGS/generation_parameters={/generation_parameters={top_p:0.95,}"
 fi
 
 LM_EVAL_REPO_ID="open-r1/open-r1-eval-leaderboard"
