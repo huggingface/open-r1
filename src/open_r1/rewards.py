@@ -85,14 +85,14 @@ def reasoning_steps_reward(completions, **kwargs):
     return [min(1.0, count / 3) for count in matches]
 
 
-def len_reward(completions: list[Dict[str, str]], solutions: list[str], **kwargs) -> float:
+def len_reward(completions: list[Dict[str, str]], solution: list[str], **kwargs) -> float:
     """Compute length-based rewards to discourage overthinking and promote token efficiency.
 
     Taken from from the Kimi 1.5 tech report: https://arxiv.org/abs/2501.12599
 
     Args:
         completions: List of model completions
-        solutions: List of ground truth solutions
+        solution: List of ground truth solutions
 
     Returns:
         List of rewards where:
@@ -103,7 +103,7 @@ def len_reward(completions: list[Dict[str, str]], solutions: list[str], **kwargs
 
     # First check correctness of answers
     correctness = []
-    for content, sol in zip(contents, solutions):
+    for content, sol in zip(contents, solution):
         gold_parsed = parse(
             sol,
             extraction_mode="first_match",
