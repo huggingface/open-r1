@@ -39,7 +39,7 @@ if stale_egg_info.exists():
 
 
 # IMPORTANT: all dependencies should be listed here with their version requirements, if any.
-#   * If a dependency is fast-moving (e.g. transformers), pin to the exact version
+#   * If a dependency is fast-moving (e.g. trl), pin to the exact version
 _deps = [
     "accelerate>=1.2.1",
     "bitsandbytes>=0.43.0",
@@ -56,7 +56,7 @@ _deps = [
     "langdetect",  # Needed for LightEval's extended tasks
     "latex2sympy2_extended>=1.0.6",
     "liger_kernel==0.5.2",
-    "lighteval @ git+https://github.com/huggingface/lighteval.git@376737883fa75967e1a66f7aac2b567046447172",
+    "lighteval @ git+https://github.com/huggingface/lighteval.git@ebb7377b39a48ab0691e6fbd9dea57e9fe290a7e",
     "math-verify==0.5.2",  # Used for math verification in grpo
     "packaging>=23.0",
     "parameterized>=0.9.0",
