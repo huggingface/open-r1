@@ -8,8 +8,7 @@ attn_implementation: flash_attention_2
 dataset_name: DigitalLearningGmbH/MATH-lighteval
 dataset_configs:
 - train
-# Num processes is less by 1 as vLLM is using 1 GPU
-num_processes: 7
+system_prompt: "You are a helpful AI Assistant, designed to provided well-reasoned and detailed responses. You FIRST think about the reasoning process as an internal monologue and then provide the user with the answer. The reasoning process MUST BE enclosed within <think> and </think> tags."
 
 # GRPO trainer config
 bf16: true
@@ -26,7 +25,9 @@ gradient_checkpointing_kwargs:
 hub_model_id: Qwen-2.5-7B-Simple-RL
 hub_strategy: every_save
 learning_rate: 3.0e-06
+log_completions: true
 log_level: info
+logging_first_step: true
 logging_steps: 5
 logging_strategy: steps
 lr_scheduler_type: cosine
@@ -42,6 +43,12 @@ per_device_train_batch_size: 16
 push_to_hub: true
 report_to:
 - wandb
+reward_funcs:
+- accuracy
+- format
+reward_weights:
+- 1.0
+- 1.0
 save_strategy: "no"
 seed: 42
 warmup_ratio: 0.1

@@ -5,38 +5,42 @@ torch_dtype: bfloat16
 attn_implementation: flash_attention_2
 
 # Data training arguments
-dataset_name: HuggingFaceH4/Bespoke-Stratos-17k
+dataset_name: open-r1/OpenR1-Math-220k
 dataset_configs:
-- all
-preprocessing_num_workers: 8
+- default
+dataset_num_proc: 48
 
 # SFT trainer config
 bf16: true
-do_eval: true
-eval_strategy: steps
-eval_steps: 100
-gradient_accumulation_steps: 8
+do_eval: false
+eval_strategy: 'no'
+gradient_accumulation_steps: 1
 gradient_checkpointing: true
 gradient_checkpointing_kwargs:
   use_reentrant: false
 hub_model_id: Qwen2.5-1.5B-Open-R1-Distill
 hub_strategy: every_save
-learning_rate: 2.0e-05
+learning_rate: 5.0e-05
 log_level: info
 logging_steps: 5
 logging_strategy: steps
-lr_scheduler_type: cosine
+lr_scheduler_type: cosine_with_min_lr
+lr_scheduler_kwargs:
+  min_lr_rate: 0.1
 packing: true
-max_seq_length: 4096
+max_seq_length: 16384
 max_steps: -1
 num_train_epochs: 1
 output_dir: data/Qwen2.5-1.5B-Open-R1-Distill
 overwrite_output_dir: true
-per_device_eval_batch_size: 4
-per_device_train_batch_size: 2
+per_device_eval_batch_size: 16
+per_device_train_batch_size: 16
 push_to_hub: true
 report_to:
 - wandb
-save_strategy: "no"
+save_strategy: "steps"
+save_steps: 100
+save_total_limit: 1
 seed: 42
-warmup_ratio: 0.1
+use_liger: true
+warmup_ratio: 0.05

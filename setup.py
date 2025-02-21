@@ -46,6 +46,7 @@ _deps = [
     "datasets>=3.2.0",
     "deepspeed==0.15.4",
     "distilabel[vllm,ray,openai]>=1.5.2",
+    "e2b-code-interpreter>=1.0.5",
     "einops>=0.8.0",
     "flake8>=6.0.0",
     "flash_attn>=2.7.4.post1",
@@ -60,6 +61,7 @@ _deps = [
     "parameterized>=0.9.0",
     "peft>=0.14.0",
     "pytest",
+    "python-dotenv",
     "ruff>=0.9.0",
     "safetensors>=0.3.3",
     "sentencepiece>=0.1.99",
@@ -88,6 +90,7 @@ extras["tests"] = deps_list("pytest", "parameterized", "math-verify")
 extras["torch"] = deps_list("torch")
 extras["quality"] = deps_list("ruff", "isort", "flake8")
 extras["train"] = deps_list("flash_attn")
+extras["code"] = deps_list("e2b-code-interpreter", "python-dotenv")
 extras["eval"] = deps_list("lighteval", "math-verify")
 extras["dev"] = extras["quality"] + extras["tests"] + extras["eval"] + extras["train"]
 
