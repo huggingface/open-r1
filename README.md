@@ -54,6 +54,9 @@ To install `uv`, follow the [UV Installation Guide](https://docs.astral.sh/uv/ge
 uv venv openr1 --python 3.11 && source openr1/bin/activate && uv pip install --upgrade pip
 ```
 
+> [!TIP]
+> For Hugging Face cluster users, add `export UV_LINK_MODE=copy` to your `.bashrc` to suppress cache warnings from `uv`
+
 Next, install vLLM and FlashAttention:
 
 ```shell
