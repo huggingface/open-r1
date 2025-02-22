@@ -51,19 +51,23 @@ To install `uv`, follow the [UV Installation Guide](https://docs.astral.sh/uv/ge
 
 
 ```shell
-uv venv openr1 --python 3.11 && source openr1/bin/activate && uv pip install --upgrade pip --link-mode=copy
+uv venv openr1 --python 3.11 && source openr1/bin/activate && uv pip install --upgrade pip
 ```
 
-Next, install vLLM:
+> [!TIP]
+> For Hugging Face cluster users, add `export UV_LINK_MODE=copy` to your `.bashrc` to suppress cache warnings from `uv`
+
+Next, install vLLM and FlashAttention:
 
 ```shell
-uv pip install vllm==0.7.2 --link-mode=copy
+uv pip install vllm==0.7.2
+uv pip install setuptools && uv pip install flash-attn --no-build-isolation
 ```
 
 This will also install PyTorch `v2.5.1` and it is **very important** to use this version since the vLLM binaries are compiled for it. You can then install the remaining dependencies for your specific use case via `pip install -e .[LIST OF MODES]`. For most contributors, we recommend:
 
 ```shell
-GIT_LFS_SKIP_SMUDGE=1 uv pip install -e ".[dev]" --link-mode=copy
+GIT_LFS_SKIP_SMUDGE=1 uv pip install -e ".[dev]"
 ```
 
 Next, log into your Hugging Face and Weights and Biases accounts as follows:
@@ -233,7 +237,7 @@ We use `lighteval` to evaluate models, with custom tasks defined in `src/open_r1
 
 ```shell
 MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B
-MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=32768,gpu_memory_utilisation=0.8"
+MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=32768,gpu_memory_utilization=0.8,generation_parameters={max_new_tokens:32768,temperature:0.0}"
 OUTPUT_DIR=data/evals/$MODEL
 
 # AIME 2024
@@ -266,7 +270,7 @@ To increase throughput across multiple GPUs, use _data parallel_ as follows:
 ```shell
 NUM_GPUS=8
 MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B
-MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,data_parallel_size=$NUM_GPUS,max_model_length=32768,gpu_memory_utilisation=0.8"
+MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,data_parallel_size=$NUM_GPUS,max_model_length=32768,gpu_memory_utilization=0.8,generation_parameters={max_new_tokens:32768,temperature:0.0}"
 TASK=aime24
 OUTPUT_DIR=data/evals/$MODEL
 
@@ -281,7 +285,7 @@ For large models which require sharding across GPUs, use _tensor parallel_ and r
 ```shell
 NUM_GPUS=8
 MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-32B
-MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,tensor_parallel_size=$NUM_GPUS,max_model_length=32768,gpu_memory_utilisation=0.8"
+MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,tensor_parallel_size=$NUM_GPUS,max_model_length=32768,gpu_memory_utilization=0.8,generation_parameters={max_new_tokens:32768,temperature:0.0}"
 TASK=aime24
 OUTPUT_DIR=data/evals/$MODEL
 
@@ -335,7 +339,7 @@ To reproduce these results use the following command:
 ```shell
 NUM_GPUS=1 # Set to 8 for 32B and 70B models
 MODEL=deepseek-ai/{model_name}
-MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=32768,gpu_memory_utilisation=0.8,tensor_parallel_size=$NUM_GPUS"
+MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=32768,gpu_memory_utilization=0.8,data_parallel_size=$NUM_GPUS,generation_parameters={max_new_tokens:32768,temperature:0.0}"
 OUTPUT_DIR=data/evals/$MODEL
 
 lighteval vllm $MODEL_ARGS "custom|math_500|0|0" \
@@ -347,7 +351,7 @@ lighteval vllm $MODEL_ARGS "custom|math_500|0|0" \
 Alternatively, you can launch Slurm jobs as follows:
 
 ```shell
-python scripts/run_benchmarks.py --model-id={model_id}  --benchmarks math_500
+python scripts/run_benchmarks.py --model-id {model_id}  --benchmarks math_500
 ```
 
 ### GPQA Diamond
@@ -368,7 +372,7 @@ To reproduce these results use the following command:
 ```shell
 NUM_GPUS=1 # Set to 8 for 32B and 70B models
 MODEL=deepseek-ai/{model_name}
-MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=32768,gpu_memory_utilisation=0.8,tensor_parallel_size=$NUM_GPUS"
+MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=32768,gpu_memory_utilization=0.8,data_parallel_size=$NUM_GPUS,generation_parameters={max_new_tokens:32768,temperature:0.0}"
 OUTPUT_DIR=data/evals/$MODEL
 
 lighteval vllm $MODEL_ARGS "custom|gpqa:diamond|0|0" \
@@ -378,7 +382,7 @@ lighteval vllm $MODEL_ARGS "custom|gpqa:diamond|0|0" \
 ```
 
 ```shell
-python scripts/run_benchmarks.py --model-id={model_id}  --benchmarks gpqa
+python scripts/run_benchmarks.py --model-id {model_id}  --benchmarks gpqa
 ```
 
 ### LiveCodeBench
@@ -386,20 +390,20 @@ python scripts/run_benchmarks.py --model-id={model_id}  --benchmarks gpqa
 We are able to reproduce Deepseek's reported results on the LiveCodeBench code generation benchmark within ~1-3 standard deviations:
 
 | Model                         | LiveCodeBench (🤗 LightEval) | GPQA Diamond (DeepSeek Reported) |
-|:------------------------------|:---------------------------:|:--------------------------------:|
-| DeepSeek-R1-Distill-Qwen-1.5B |            16.3             |               16.9               |
-| DeepSeek-R1-Distill-Qwen-7B   |            36.6             |               37.6               |
-| DeepSeek-R1-Distill-Qwen-14B  |            51.5             |               53.1               |
-| DeepSeek-R1-Distill-Qwen-32B  |            56.6                |               57.2               |
-| DeepSeek-R1-Distill-Llama-8B  |            37.0             |               39.6               |
-| DeepSeek-R1-Distill-Llama-70B |            54.5             |               57.5               |
+|:------------------------------|:----------------------------:|:--------------------------------:|
+| DeepSeek-R1-Distill-Qwen-1.5B |             16.3             |               16.9               |
+| DeepSeek-R1-Distill-Qwen-7B   |             36.6             |               37.6               |
+| DeepSeek-R1-Distill-Qwen-14B  |             51.5             |               53.1               |
+| DeepSeek-R1-Distill-Qwen-32B  |             56.6             |               57.2               |
+| DeepSeek-R1-Distill-Llama-8B  |             37.0             |               39.6               |
+| DeepSeek-R1-Distill-Llama-70B |             54.5             |               57.5               |
 
 To reproduce these results use the following command:
 
 ```shell
 NUM_GPUS=1 # Set to 8 for 32B and 70B models, or data_parallel_size=8 with the smaller models for speed
 MODEL=deepseek-ai/{model_name}
-MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=32768,gpu_memory_utilisation=0.8,tensor_parallel_size=$NUM_GPUS,generation_parameters={temperature:0.6,top_p:0.95}"
+MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=32768,gpu_memory_utilization=0.8,data_parallel_size=$NUM_GPUS,generation_parameters={max_new_tokens:32768,temperature:0.6,top_p:0.95}"
 OUTPUT_DIR=data/evals/$MODEL
 
 lighteval vllm $MODEL_ARGS "extended|lcb:codegeneration|0|0" \
@@ -408,7 +412,7 @@ lighteval vllm $MODEL_ARGS "extended|lcb:codegeneration|0|0" \
 ```
 
 ```shell
-python scripts/run_benchmarks.py --model-id={model_id}  --benchmarks lcb
+python scripts/run_benchmarks.py --model-id {model_id}  --benchmarks lcb
 ```
 
 ## Data generation
