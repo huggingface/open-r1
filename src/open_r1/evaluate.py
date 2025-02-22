@@ -27,6 +27,27 @@ from lighteval.tasks.requests import Doc
 from lighteval.utils.language import Language
 
 
+# Prompt template from simple-evals: https://github.com/openai/simple-evals/blob/6e84f4e2aed6b60f6a0c7b8f06bbbf4bfde72e58/math_eval.py#L17
+MATH_QUERY_TEMPLATE = """
+Solve the following math problem step by step. The last line of your response should be of the form Answer: $ANSWER (without quotes) where $ANSWER is the answer to the problem.
+
+{Question}
+
+Remember to put your answer on its own line after "Answer:", and you do not need to use a \\boxed command.
+""".strip()
+
+# Prompt template from simple-evals: https://github.com/openai/simple-evals/blob/83ed7640a7d9cd26849bcb3340125002ef14abbe/common.py#L14
+GPQA_QUERY_TEMPLATE = """
+Answer the following multiple choice question. The last line of your response should be of the following format: 'Answer: $LETTER' (without quotes) where LETTER is one of ABCD. Think step by step before answering.
+
+{Question}
+
+A) {A}
+B) {B}
+C) {C}
+D) {D}
+""".strip()
+
 latex_gold_metric = multilingual_extractive_match_metric(
     language=Language.ENGLISH,
     fallback_mode="first_match",
@@ -55,11 +76,10 @@ gpqa_metric = multilingual_extractive_match_metric(
 )
 
 
-def prompt_fn(line, task_name: str = None):
-    """Assumes the model is either prompted to emit \\boxed{answer} or does so automatically"""
+def math_prompt_fn(line, task_name: str = None):
     return Doc(
         task_name=task_name,
-        query=line["problem"],
+        query=MATH_QUERY_TEMPLATE.format(Question=line["problem"]),
         choices=[line["solution"]],
         gold_index=0,
     )
@@ -68,20 +88,19 @@ def prompt_fn(line, task_name: str = None):
 def aime_prompt_fn(line, task_name: str = None):
     return Doc(
         task_name=task_name,
-        query=line["problem"],
+        query=MATH_QUERY_TEMPLATE.format(Question=line["problem"]),
         choices=[line["answer"]],
         gold_index=0,
     )
 
 
 def gpqa_prompt_fn(line, task_name: str = None):
-    """Prompt template adapted from simple-evals: https://github.com/openai/simple-evals/blob/83ed7640a7d9cd26849bcb3340125002ef14abbe/common.py#L14"""
     gold_index = random.randint(0, 3)
     choices = [line["Incorrect Answer 1"], line["Incorrect Answer 2"], line["Incorrect Answer 3"]]
     choices.insert(gold_index, line["Correct Answer"])
-    query_template = "Answer the following multiple choice question. The last line of your response should be of the following format: 'Answer: $LETTER' (without quotes) where LETTER is one of ABCD. Think step by step before answering.\n\n{Question}\n\nA) {A}\nB) {B}\nC) {C}\nD) {D}"
-    query = query_template.format(A=choices[0], B=choices[1], C=choices[2], D=choices[3], Question=line["Question"])
-
+    query = GPQA_QUERY_TEMPLATE.format(
+        A=choices[0], B=choices[1], C=choices[2], D=choices[3], Question=line["Question"]
+    )
     return Doc(
         task_name=task_name,
         query=query,
@@ -123,7 +142,7 @@ aime25 = LightevalTaskConfig(
 math_500 = LightevalTaskConfig(
     name="math_500",
     suite=["custom"],
-    prompt_function=prompt_fn,
+    prompt_function=math_prompt_fn,
     hf_repo="HuggingFaceH4/MATH-500",
     hf_subset="default",
     hf_avail_splits=["test"],
