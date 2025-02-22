@@ -28,12 +28,18 @@ from lighteval.utils.language import Language
 
 
 # Prompt template from simple-evals: https://github.com/openai/simple-evals/blob/6e84f4e2aed6b60f6a0c7b8f06bbbf4bfde72e58/math_eval.py#L17
+# MATH_QUERY_TEMPLATE = """
+# Solve the following math problem step by step. The last line of your response should be of the form Answer: $ANSWER (without quotes) where $ANSWER is the answer to the problem.
+
+# {Question}
+
+# Remember to put your answer on its own line after "Answer:", and you do not need to use a \\boxed command.
+# """.strip()
+
 MATH_QUERY_TEMPLATE = """
-Solve the following math problem step by step. The last line of your response should be of the form Answer: $ANSWER (without quotes) where $ANSWER is the answer to the problem.
+Solve the following math problem efficiently and clearly.  The last line of your response should be of the following format: 'Therefore, the final answer is: $\\boxed{{ANSWER}}$. I hope it is correct' (without quotes) where ANSWER is just the final number or expression that solves the problem. Think step by step before answering.
 
 {Question}
-
-Remember to put your answer on its own line after "Answer:", and you do not need to use a \\boxed command.
 """.strip()
 
 # Prompt template from simple-evals: https://github.com/openai/simple-evals/blob/83ed7640a7d9cd26849bcb3340125002ef14abbe/common.py#L14
