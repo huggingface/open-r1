@@ -29,6 +29,7 @@ from open_r1.rewards import (
     accuracy_reward,
     code_reward,
     format_reward,
+    get_code_format_reward,
     get_cosine_scaled_reward,
     get_repetition_penalty_reward,
     len_reward,
@@ -61,12 +62,14 @@ class GRPOScriptArguments(ScriptArguments):
             Maximum reward for cosine scaling for correct answers.
         cosine_max_len (`int`):
             Maximum length for cosine scaling.
+        code_language (`str`):
+            Language for code format reward.
     """
 
     reward_funcs: list[str] = field(
         default_factory=lambda: ["accuracy", "format"],
         metadata={
-            "help": "List of reward functions. Possible values: 'accuracy', 'format', 'format_deepseek', 'reasoning_steps', 'cosine', 'repetition_penalty', 'length'"
+            "help": "List of reward functions. Possible values: 'accuracy', 'format', 'format_deepseek', 'reasoning_steps', 'cosine', 'repetition_penalty', 'length', 'code', 'code_format'"
         },
     )
     cosine_min_value_wrong: float = field(
@@ -96,6 +99,13 @@ class GRPOScriptArguments(ScriptArguments):
     repetition_max_penalty: float = field(
         default=-1.0,
         metadata={"help": "Maximum (negative) penalty for for repetition penalty reward"},
+    )
+    code_language: str = field(
+        default="python",
+        metadata={
+            "help": "Language for code format reward. Based on E2B supported languages https://e2b.dev/docs/code-interpreting/supported-languages",
+            "choices": ["python", "javascript", "r", "java", "bash"],
+        },
     )
 
 
@@ -163,6 +173,7 @@ def main(script_args, training_args, model_args):
         ),
         "length": len_reward,
         "code": code_reward,
+        "code_format": get_code_format_reward(language=script_args.code_language),
     }
     reward_funcs = [REWARD_FUNCS_REGISTRY[func] for func in script_args.reward_funcs]
 

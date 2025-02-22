@@ -29,9 +29,16 @@ NUM_GPUS=$(nvidia-smi -L | wc -l)
 if [ "$TENSOR_PARALLEL" = "True" ]; then
     # use TP to shard model across NUM_GPUS
     export VLLM_WORKER_MULTIPROC_METHOD=spawn
-    MODEL_ARGS="pretrained=$MODEL_ID,revision=$MODEL_REVISION,trust_remote_code=$TRUST_REMOTE_CODE,dtype=bfloat16,tensor_parallel_size=$NUM_GPUS,max_model_length=32768,gpu_memory_utilisation=0.8"
+    # FIXME: lighteval is broken on `main`so we need to manually pass the generation params
+    MODEL_ARGS="pretrained=$MODEL_ID,revision=$MODEL_REVISION,trust_remote_code=$TRUST_REMOTE_CODE,dtype=bfloat16,tensor_parallel_size=$NUM_GPUS,max_model_length=32768,gpu_memory_utilization=0.8,generation_parameters={max_new_tokens:32768,temperature:0.0}"
 else
-    MODEL_ARGS="pretrained=$MODEL_ID,revision=$MODEL_REVISION,trust_remote_code=$TRUST_REMOTE_CODE,dtype=bfloat16,data_parallel_size=$NUM_GPUS,max_model_length=32768,gpu_memory_utilisation=0.8"
+    MODEL_ARGS="pretrained=$MODEL_ID,revision=$MODEL_REVISION,trust_remote_code=$TRUST_REMOTE_CODE,dtype=bfloat16,data_parallel_size=$NUM_GPUS,max_model_length=32768,gpu_memory_utilization=0.8,generation_parameters={max_new_tokens:32768,temperature:0.0}"
+fi
+
+# FIXME: enable sampling for pass@1 (remove once this is fixed on lighteval side). We use the defaults from Qwen2.5-Coder: https://github.com/QwenLM/Qwen2.5-Coder/blob/main/qwencoder-eval/instruct/livecode_bench/lcb_runner/runner/parser.py#L8
+if [ "$TASK_NAME" = "lcb" ]; then
+    MODEL_ARGS="${MODEL_ARGS/temperature:0.0/temperature:0.2}"
+    MODEL_ARGS="${MODEL_ARGS/generation_parameters={/generation_parameters={top_p:0.95,}"
 fi
 
 LM_EVAL_REPO_ID="open-r1/open-r1-eval-leaderboard"
@@ -48,14 +55,14 @@ echo "Eval results will be saved to $OUTPUT_DIR"
 # Check if "custom" is a substring of TASKS
 if [[ $TASKS == *"custom"* ]]; then
     echo "Custom task detected. Running custom task evaluation script ..."
-    lighteval vllm $MODEL_ARGS $TASKS \
+    lighteval vllm "$MODEL_ARGS" $TASKS \
     --custom-tasks "src/open_r1/evaluate.py" \
     --use-chat-template \
     --output-dir $OUTPUT_DIR \
     --save-details \
     ${7:+--system-prompt "$7"}
 else
-    lighteval vllm $MODEL_ARGS $TASKS \
+    lighteval vllm "$MODEL_ARGS" $TASKS \
     --use-chat-template \
     --output-dir $OUTPUT_DIR \
     --save-details \
