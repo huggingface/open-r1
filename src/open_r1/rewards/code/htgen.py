@@ -13,10 +13,13 @@ def quotes(s:str):
     """markdown triple backticks for a piece of code"""
     return f"```{str}```"
 
-# totality check task
+
+# TOTALITY_CHECK task
 def mk_row_totality_check(o):
     """
     Construct the prompt
+    NB: the rows have a 'prompt' column as required by the GRPOTrainer interface:
+    https://huggingface.co/docs/trl/main/grpo_trainer#trl.GRPOTrainer.train_dataset 
     """
     label = o['label']
     pre = o['pre']
@@ -51,8 +54,9 @@ def mk_row_totality_check(o):
 
     # # construct a row of the dataset
     o_out = {
-        "problem": prompt_problem,
-        "solution": label_is_total
+        "prompt": prompt_problem,
+        "ground_truth": label_is_total,
+        "triple": {"pre": pre, "program":program, "post": post}
     }
 
     return o_out
@@ -82,10 +86,51 @@ def mk_dataset_totality_check(
 
     return dataset
 
-def totality_check_reward(completions, solution, **kwargs):
+def totality_check_reward(completions, ground_truth, **kwargs):
     """
     verification callback for GRPOTRainer
+    :param completions: list of truthy values produced by the model
+    :param ground_truth: list of boolean ground truth values
+    :returns: list of float 1s or 0s with the prediction scores that match the ground truth
     """
-    # pass the completion together with the reference solution to 'verify_triple_X'
-    # and score the result
-    pass
+    if not isinstance(completions[0], bool):
+        completions = [bool(c) for c in completions]
+    def verify(predicted, actual):
+        if predicted == actual:
+            return 1.0
+        else:
+            return 0.0
+
+    return [verify(predicted, actual) for (predicted, actual) in zip(completions, ground_truth)]
+    
+    
+
+
+if __name__ == "__main__":
+    compls = [True]
+    ground_truth = ["True"]
+    res = totality_check_reward(compls, ground_truth)
+    print(res)
+
+
+# # # verify against API
+
+# def totality_oracle_reward(completions, triples, **kwargs):
+#     """
+#     verification callback for GRPOTRainer
+#     :param completions: list of truthy values produced by the model
+#     :param triples: list of program triples dicts {"pre":: string, "program":: string, "post:: string}
+#     """
+
+# def verify(pre, program, post, is_total):
+#     res = verify_triple_33(
+#         preconditions = pre,
+#         program = program,
+#         postconditions = post,
+#         is_total = is_total
+#     )
+#     if res is not None:
+#         prediction = res['prediction_is_correct']
+#         return 1.0 if prediction else 0.0
+#     else:
+#         return 0.0
