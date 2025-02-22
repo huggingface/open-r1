@@ -16,16 +16,16 @@ def mk_dataset_row(o):
 
     program_str = '\n'.join(program)
 
-    label_is_total = label == 'ok_total' 
+    
 
     prompt_hdr = (
         f"Below you are given a Python program triple, made of a precondition predicate, "
-        f"a sequence of program statements, and a post-condition predicate."
+        f"a sequence of program statements, and a post-condition predicate. "
         f"The precondition returns True if the variable environment before beginning the "
         f"program execution satisfies the predicate, and False otherwise. "
         f"Similarly, the postcondition returns True if the program environment after the last "
         f"statement satisfies the predicate, and False otherwise. "
-        f"Note that there might be unsatisfiable or contradictory predicates, that make the solution unreachable."
+        f"Note that there might be unsatisfiable or contradictory predicates, that make the solution False by definition. "
         f"With this information, you should judge whether the program is 'total', i.e. "
         f"whether the post-condition evaluates to True for all possible variable assigments "
         f"that satisfy the precondition."
@@ -39,7 +39,7 @@ def mk_dataset_row(o):
     # # concatenate header and question into a prompt
     prompt_problem = f"{prompt_hdr}\n{prompt_question}"
 
-    solution = label_is_total  # boolean
+    label_is_total = label == 'ok_total'  # boolean
 
     # # construct a row of the dataset
     o_out = {
