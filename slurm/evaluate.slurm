@@ -37,7 +37,7 @@ fi
 
 # FIXME: enable sampling for pass@1 (remove once this is fixed on lighteval side). We use the defaults from Qwen2.5-Coder: https://github.com/QwenLM/Qwen2.5-Coder/blob/main/qwencoder-eval/instruct/livecode_bench/lcb_runner/runner/parser.py#L8
 if [ "$TASK_NAME" = "lcb" ]; then
-    MODEL_ARGS="${MODEL_ARGS/temperature:0.0/temperature:0.2}"
+    MODEL_ARGS="${MODEL_ARGS/temperature:0.0/temperature:0.6}"
     MODEL_ARGS="${MODEL_ARGS/generation_parameters={/generation_parameters={top_p:0.95,}"
 fi
 
