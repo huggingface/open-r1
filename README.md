@@ -237,7 +237,7 @@ We use `lighteval` to evaluate models, with custom tasks defined in `src/open_r1
 
 ```shell
 MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B
-MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=32768,gpu_memory_utilization=0.8,generation_parameters={max_new_tokens:32768,temperature:0.0}"
+MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=32768,gpu_memory_utilization=0.8,generation_parameters={max_new_tokens:32768,temperature:0.6,top_p:0.95}"
 OUTPUT_DIR=data/evals/$MODEL
 
 # AIME 2024
@@ -259,18 +259,23 @@ TASK=gpqa:diamond
 lighteval vllm $MODEL_ARGS "custom|$TASK|0|0" \
     --custom-tasks src/open_r1/evaluate.py \
     --use-chat-template \
+    --output-dir $OUTPUT_DIR
+
+# LiveCodeBench
+lighteval vllm $MODEL_ARGS "extended|lcb:codegeneration|0|0" \
+    --use-chat-template \
     --output-dir $OUTPUT_DIR 
 ```
 
 > [!IMPORTANT]
-> You must set `max_model_length=32768` in the `vllm` command to align with the `generation_size` we define per eval. Without this, `lighteval` will throw an error.
+> You must set `max_model_length=32768` in the `vllm` command to align with the `max_new_tokens` we define per eval. Without this, `lighteval` will throw an error.
 
 To increase throughput across multiple GPUs, use _data parallel_ as follows:
 
 ```shell
 NUM_GPUS=8
 MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B
-MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,data_parallel_size=$NUM_GPUS,max_model_length=32768,gpu_memory_utilization=0.8,generation_parameters={max_new_tokens:32768,temperature:0.0}"
+MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,data_parallel_size=$NUM_GPUS,max_model_length=32768,gpu_memory_utilization=0.8,generation_parameters={max_new_tokens:32768,temperature:0.6,top_p:0.95}"
 TASK=aime24
 OUTPUT_DIR=data/evals/$MODEL
 
@@ -285,7 +290,7 @@ For large models which require sharding across GPUs, use _tensor parallel_ and r
 ```shell
 NUM_GPUS=8
 MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-32B
-MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,tensor_parallel_size=$NUM_GPUS,max_model_length=32768,gpu_memory_utilization=0.8,generation_parameters={max_new_tokens:32768,temperature:0.0}"
+MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,tensor_parallel_size=$NUM_GPUS,max_model_length=32768,gpu_memory_utilization=0.8,generation_parameters={max_new_tokens:32768,temperature:0.6,top_p:0.95}"
 TASK=aime24
 OUTPUT_DIR=data/evals/$MODEL
 
@@ -319,7 +324,40 @@ make evaluate MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-32B TASK=aime24 PARALLE
 ## Reproducing Deepseek's evaluation results
 
 > [!NOTE]
-> The DeepSeek-R1 paper uses sampling with a temperature of 0.6, a top-p value of 0.95, and 64 responses per query to estimate `pass@1`. Below, we report the results from greedy decoding, which likely explains the small 1-3σ discrepancies between our results and theirs.
+> The DeepSeek-R1 paper uses sampling with 64 responses per query to estimate `pass@1`. Below, we report the results from sampling 1 response per query, which likely explains the small 1-3σ discrepancies between our results and theirs.
+
+### AIME 2024
+
+We are able to reproduce Deepseek's reported results on the AIME 2024 benchmark within ~1-3 standard deviations:
+
+| Model                         | AIME 2024 (🤗 LightEval) | AIME 2024 (DeepSeek Reported) |
+|:------------------------------|:-----------------------:|:----------------------------:|
+| DeepSeek-R1-Distill-Qwen-1.5B |          26.7           |             28.9             |
+| DeepSeek-R1-Distill-Qwen-7B   |          56.6           |             55.5             |
+| DeepSeek-R1-Distill-Qwen-14B  |          60.0           |             69.7             |
+| DeepSeek-R1-Distill-Qwen-32B  |          73.2           |             72.6             |
+| DeepSeek-R1-Distill-Llama-8B  |          43.3           |             50.4             |
+| DeepSeek-R1-Distill-Llama-70B |          73.3           |             70.0             |
+
+To reproduce these results use the following command:
+
+```shell
+NUM_GPUS=1 # Set to 8 for 32B and 70B models
+MODEL=deepseek-ai/{model_name}
+MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=32768,gpu_memory_utilization=0.8,data_parallel_size=$NUM_GPUS,generation_parameters={max_new_tokens:32768,temperature:0.6,top_p:0.95}"
+OUTPUT_DIR=data/evals/$MODEL
+
+lighteval vllm $MODEL_ARGS "custom|aime24|0|0" \
+    --custom-tasks src/open_r1/evaluate.py \
+    --use-chat-template \
+    --output-dir $OUTPUT_DIR
+```
+
+Alternatively, you can launch Slurm jobs as follows:
+
+```shell
+python scripts/run_benchmarks.py --model-id {model_id}  --benchmarks aime24
+```
 
 ### MATH-500
 
@@ -327,19 +365,19 @@ We are able to reproduce Deepseek's reported results on the MATH-500 benchmark w
 
 | Model                         | MATH-500 (🤗 LightEval) | MATH-500 (DeepSeek Reported) |
 |:------------------------------|:-----------------------:|:----------------------------:|
-| DeepSeek-R1-Distill-Qwen-1.5B |          81.2           |             83.9             |
-| DeepSeek-R1-Distill-Qwen-7B   |          91.8           |             92.8             |
-| DeepSeek-R1-Distill-Qwen-14B  |          94.2           |             93.9             |
-| DeepSeek-R1-Distill-Qwen-32B  |          95.0           |             94.3             |
-| DeepSeek-R1-Distill-Llama-8B  |          85.4           |             89.1             |
-| DeepSeek-R1-Distill-Llama-70B |          93.4           |             94.5             |
+| DeepSeek-R1-Distill-Qwen-1.5B |          84.6           |             83.9             |
+| DeepSeek-R1-Distill-Qwen-7B   |          93.0           |             92.8             |
+| DeepSeek-R1-Distill-Qwen-14B  |          95.0           |             93.9             |
+| DeepSeek-R1-Distill-Qwen-32B  |          96.6           |             94.3             |
+| DeepSeek-R1-Distill-Llama-8B  |          88.6           |             89.1             |
+| DeepSeek-R1-Distill-Llama-70B |          96.4           |             94.5             |
 
 To reproduce these results use the following command:
 
 ```shell
 NUM_GPUS=1 # Set to 8 for 32B and 70B models
 MODEL=deepseek-ai/{model_name}
-MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=32768,gpu_memory_utilization=0.8,data_parallel_size=$NUM_GPUS,generation_parameters={max_new_tokens:32768,temperature:0.0}"
+MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=32768,gpu_memory_utilization=0.8,data_parallel_size=$NUM_GPUS,generation_parameters={max_new_tokens:32768,temperature:0.6,top_p:0.95}"
 OUTPUT_DIR=data/evals/$MODEL
 
 lighteval vllm $MODEL_ARGS "custom|math_500|0|0" \
@@ -360,19 +398,19 @@ We are able to reproduce Deepseek's reported results on the GPQA Diamond benchma
 
 | Model                         | GPQA Diamond (🤗 LightEval) | GPQA Diamond (DeepSeek Reported) |
 |:------------------------------|:---------------------------:|:--------------------------------:|
-| DeepSeek-R1-Distill-Qwen-1.5B |            33.3             |               33.8               |
-| DeepSeek-R1-Distill-Qwen-7B   |            48.4             |               49.1               |
-| DeepSeek-R1-Distill-Qwen-14B  |            55.6             |               59.1               |
-| DeepSeek-R1-Distill-Qwen-32B  |            58.6             |               62.1               |
-| DeepSeek-R1-Distill-Llama-8B  |            51.0             |               49.0               |
-| DeepSeek-R1-Distill-Llama-70B |            65.2             |               65.2               |
+| DeepSeek-R1-Distill-Qwen-1.5B |            34.3             |               33.8               |
+| DeepSeek-R1-Distill-Qwen-7B   |            50.5             |               49.1               |
+| DeepSeek-R1-Distill-Qwen-14B  |            59.6             |               59.1               |
+| DeepSeek-R1-Distill-Qwen-32B  |            63.6             |               62.1               |
+| DeepSeek-R1-Distill-Llama-8B  |            52.0             |               49.0               |
+| DeepSeek-R1-Distill-Llama-70B |            67.2             |               65.2               |
 
 To reproduce these results use the following command:
 
 ```shell
 NUM_GPUS=1 # Set to 8 for 32B and 70B models
 MODEL=deepseek-ai/{model_name}
-MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=32768,gpu_memory_utilization=0.8,data_parallel_size=$NUM_GPUS,generation_parameters={max_new_tokens:32768,temperature:0.0}"
+MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=32768,gpu_memory_utilization=0.8,data_parallel_size=$NUM_GPUS,generation_parameters={max_new_tokens:32768,temperature:0.6,top_p:0.95}"
 OUTPUT_DIR=data/evals/$MODEL
 
 lighteval vllm $MODEL_ARGS "custom|gpqa:diamond|0|0" \
