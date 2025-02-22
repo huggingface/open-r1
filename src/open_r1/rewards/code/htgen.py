@@ -5,9 +5,18 @@ from open_r1.rewards.api.code.unfoldml.htgen import gen_triples_33, verify_tripl
 
 # # GRPOTrainer requires 1. a dataset and 2. a verification callback
 
-def mk_dataset_row(o):
+# # # Tasks 
+# TOTALITY_CHECK : is the program "total"?
+# FIX_PRE, FIX_POST, FIX_PROGRAM : modify either part of a triple to achieve either a total triple or other proof result
+
+def quotes(s:str):
+    """markdown triple backticks for a piece of code"""
+    return f"```{str}```"
+
+# totality check task
+def mk_row_totality_check(o):
     """
-    Construct the prompt from the raw API data
+    Construct the prompt
     """
     label = o['label']
     pre = o['pre']
@@ -15,8 +24,6 @@ def mk_dataset_row(o):
     post = o['post']
 
     program_str = '\n'.join(program)
-
-    
 
     prompt_hdr = (
         f"Below you are given a Python program triple, made of a precondition predicate, "
@@ -32,7 +39,8 @@ def mk_dataset_row(o):
     )
 
     prompt_question = (
-        f"Given a program triple made of program '{program_str}', preconditions '{pre}' and postcondition '{post}', is the postcondition "
+        f"Given a program triple made of program {quotes(program_str)}, "
+        f"preconditions {quotes(pre)} and postcondition {quotes(post)}, is the postcondition "
         f"always True at the end of the program ? Please return 'True' or 'False'."
     )
 
@@ -49,9 +57,7 @@ def mk_dataset_row(o):
 
     return o_out
 
-
-
-def mk_dataset(
+def mk_dataset_totality_check(
     max_ast_depth:int = 3, 
     n_stmt:int = 5, 
     n_pre_terms:int = 1, 
@@ -70,13 +76,13 @@ def mk_dataset(
             )
 
     # produce prompts from the raw API data
-    gen_prompts = (mk_dataset_row(o) for o in gen if o is not None)
+    gen_prompts = (mk_row_totality_check(o) for o in gen if o is not None)
 
     dataset = IterableDataset.from_generator(gen_prompts)
 
     return dataset
 
-def total_correctness_reward(completions, solution, **kwargs):
+def totality_check_reward(completions, solution, **kwargs):
     """
     verification callback for GRPOTRainer
     """
