@@ -393,6 +393,4 @@ class TestCodeFormat(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    # unittest.main()
-    test = TestRewards()
-    test.test_accuracy_reward_correct_answer()
+    unittest.main()
