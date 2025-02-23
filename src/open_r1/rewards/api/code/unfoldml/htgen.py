@@ -5,7 +5,8 @@ from requests.exceptions import HTTPError
 
 api_server_url = "https://htgen.unfoldml.com"
 
-def gen_triples_33(n_examples:int, 
+def gen_triples_33(
+    n_examples:int, 
     max_ast_depth:int = 3, 
     n_stmt:int = 5, 
     n_pre_terms:int = 1, 
@@ -17,6 +18,7 @@ def gen_triples_33(n_examples:int,
     Yield program triples (Precondition, Statements, Postconditions) from the API,
     together with their program traces plus a initial variable environment and 
     whether they are totally correct or they .
+    :param n_examples: number of triples to generate
     :param max_ast_depth: maximum AST depth of generated expressions
     :param n_stmt: no. of statements in the generated program
     :param n_pre_terms: no. of AND/OR terms in the generated pre-conditions

@@ -11,7 +11,7 @@ from open_r1.rewards.api.code.unfoldml.htgen import gen_triples_33, verify_tripl
 
 def quotes(s:str):
     """markdown triple backticks for a piece of code"""
-    return f"```{str}```"
+    return f"```{s}```"
 
 
 # TOTALITY_CHECK task
@@ -58,7 +58,6 @@ def mk_row_totality_check(o):
         "ground_truth": label_is_total,
         "triple": {"pre": pre, "program":program, "post": post}
     }
-
     return o_out
 
 def mk_dataset_totality_check(
