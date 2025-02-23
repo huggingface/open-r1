@@ -28,7 +28,7 @@ evaluate:
 		fi \
 	),))
 	$(if $(filter tensor,$(PARALLEL)),export VLLM_WORKER_MULTIPROC_METHOD=spawn &&,) \
-	MODEL_ARGS="pretrained=$(MODEL),dtype=bfloat16,$(PARALLEL_ARGS),max_model_length=32768,gpu_memory_utilisation=0.8" && \
+	MODEL_ARGS="pretrained=$(MODEL),dtype=bfloat16,$(PARALLEL_ARGS),max_model_length=32768,gpu_memory_utilization=0.8" && \
 	lighteval vllm $$MODEL_ARGS "custom|$(TASK)|0|0" \
 		--custom-tasks src/open_r1/evaluate.py \
 		--use-chat-template \
