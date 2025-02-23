@@ -17,13 +17,13 @@ Supervised fine-tuning script for decoder language models.
 
 Usage:
 
-# One 1 node of 8 x H100s
+# One 1 node of 8 x H100s 
+#Remove the packing parameter.
 accelerate launch --config_file=recipes/accelerate_configs/zero3.yaml src/open_r1/sft.py \
     --model_name_or_path Qwen/Qwen2.5-1.5B-Instruct \
     --dataset_name HuggingFaceH4/Bespoke-Stratos-17k \
     --learning_rate 2.0e-5 \
     --num_train_epochs 1 \
-    --packing \
     --max_seq_length 4096 \
     --per_device_train_batch_size 2 \
     --gradient_accumulation_steps 8 \
@@ -58,8 +58,8 @@ from trl import (
     get_kbit_device_map,
     get_peft_config,
     get_quantization_config,
+    DataCollatorForCompletionOnlyLM
 )
-
 
 logger = logging.getLogger(__name__)
 
@@ -130,16 +130,20 @@ def main(script_args, training_args, model_args):
     ############################
     # Initialize the SFT Trainer
     ############################
+    response_template = "\n<|im_start|>assistant\n"
+    collator = DataCollatorForCompletionOnlyLM(response_template, tokenizer=tokenizer, pad_to_multiple_of=4096)
+    
     trainer = SFTTrainer(
+        # model=model,
         model=model_args.model_name_or_path,
         args=training_args,
         train_dataset=dataset[script_args.dataset_train_split],
         eval_dataset=dataset[script_args.dataset_test_split] if training_args.eval_strategy != "no" else None,
         processing_class=tokenizer,
         peft_config=get_peft_config(model_args),
+        data_collator=collator,
         callbacks=get_callbacks(training_args, model_args),
     )
-
     ###############
     # Training loop
     ###############
