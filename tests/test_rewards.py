@@ -1,13 +1,13 @@
 import unittest
 
 from open_r1.rewards import (
-    accuracy_reward,
-    format_reward,
-    get_code_format_reward,
-    get_cosine_scaled_reward,
-    get_repetition_penalty_reward,
-    len_reward,
-    reasoning_steps_reward,
+    AccuracyReward,
+    CodeFormatReward,
+    CosineScaledReward,
+    FormatReward,
+    LengthReward,
+    ReasoningStepsReward,
+    RepetitionPenaltyReward,
 )
 
 
@@ -17,7 +17,7 @@ class TestRewards(unittest.TestCase):
         completion = [[{"content": r"\boxed{\frac{63}{400}}"}]]
         solution = [r"\frac{63}{400}"]
 
-        rewards = accuracy_reward(completion, solution)
+        rewards = AccuracyReward()(completion, solution=solution)
         self.assertEqual(rewards[0], 1.0)
 
     def test_accuracy_reward_wrong_answer(self):
@@ -25,13 +25,13 @@ class TestRewards(unittest.TestCase):
         completion = [[{"content": r"\boxed{\frac{64}{400}}"}]]
         solution = [r"\frac{63}{400}"]
 
-        rewards = accuracy_reward(completion, solution)
+        rewards = AccuracyReward()(completion, solution=solution)
         self.assertEqual(rewards[0], 0.0)
 
     def test_format_reward_correct(self):
         """Test format_reward with correct format."""
         completion = [[{"content": "<think>Some reasoning</think><answer>The answer</answer>"}]]
-        rewards = format_reward(completion)
+        rewards = FormatReward()(completion)
         self.assertEqual(rewards[0], 1.0)
 
     def test_format_reward_incorrect(self):
@@ -46,7 +46,7 @@ class TestRewards(unittest.TestCase):
 
         for fmt in incorrect_formats:
             completion = [[{"content": fmt}]]
-            rewards = format_reward(completion)
+            rewards = FormatReward()(completion)
             self.assertEqual(rewards[0], 0.0)
 
     def test_reasoning_steps_reward(self):
@@ -64,7 +64,7 @@ class TestRewards(unittest.TestCase):
 
         for content, expected_reward in test_cases:
             completion = [[{"content": content}]]
-            rewards = reasoning_steps_reward(completion)
+            rewards = ReasoningStepsReward()(completion)
             self.assertAlmostEqual(rewards[0], expected_reward)
 
     def test_multiple_completions(self):
@@ -72,7 +72,7 @@ class TestRewards(unittest.TestCase):
         completions = [[{"content": r"\boxed{\frac{63}{400}}"}], [{"content": r"\boxed{\frac{64}{400}}"}]]
         solutions = [r"\frac{63}{400}", r"\frac{63}{400}"]
 
-        rewards = accuracy_reward(completions, solutions)
+        rewards = AccuracyReward()(completions, solution=solutions)
         self.assertEqual(len(rewards), 2)
         self.assertEqual(rewards[0], 1.0)
         self.assertEqual(rewards[1], 0.0)
@@ -102,14 +102,14 @@ class TestRewards(unittest.TestCase):
             padded_content = content + " " * (content_len - len(content))
             completion = [[{"content": padded_content}]]
 
-            rewards = get_cosine_scaled_reward(**test_params)(completion, [solution])
+            rewards = CosineScaledReward(**test_params)(completion, solution=[solution])
             self.assertAlmostEqual(rewards[0], expected_reward, places=2)
 
     def test_format_reward_specific_multiline(self):
         """Test format_reward with a specific multiline input."""
         inputs = "<think>\nI will count each distinct object in the image:\n1. Purple scooter\n2. Red bicycle\n3. Green motorcycle\n4. Gray sedan\n5. Yellow school bus\n6. Small green double-decker bus\n7. Small red car\n8. Small purple car\n9. Small gray dirt bike\n\nThere are 9 distinct objects in total.\n</think>\n<answer>9</answer>"
         completion = [[{"content": inputs}]]
-        rewards = format_reward(completion)
+        rewards = FormatReward()(completion)
         self.assertEqual(rewards[0], 1.0)
 
     def test_same_length_responses(self):
@@ -117,7 +117,7 @@ class TestRewards(unittest.TestCase):
         completions = [[{"content": r"\boxed{\frac{63}{400}}"}], [{"content": r"\boxed{\frac{64}{400}}"}]]
         solutions = [r"\frac{63}{400}", r"\frac{63}{400}"]
 
-        rewards = len_reward(completions, solutions)
+        rewards = LengthReward()(completions, solutions)
         self.assertEqual(rewards, [0.0, 0.0])
 
     def test_different_lengths_correct_answers(self):
@@ -128,7 +128,7 @@ class TestRewards(unittest.TestCase):
         ]
         solutions = [r"\frac{63}{400}", r"\frac{63}{400}"]
 
-        rewards = len_reward(completions, solutions)
+        rewards = LengthReward()(completions, solutions)
         self.assertGreater(rewards[0], rewards[1])  # shorter answer should get higher reward
         self.assertAlmostEqual(rewards[0], 0.5)  # shortest correct answer gets maximum reward
 
@@ -140,7 +140,7 @@ class TestRewards(unittest.TestCase):
         ]
         solutions = [r"\frac{63}{400}", r"\frac{63}{400}"]
 
-        rewards = len_reward(completions, solutions)
+        rewards = LengthReward()(completions, solutions)
         self.assertLessEqual(rewards[0], 0.0)  # incorrect answers should get non-positive rewards
         self.assertLessEqual(rewards[1], 0.0)
         self.assertGreater(rewards[0], rewards[1])  # shorter answer should still be penalized less
@@ -155,7 +155,7 @@ class TestRewards(unittest.TestCase):
         ]
         solutions = [r"\frac{63}{400}"] * 4
 
-        rewards = len_reward(completions, solutions)
+        rewards = LengthReward()(completions, solutions)
 
         # Shortest correct answer should get positive reward
         self.assertGreater(rewards[0], 0.0)
@@ -177,7 +177,7 @@ class TestRewards(unittest.TestCase):
         completions = [[{"content": r"\boxed{answer}"}], [{"content": r"\boxed{answer} " + "x" * 10}]]
         solutions = ["unparseable_latex", "unparseable_latex"]
 
-        rewards = len_reward(completions, solutions)
+        rewards = LengthReward()(completions, solutions)
         self.assertGreater(rewards[0], rewards[1])  # shorter answer should still get better reward
         self.assertAlmostEqual(rewards[0], 0.5)  # treated as correct, shortest gets maximum reward
 
@@ -185,18 +185,18 @@ class TestRewards(unittest.TestCase):
 class TestRepetitionPenaltyReward(unittest.TestCase):
     def test_positive_max_penalty_raises_value_error(self):
         with self.assertRaises(ValueError):
-            get_repetition_penalty_reward(ngram_size=2, max_penalty=1.0)
+            RepetitionPenaltyReward(ngram_size=2, max_penalty=1.0)
         with self.assertRaisesRegex(ValueError, "max_penalty 1.5 should not be positive"):
-            get_repetition_penalty_reward(ngram_size=2, max_penalty=1.5)
+            RepetitionPenaltyReward(ngram_size=2, max_penalty=1.5)
 
     def test_no_repetition(self):
-        reward_fn = get_repetition_penalty_reward(ngram_size=2, max_penalty=-1.0)
+        reward_fn = RepetitionPenaltyReward(ngram_size=2, max_penalty=-1.0)
         completions = [[{"content": "this is a test sentence"}]]
         rewards = reward_fn(completions)
         self.assertEqual(rewards, [0.0])
 
     def test_full_repetition(self):
-        reward_fn = get_repetition_penalty_reward(ngram_size=2, max_penalty=-1.0)
+        reward_fn = RepetitionPenaltyReward(ngram_size=2, max_penalty=-1.0)
         completions = [[{"content": "this this this this this"}]]
 
         rewards = reward_fn(completions)
@@ -204,7 +204,7 @@ class TestRepetitionPenaltyReward(unittest.TestCase):
         self.assertEqual(rewards, [-0.75])
 
     def test_partial_repetition(self):
-        reward_fn = get_repetition_penalty_reward(ngram_size=2, max_penalty=-1.0)
+        reward_fn = RepetitionPenaltyReward(ngram_size=2, max_penalty=-1.0)
         completions = [[{"content": "this is a this is a test"}]]
 
         rewards = reward_fn(completions)
@@ -213,7 +213,7 @@ class TestRepetitionPenaltyReward(unittest.TestCase):
         self.assertAlmostEqual(rewards[0], -1 / 3)
 
     def test_multiple_completions(self):
-        reward_fn = get_repetition_penalty_reward(ngram_size=3, max_penalty=-0.5)
+        reward_fn = RepetitionPenaltyReward(ngram_size=3, max_penalty=-0.5)
         completions = [
             [{"content": "this is a test"}],
             [{"content": "test test test test"}],
@@ -226,20 +226,20 @@ class TestRepetitionPenaltyReward(unittest.TestCase):
         self.assertAlmostEqual(rewards[1], -0.25)
 
     def test_empty_completion(self):
-        reward_fn = get_repetition_penalty_reward(ngram_size=2, max_penalty=-1.0)
+        reward_fn = RepetitionPenaltyReward(ngram_size=2, max_penalty=-1.0)
         completions = [[{"content": ""}]]
         rewards = reward_fn(completions)
         self.assertEqual(rewards, [0.0])
 
     def test_different_ngram_size(self):
-        reward_fn = get_repetition_penalty_reward(ngram_size=3, max_penalty=-2.0)
+        reward_fn = RepetitionPenaltyReward(ngram_size=3, max_penalty=-2.0)
         completions = [[{"content": "this is a this is a test"}]]
 
         rewards = reward_fn(completions)
         self.assertAlmostEqual(rewards[0], -0.4)
 
     def test_mixed_case(self):
-        reward_fn = get_repetition_penalty_reward(ngram_size=2, max_penalty=-1.0)
+        reward_fn = RepetitionPenaltyReward(ngram_size=2, max_penalty=-1.0)
         completions = [
             [{"content": "This is A Test"}],
             [{"content": "this IS a test"}],
@@ -250,35 +250,35 @@ class TestRepetitionPenaltyReward(unittest.TestCase):
         self.assertAlmostEqual(rewards[0], rewards[1])
 
     def test_one_word_completion(self):
-        reward_fn = get_repetition_penalty_reward(ngram_size=3, max_penalty=-1.0)
+        reward_fn = RepetitionPenaltyReward(ngram_size=3, max_penalty=-1.0)
         completions = [[{"content": "word"}]]
 
         rewards = reward_fn(completions)
         self.assertEqual(rewards, [0.0])
 
     def test_two_word_completion(self):
-        reward_fn = get_repetition_penalty_reward(ngram_size=3, max_penalty=-1.0)
+        reward_fn = RepetitionPenaltyReward(ngram_size=3, max_penalty=-1.0)
         completions = [[{"content": "two words"}]]
 
         rewards = reward_fn(completions)
         self.assertEqual(rewards, [0.0])
 
     def test_three_word_completion(self):
-        reward_fn = get_repetition_penalty_reward(ngram_size=3, max_penalty=-1.0)
+        reward_fn = RepetitionPenaltyReward(ngram_size=3, max_penalty=-1.0)
         completions = [[{"content": "three different words"}]]
 
         rewards = reward_fn(completions)
         self.assertEqual(rewards, [0.0])
 
     def test_three_word_repetition_completion(self):
-        reward_fn = get_repetition_penalty_reward(ngram_size=3, max_penalty=-1.0)
+        reward_fn = RepetitionPenaltyReward(ngram_size=3, max_penalty=-1.0)
         completions = [[{"content": "word word word word"}]]
 
         rewards = reward_fn(completions)
         self.assertEqual(rewards, [-0.5])
 
     def test_four_word_completion_with_repetition(self):
-        reward_fn = get_repetition_penalty_reward(ngram_size=3, max_penalty=-1.0)
+        reward_fn = RepetitionPenaltyReward(ngram_size=3, max_penalty=-1.0)
         completions = [[{"content": "one two one two"}]]
 
         rewards = reward_fn(completions)
@@ -286,7 +286,7 @@ class TestRepetitionPenaltyReward(unittest.TestCase):
         self.assertEqual(rewards, [0.0])
 
     def test_five_word_completion_with_repetition(self):
-        reward_fn = get_repetition_penalty_reward(ngram_size=3, max_penalty=-0.5)
+        reward_fn = RepetitionPenaltyReward(ngram_size=3, max_penalty=-0.5)
         completions = [[{"content": "A B C A B"}]]
 
         rewards = reward_fn(completions)
@@ -294,20 +294,20 @@ class TestRepetitionPenaltyReward(unittest.TestCase):
         self.assertEqual(rewards, [0.0])
 
     def test_six_word_completion_with_repetition(self):
-        reward_fn = get_repetition_penalty_reward(ngram_size=3, max_penalty=-1.0)
+        reward_fn = RepetitionPenaltyReward(ngram_size=3, max_penalty=-1.0)
         completions = [[{"content": "A B C A B C"}]]
 
         rewards = reward_fn(completions)
         self.assertEqual(rewards, [-0.25])
 
     def test_long_completion_with_repetition(self):
-        reward_fn = get_repetition_penalty_reward(ngram_size=3, max_penalty=-1.0)
+        reward_fn = RepetitionPenaltyReward(ngram_size=3, max_penalty=-1.0)
         completions = [[{"content": "A B C A B C E F G A B C A B C"}]]
         rewards = reward_fn(completions)
         self.assertAlmostEqual(rewards[0], -0.3846, places=4)
 
     def test_long_completion_without_repetition(self):
-        reward_fn = get_repetition_penalty_reward(ngram_size=3, max_penalty=-1.0)
+        reward_fn = RepetitionPenaltyReward(ngram_size=3, max_penalty=-1.0)
         completions = [[{"content": "A B C D E F G H I J K L"}]]
 
         rewards = reward_fn(completions)
@@ -324,7 +324,7 @@ class TestCodeFormat(unittest.TestCase):
                 }
             ]
         ]
-        reward_fn = get_code_format_reward(language="python")
+        reward_fn = CodeFormatReward(language="python")
         rewards = reward_fn(completion)
         self.assertEqual(rewards[0], 1.0)
 
@@ -343,7 +343,7 @@ class TestCodeFormat(unittest.TestCase):
             "<answer>```python\ndef hello(): pass\n```</answer><think>Analysis</think>",
         ]
 
-        reward_fn = get_code_format_reward(language="python")
+        reward_fn = CodeFormatReward(language="python")
         for fmt in incorrect_formats:
             completion = [[{"content": fmt}]]
             rewards = reward_fn(completion)
@@ -358,7 +358,7 @@ class TestCodeFormat(unittest.TestCase):
                 }
             ]
         ]
-        reward_fn = get_code_format_reward(language="python")
+        reward_fn = CodeFormatReward(language="python")
         rewards = reward_fn(completion)
         self.assertEqual(rewards[0], 1.0)
 
@@ -369,12 +369,12 @@ class TestCodeFormat(unittest.TestCase):
         ]
 
         # Test with JavaScript
-        js_reward_fn = get_code_format_reward(language="javascript")
+        js_reward_fn = CodeFormatReward(language="javascript")
         rewards = js_reward_fn(completion)
         self.assertEqual(rewards[0], 1.0)
 
         # Same completion should fail for Python
-        py_reward_fn = get_code_format_reward(language="python")
+        py_reward_fn = CodeFormatReward(language="python")
         rewards = py_reward_fn(completion)
         self.assertEqual(rewards[0], 0.0)
 
@@ -387,10 +387,12 @@ class TestCodeFormat(unittest.TestCase):
                 }
             ]
         ]
-        reward_fn = get_code_format_reward(language="python")
+        reward_fn = CodeFormatReward(language="python")
         rewards = reward_fn(completion)
         self.assertEqual(rewards[0], 1.0)
 
 
 if __name__ == "__main__":
-    unittest.main()
+    # unittest.main()
+    test = TestRewards()
+    test.test_accuracy_reward_correct_answer()
