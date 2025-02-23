@@ -39,6 +39,19 @@ class BaseRewardFunction(ABC):
         """
         raise NotImplementedError("reward_on_single_completion should be impl by subclass")
 
+    def _single_thread_call(self, completions: List[Dict[str, str]], **kwargs) -> List[float]:
+        results = []
+        for idx, completion in enumerate(completions):
+            # prepare per-completion kwargs
+            per_completion_kwargs = {}
+            for key, value in kwargs.items():
+                if isinstance(value, list):
+                    per_completion_kwargs[key] = value[idx]
+                else:
+                    per_completion_kwargs[key] = value
+            results.append(self.reward_on_single_completion(completion, **per_completion_kwargs))
+        return results
+
     def __call__(self, completions: List[Dict[str, str]], **kwargs) -> List[float]:
         """Process and score multiple model completions in parallel.
 
@@ -61,6 +74,9 @@ class BaseRewardFunction(ABC):
             max_workers = kwargs["max_workers"]
         else:
             max_workers = self.max_workers
+
+        if max_workers == 1:
+            return self._single_thread_call(completions, **kwargs)
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             future_to_idx = {}
