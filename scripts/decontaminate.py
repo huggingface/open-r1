@@ -1,6 +1,5 @@
 """
-Usage:
-$ python scripts/decontaminate.py \
+python scripts/decontaminate.py \
     --dataset "open-r1/verifiable-coding-problems-python-10k" \
     --split train \
     --ngram_size 8 \
@@ -9,6 +8,7 @@ $ python scripts/decontaminate.py \
 """
 
 import collections
+
 from tqdm import tqdm
 
 
@@ -17,13 +17,14 @@ def normalize_string(text: str) -> str:
     # Convert to lowercase and normalize whitespace
     text = text.lower().strip()
     # Replace multiple spaces with single space
-    text = ' '.join(text.split())
+    text = " ".join(text.split())
     return text
+
 
 def word_ngrams(text: str, n: int) -> list:
     """Generate word-level n-grams from text."""
     words = text.split()
-    return [' '.join(words[i:i+n]) for i in range(len(words) - n + 1)]
+    return [" ".join(words[i : i + n]) for i in range(len(words) - n + 1)]
 
 
 def build_ngram_lookup(documents: list[str], ngram_size: int = 8) -> dict[str, set[int]]:
@@ -35,7 +36,7 @@ def build_ngram_lookup(documents: list[str], ngram_size: int = 8) -> dict[str, s
         ngrams = word_ngrams(normalized_text, ngram_size)
         for ngram in ngrams:
             lookup[ngram].add(doc_id)
-    
+
     return lookup
 
 
@@ -51,11 +52,23 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset", type=str, required=True, help="Name of the dataset to check for contamination.")
-    parser.add_argument("--split", type=str, default="train", help="Split to check for contamination.")
-    parser.add_argument("--ngram_size", type=int, default=8, help="Size of n-grams to build.")
-    parser.add_argument("--problem_column", type=str, default="problem", help="Name of the column containing the problem (prompt).")
-    parser.add_argument("--cleanup", "-c", action="store_true", help="Wether to remove the contaminated rows before pushing the dataset.")
-    parser.add_argument("--new_dataset_name", type=str, default=None, help="New name for the dataset")
+    parser.add_argument("--split", type=str, default="train", help="Split to check for contamination, defaults to `train`.")
+    parser.add_argument("--ngram_size", type=int, default=8, help="Size of n-grams to build, defaults to 8.")
+    parser.add_argument(
+        "--problem_column", type=str, default="problem", help="Name of the column containing the problem (prompt)."
+    )
+    parser.add_argument(
+        "--cleanup",
+        "-c",
+        action="store_true",
+        help="Wether to remove the contaminated rows before pushing the dataset.",
+    )
+    parser.add_argument(
+        "--new_dataset_name",
+        type=str,
+        default=None,
+        help="New name for the dataset. If not provided, will reuse the name and add a `_decontaminated` to the name."
+    )
     args = parser.parse_args()
 
     from datasets import load_dataset, Dataset
@@ -68,7 +81,12 @@ if __name__ == "__main__":
         "aime_2025": (load_dataset("yentinglin/aime_2025", split="train"), "problem"),
         "math_500": (load_dataset("HuggingFaceH4/MATH-500", split="test"), "problem"),
         "gpqa": (load_dataset("Idavidrein/gpqa", "gpqa_diamond", split="train", trust_remote_code=True), "Question"),
-        "lcb": (load_dataset("livecodebench/code_generation_lite", split="test", version_tag="v4_v5", trust_remote_code=True), "question_content"),
+        "lcb": (
+            load_dataset(
+                "livecodebench/code_generation_lite", split="test", version_tag="v4_v5", trust_remote_code=True
+            ),
+            "question_content",
+        ),
     }
     ngram_lookups = {}
     for ds_name, (eval_dataset, problem_col) in eval_datasets.items():
@@ -103,3 +121,4 @@ if __name__ == "__main__":
 
     new_ds_name = args.new_dataset_name or f"{args.dataset}_decontaminated"
     ds.push_to_hub(new_ds_name, split="train", private=False)
+    print(f"Decontaminated dataset: {new_ds_name}")
