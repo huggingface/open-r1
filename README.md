@@ -237,7 +237,7 @@ options:
                         Size of n-grams to build, defaults to 8.
   --problem_column PROBLEM_COLUMN
                         Name of the column containing the problem (prompt).
-  --cleanup, -c         Wether to remove the contaminated rows before pushing the dataset.
+  --cleanup           Whether to remove the contaminated rows before pushing the dataset.
   --new_dataset_name NEW_DATASET_NAME
                         New name for the dataset. If not provided, will reuse the name and add a `_decontaminated` to the name.
 ```
