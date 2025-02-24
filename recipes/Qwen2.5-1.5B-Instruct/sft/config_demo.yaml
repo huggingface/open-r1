@@ -28,7 +28,7 @@ lr_scheduler_type: cosine_with_min_lr
 lr_scheduler_kwargs:
   min_lr_rate: 0.1
 packing: true
-max_seq_length: 16384
+max_length: 16384
 max_steps: -1
 num_train_epochs: 1
 output_dir: data/Qwen2.5-1.5B-Open-R1-Distill
