@@ -217,7 +217,7 @@ Following [s1: Simple test-time scaling](https://arxiv.org/abs/2501.19393) the d
 
 ```shell
 python scripts/decontaminate.py \
-    --dataset "open-r1/verifiable-coding-problems-python-10k" \
+    --dataset "open-r1/verifiable-coding-problems-python" \
     --problem_column problem \
     -c
 ```
