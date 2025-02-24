@@ -92,7 +92,7 @@ if __name__ == "__main__":
         ngram_lookups[ds_name] = build_ngram_lookup(eval_dataset[problem_col], ngram_size=args.ngram_size)
 
     for eval_name, ngram_lookup in ngram_lookups.items():
-        # Update the ngram_loopup variable for each dataset
+        # Update the ngram_lookup variable for each dataset
         def find_contaminated(row):
             # For each example we have to build the ngrams and check for all of them on each row
             ngrams = build_ngram_single(row[args.problem_column], ngram_size=args.ngram_size)
