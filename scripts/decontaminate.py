@@ -60,7 +60,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--cleanup",
         action="store_true",
-        help="Wether to remove the contaminated rows before pushing the dataset.",
+        help="Whether to remove the contaminated rows before pushing the dataset.",
     )
     parser.add_argument(
         "--new_dataset_name",
