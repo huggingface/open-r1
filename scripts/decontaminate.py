@@ -4,7 +4,7 @@ python scripts/decontaminate.py \
     --split train \
     --ngram_size 8 \
     --problem_column problem \
-    -c
+    --cleanup
 """
 
 import collections
