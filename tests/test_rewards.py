@@ -8,6 +8,7 @@ from open_r1.rewards import (
     get_repetition_penalty_reward,
     len_reward,
     reasoning_steps_reward,
+    tag_count_reward,
 )
 
 
@@ -312,6 +313,42 @@ class TestRepetitionPenaltyReward(unittest.TestCase):
 
         rewards = reward_fn(completions)
         self.assertEqual(rewards, [0.0])
+
+    def test_tag_count_rewards_all_correct(self):
+        """Test tag_count_reward with correct tags."""
+        completion = [[{"content": "<think>\nSome reasoning\n</think>\n<answer>\nThe answer\n</answer>"}]]
+        rewards = tag_count_reward(completion)
+        self.assertEqual(rewards[0], 1.0)
+
+    def test_tag_count_rewards_missing_think_begin(self):
+        """Test tag_count_reward with missing <think> tag."""
+        completion = [[{"content": "Some reasoning\n</think>\n<answer>\nThe answer\n</answer>"}]]
+        rewards = tag_count_reward(completion)
+        self.assertEqual(rewards[0], 0.75)
+
+    def test_tag_count_rewards_missing_think_end(self):
+        """Test tag_count_reward with missing </think> tag."""
+        completion = [[{"content": "<think>\nSome reasoning\n<answer>\nThe answer\n</answer>"}]]
+        rewards = tag_count_reward(completion)
+        self.assertEqual(rewards[0], 0.75)
+
+    def test_tag_count_rewards_missing_answer_begin(self):
+        """Test tag_count_reward with missing <answer> tag."""
+        completion = [[{"content": "<think>\nSome reasoning\n</think>\nThe answer\n</answer>"}]]
+        rewards = tag_count_reward(completion)
+        self.assertEqual(rewards[0], 0.75)
+
+    def test_tag_count_rewards_missing_answer_end(self):
+        """Test tag_count_reward with missing </answer> tag."""
+        completion = [[{"content": "<think>\nSome reasoning\n</think>\n<answer>\nThe answer"}]]
+        rewards = tag_count_reward(completion)
+        self.assertEqual(rewards[0], 0.75)
+
+    def test_tag_count_rewards_missing_all_tags(self):
+        """Test tag_count_reward with missing all tags."""
+        completion = [[{"content": "Some reasoning\nThe answer"}]]
+        rewards = tag_count_reward(completion)
+        self.assertEqual(rewards[0], 0.0)
 
 
 class TestCodeFormat(unittest.TestCase):
