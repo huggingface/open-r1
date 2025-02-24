@@ -59,7 +59,6 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--cleanup",
-        "-c",
         action="store_true",
         help="Wether to remove the contaminated rows before pushing the dataset.",
     )
