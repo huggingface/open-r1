@@ -1,6 +1,6 @@
 """
 python scripts/decontaminate.py \
-    --dataset "open-r1/verifiable-coding-problems-python-10k" \
+    --dataset "open-r1/verifiable-coding-problems-python" \
     --split train \
     --ngram_size 8 \
     --problem_column problem \
