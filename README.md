@@ -219,7 +219,7 @@ Following [s1: Simple test-time scaling](https://arxiv.org/abs/2501.19393) the d
 python scripts/decontaminate.py \
     --dataset "open-r1/verifiable-coding-problems-python" \
     --problem_column problem \
-    -c
+    --cleanup
 ```
 
 It will decontaminate against the benchmark datasets, and remove the contaminated samples afterwards. If no argument `--new_dataset_name` is provided, the same dataset will be reused, adding a `_decontaminated`. It runs against the prompt, which for this dataset is the column `problem`, but a different one can be provided.
