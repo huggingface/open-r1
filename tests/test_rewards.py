@@ -30,7 +30,7 @@ class TestRewards(unittest.TestCase):
 
     def test_format_reward_correct(self):
         """Test format_reward with correct format."""
-        completion = [[{"content": "<think>Some reasoning</think><answer>The answer</answer>"}]]
+        completion = [[{"content": "<think>\nSome reasoning\n</think>\n<answer>\nThe answer\n</answer>"}]]
         rewards = format_reward(completion)
         self.assertEqual(rewards[0], 1.0)
 
@@ -107,7 +107,7 @@ class TestRewards(unittest.TestCase):
 
     def test_format_reward_specific_multiline(self):
         """Test format_reward with a specific multiline input."""
-        inputs = "<think>\nI will count each distinct object in the image:\n1. Purple scooter\n2. Red bicycle\n3. Green motorcycle\n4. Gray sedan\n5. Yellow school bus\n6. Small green double-decker bus\n7. Small red car\n8. Small purple car\n9. Small gray dirt bike\n\nThere are 9 distinct objects in total.\n</think>\n<answer>9</answer>"
+        inputs = "<think>\nI will count each distinct object in the image:\n1. Purple scooter\n2. Red bicycle\n3. Green motorcycle\n4. Gray sedan\n5. Yellow school bus\n6. Small green double-decker bus\n7. Small red car\n8. Small purple car\n9. Small gray dirt bike\n\nThere are 9 distinct objects in total.\n</think>\n<answer>\n9\n</answer>"
         completion = [[{"content": inputs}]]
         rewards = format_reward(completion)
         self.assertEqual(rewards[0], 1.0)
@@ -320,7 +320,7 @@ class TestCodeFormat(unittest.TestCase):
         completion = [
             [
                 {
-                    "content": "<think>Let's solve this\nStep 1: First step</think>\n<answer>```python\ndef hello():\n    print('world')\n```</answer>"
+                    "content": "<think>\nLet's solve this\nStep 1: First step\n</think>\n<answer>\n```python\ndef hello():\n    print('world')\n```\n</answer>"
                 }
             ]
         ]
@@ -354,7 +354,7 @@ class TestCodeFormat(unittest.TestCase):
         completion = [
             [
                 {
-                    "content": "<think>Here's an example:\n```python\nx = 1\n```\nNow the solution:</think>\n<answer>```python\ndef solution():\n    return 42\n```</answer>"
+                    "content": "<think>\nHere's an example:\n```python\nx = 1\n```\nNow the solution:\n</think>\n<answer>\n```python\ndef solution():\n    return 42\n```\n</answer>"
                 }
             ]
         ]
@@ -365,7 +365,11 @@ class TestCodeFormat(unittest.TestCase):
     def test_different_languages(self):
         """Test code format reward with different programming languages."""
         completion = [
-            [{"content": "<think>Analysis</think><answer>```javascript\nconsole.log('hello');\n```</answer>"}]
+            [
+                {
+                    "content": "<think>\nAnalysis\n</think>\n<answer>\n```javascript\nconsole.log('hello');\n```\n</answer>"
+                }
+            ]
         ]
 
         # Test with JavaScript
@@ -383,7 +387,7 @@ class TestCodeFormat(unittest.TestCase):
         completion = [
             [
                 {
-                    "content": "<think>Here's the analysis</think>\n<answer>```python\nclass Solution:\n    def __init__(self):\n        self.value = 42\n        \n    def get_value(self):\n        return self.value\n```</answer>"
+                    "content": "<think>\nHere's the analysis\n</think>\n<answer>\n```python\nclass Solution:\n    def __init__(self):\n        self.value = 42\n        \n    def get_value(self):\n        return self.value\n```\n</answer>"
                 }
             ]
         ]
