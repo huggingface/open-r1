@@ -13,7 +13,7 @@ dataset_configs:
 dataset_num_proc: 48
 
 #SFT hyperparam
-max_seq_length: 32768
+max_length: 32768
 weight_decay: 0.0001
 optim: adamw_torch
 lr_scheduler_type: linear
