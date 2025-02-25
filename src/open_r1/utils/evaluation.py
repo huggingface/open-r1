@@ -71,6 +71,7 @@ def run_lighteval_job(
     if get_param_count_from_repo_id(model_name) >= 30_000_000_000:
         tensor_parallel = True
     else:
+        num_gpus = 8
         tensor_parallel = False
 
     cmd = VLLM_SLURM_PREFIX.copy()
