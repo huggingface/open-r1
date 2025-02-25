@@ -16,8 +16,10 @@ def gen_triples_33(
     ):
     """
     Yield program triples (Precondition, Statements, Postconditions) from the API,
-    together with their program traces plus a initial variable environment and 
-    whether they are totally correct or they .
+    together with their program traces, plus a initial variable environment and 
+    whether they are totally correct ('ok_total'), or fail to satisfy either specification.
+    NB: '33' stands for the number of constant and mutable identifiers in the program
+
     :param n_examples: number of triples to generate
     :param max_ast_depth: maximum AST depth of generated expressions
     :param n_stmt: no. of statements in the generated program
@@ -75,6 +77,8 @@ def verify_triple_33(
     """
     Verify a program triple and compare with a model prediction 
     of whether the triple is totally correct or not.
+    NB: '33' stands for the number of constant and mutable identifiers in the program
+
     :param is_total: inferred correctness label
     :param preconditions: 
     :param program: 

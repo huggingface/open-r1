@@ -60,7 +60,32 @@ def mk_row_totality_check(o):
     }
     return o_out
 
+
+def mk_dataset_iter_totality_check(
+    n_examples:int,
+    max_ast_depth:int = 3, 
+    n_stmt:int = 5, 
+    n_pre_terms:int = 1, 
+    n_post_terms:int = 1,
+    seed:int = 1234,
+    ):
+    """
+    returns an interable of prompts for GRPOTrainer
+    """
+    gen = gen_triples_33(
+        n_examples= n_examples,
+        max_ast_depth = max_ast_depth, 
+        n_stmt = n_stmt,
+        n_pre_terms = n_pre_terms, 
+        n_post_terms = n_post_terms,
+        seed = seed,
+        )
+    # produce prompts from the raw API data
+    gen_prompts = (mk_row_totality_check(o) for o in gen if o is not None)
+    return gen_prompts
+
 def mk_dataset_totality_check(
+    n_examples:int,
     max_ast_depth:int = 3, 
     n_stmt:int = 5, 
     n_pre_terms:int = 1, 
@@ -70,30 +95,26 @@ def mk_dataset_totality_check(
     """
     construct an interable dataset for GRPOTrainer
     """
-    gen = gen_triples_33(
-            max_ast_depth = max_ast_depth, 
-            n_stmt = n_stmt,
-            n_pre_terms = n_pre_terms, 
-            n_post_terms = n_post_terms,
-            seed = seed,
-            )
-
-    # produce prompts from the raw API data
-    gen_prompts = (mk_row_totality_check(o) for o in gen if o is not None)
-
+    gen_prompts = mk_dataset_iter_totality_check(
+        n_examples= n_examples,
+        max_ast_depth= max_ast_depth, 
+        n_stmt = n_stmt,
+        n_pre_terms = n_pre_terms, 
+        n_post_terms = n_post_terms,
+        seed = seed,
+    )
     dataset = IterableDataset.from_generator(gen_prompts)
-
     return dataset
 
 def totality_check_reward(completions, ground_truth, **kwargs):
     """
     verification callback for GRPOTRainer
-    :param completions: list of truthy values produced by the model
+    :param completions: list of "True"/"False" strings produced by the model
     :param ground_truth: list of boolean ground truth values
     :returns: list of float 1s or 0s with the prediction scores that match the ground truth
     """
     if not isinstance(completions[0], bool):
-        completions = [bool(c) for c in completions]
+        completions = [True if c == "True" else False for c in completions]
     def verify(predicted, actual):
         if predicted == actual:
             return 1.0
