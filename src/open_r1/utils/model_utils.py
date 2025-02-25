@@ -16,6 +16,7 @@ def get_tokenizer(
         model_args.model_name_or_path,
         revision=model_args.model_revision,
         trust_remote_code=model_args.trust_remote_code,
+        padding_side='left',
     )
 
     if training_args.chat_template is not None:
