@@ -211,6 +211,37 @@ ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_con
     --config recipes/Qwen2.5-1.5B-Instruct/grpo/config_demo_code.yaml
 ```
 
+#### Data decontamination
+
+Following [s1: Simple test-time scaling](https://arxiv.org/abs/2501.19393) the data can be decontaminated using the script at: [scripts/decontaminate.py](./scripts/decontaminate.py), which decontaminates a dataset using 8-grams and deduplicate the data. Sample run:
+
+```shell
+python scripts/decontaminate.py \
+    --dataset "open-r1/verifiable-coding-problems-python" \
+    --problem_column problem \
+    --cleanup
+```
+
+It will decontaminate against the benchmark datasets, and remove the contaminated samples afterwards. If no argument `--new_dataset_name` is provided, the same dataset will be reused, adding a `_decontaminated`. It runs against the prompt, which for this dataset is the column `problem`, but a different one can be provided.
+
+Arguments for the script:
+
+```shell
+usage: decontaminate.py [-h] --dataset DATASET [--split SPLIT] [--ngram_size NGRAM_SIZE] [--problem_column PROBLEM_COLUMN] [--cleanup] [--new_dataset_name NEW_DATASET_NAME]
+
+options:
+  -h, --help            show this help message and exit
+  --dataset DATASET     Name of the dataset to check for contamination.
+  --split SPLIT         Split to check for contamination, defaults to `train`.
+  --ngram_size NGRAM_SIZE
+                        Size of n-grams to build, defaults to 8.
+  --problem_column PROBLEM_COLUMN
+                        Name of the column containing the problem (prompt).
+  --cleanup           Whether to remove the contaminated rows before pushing the dataset.
+  --new_dataset_name NEW_DATASET_NAME
+                        New name for the dataset. If not provided, will reuse the name and add a `_decontaminated` to the name.
+```
+
 ### Launching jobs on a Slurm cluster
 
 If you have access to a Slurm cluster, we provide a `slurm/train.slurm` script that will automatically queue training jobs for you. Here's how you can use it:

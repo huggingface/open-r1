@@ -48,7 +48,9 @@ report_to:
 reward_funcs:
 - accuracy
 - format
+- tag_count
 reward_weights:
+- 1.0
 - 1.0
 - 1.0
 save_strategy: "epoch"
