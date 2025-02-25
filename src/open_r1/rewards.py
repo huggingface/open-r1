@@ -50,7 +50,11 @@ def accuracy_reward(completions, solution, **kwargs):
                 extraction_mode="first_match",
             )
             # Reward 1 if the content is the same as the ground truth, 0 otherwise
-            reward = float(verify(answer_parsed, gold_parsed))
+            try:
+                reward = float(verify(answer_parsed, gold_parsed))
+            except Exception as e:
+                print(f"verify failed: {e}, answer: {answer_parsed}, gold: {gold_parsed}")
+                reward = 0.0
         else:
             # If the gold solution is not parseable, we reward 1 to skip this example
             reward = 1.0
