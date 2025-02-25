@@ -12,7 +12,7 @@ dataset_configs:
 dataset_num_proc: 48
 
 #SFT hyperparam
-max_seq_length: 8192 # You can set this to 32768 if you change the rope, but you need to change the config.json file 
+max_length: 8192 # You can set this to 32768 if you change the rope, but you need to change the config.json file 
 weight_decay: 0.0001
 optim: adamw_torch
 lr_scheduler_type: linear
