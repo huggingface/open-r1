@@ -54,7 +54,7 @@ _deps = [
     "isort>=5.12.0",
     "langdetect",  # Needed for LightEval's extended tasks
     "latex2sympy2_extended>=1.0.6",
-    "liger_kernel==0.5.2",
+    "liger_kernel==0.5.3",
     "lighteval @ git+https://github.com/huggingface/lighteval.git@ebb7377b39a48ab0691e6fbd9dea57e9fe290a7e",
     "math-verify==0.5.2",  # Used for math verification in grpo
     "packaging>=23.0",
