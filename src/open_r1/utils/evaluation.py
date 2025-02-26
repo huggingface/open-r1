@@ -51,6 +51,7 @@ register_lighteval_task(LIGHTEVAL_TASKS, "custom", "aime24", "aime24", 0)
 register_lighteval_task(LIGHTEVAL_TASKS, "custom", "aime25", "aime25", 0)
 register_lighteval_task(LIGHTEVAL_TASKS, "custom", "gpqa", "gpqa:diamond", 0)
 register_lighteval_task(LIGHTEVAL_TASKS, "extended", "lcb", "lcb:codegeneration", 0)
+register_lighteval_task(LIGHTEVAL_TASKS, "extended", "lcb_v4", "lcb:codegeneration_v4", 0)
 
 
 def get_lighteval_tasks():
