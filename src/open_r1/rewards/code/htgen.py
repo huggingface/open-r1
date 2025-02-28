@@ -26,7 +26,7 @@ def mk_row_totality_check(o):
     program = o['program'] # list of statements
     post = o['post']
 
-    program_str = '\n'.join(program)
+    program_str = '\n'.join(program)  # single program string
 
     prompt_hdr = (
         f"Below you are given a Python program triple, made of a precondition predicate, "
