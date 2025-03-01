@@ -1,0 +1,46 @@
+# Model arguments
+model_name_or_path: Qwen/Qwen2.5-Math-7B
+model_revision: main
+torch_dtype: bfloat16
+
+# Data training arguments
+dataset_name: DigitalLearningGmbH/MATH-lighteval
+dataset_configs:
+- train
+# Num processes is less by 1 as vLLM is using 1 GPU
+num_processes: 7
+
+# GRPO trainer config
+bf16: true
+use_vllm: true
+vllm_device: auto
+vllm_gpu_memory_utilization: 0.7
+do_eval: true
+eval_strategy: steps
+eval_steps: 100
+gradient_accumulation_steps: 16
+gradient_checkpointing: true
+gradient_checkpointing_kwargs:
+  use_reentrant: false
+hub_model_id: open-r1/Qwen-2.5-7B_Base_Math_smalllr_remote_model
+hub_strategy: every_save
+learning_rate: 3.0e-06
+log_level: info
+logging_steps: 1
+logging_strategy: steps
+lr_scheduler_type: cosine
+max_prompt_length: 512
+max_completion_length: 1024
+max_steps: -1
+num_train_epochs: 1
+output_dir: data/Qwen-2.5-7B_Base_Math_smalllr_remote_model
+overwrite_output_dir: true
+per_device_eval_batch_size: 1
+per_device_train_batch_size: 1
+push_to_hub: true
+report_to:
+- wandb
+save_strategy: "no"
+seed: 42
+warmup_ratio: 0.1
+ref_model_url: http://26.0.163.127:30010
