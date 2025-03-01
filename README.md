@@ -1,4 +1,4 @@
-# Open R1 Fashion Model
+# Suanfamama F1 Fashion Model from Open R1
 
 *A specialized fashion model based on DeepSeek-R1. This repo is a work in progress, let's build it together!*
 
