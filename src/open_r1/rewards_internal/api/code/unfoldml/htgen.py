@@ -5,7 +5,7 @@ from requests.exceptions import HTTPError
 
 api_server_url = "https://htgen.unfoldml.com"
 
-def gen_triples_33(
+def gen_triples(
     n_examples:int, 
     max_ast_depth:int = 3, 
     n_stmt:int = 5, 
@@ -17,8 +17,8 @@ def gen_triples_33(
     """
     Yield program triples (Precondition, Statements, Postconditions) from the API,
     together with their program traces, plus a initial variable environment and 
-    whether they are totally correct ('ok_total'), or fail to satisfy either specification.
-    NB: '33' stands for the number of constant and mutable identifiers in the program
+    whether they are totally correct ('ok_total'), or fail to satisfy either specification ('bad_pre', 'bad_post').
+    NB: in the backend, we have distinct REST endpoints for various combinations of (constant, mutable) variables, e.g. '33' and '55'.
 
     :param n_examples: number of triples to generate
     :param max_ast_depth: maximum AST depth of generated expressions
@@ -26,6 +26,7 @@ def gen_triples_33(
     :param n_pre_terms: no. of AND/OR terms in the generated pre-conditions
     :param n_post_terms: no. of AND/OR terms in the generated post-conditions
     :param seed: random seed for the PRNG
+    :param endpoint: REST endpoint of the request. '33' stands for 3 constants and 3 mutable identifiers
     :returns: iterable of dict e.g.
 
         {
@@ -67,7 +68,7 @@ def gen_triples_33(
         raise he
     
 
-def verify_triple_33(
+def verify_triple(
     is_total:bool,
     preconditions:str = "True",
     program:str = "v4 = (0 - v3)\nv3 = v3\nv5 = v4",

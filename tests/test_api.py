@@ -1,12 +1,12 @@
 import unittest
 
-from open_r1.rewards_internal.api.code.unfoldml.htgen import gen_triples_33, verify_triple_33
+from open_r1.rewards_internal.api.code.unfoldml.htgen import gen_triples, verify_triple
 
 
 class TestApi(unittest.TestCase):
     def test_gen_triples_structure(self):
         n_stmt = 3
-        for o in gen_triples_33(n_examples = 1, n_stmt = n_stmt):
+        for o in gen_triples(n_examples = 1, n_stmt = n_stmt):
             len_program = len(o['program'])
             self.assertEqual(len_program, n_stmt)
     def test_verify_triple_result(self):
@@ -16,7 +16,7 @@ class TestApi(unittest.TestCase):
         post_ok = "v5 == (0 - v3)" # post-condition that verifies
         post_not_ok = "v5 == (1 - v3)" # post-condition that does not verify
         # # should return True
-        o = verify_triple_33(
+        o = verify_triple(
             is_total = is_total,
             preconditions = preconditions,
             program = program,
@@ -25,7 +25,7 @@ class TestApi(unittest.TestCase):
         res_ok = o['prediction_is_correct']
         self.assertEqual(res_ok, True)
         # # should return False
-        o = verify_triple_33(
+        o = verify_triple(
             is_total = is_total,
             preconditions = preconditions,
             program = program,
