@@ -86,7 +86,10 @@ def explain_proof_result(wp_proof_result):
 # FIX_TRIPLE task : modify the program to satisfy the pre- and post-conditions
 def mk_row_fix_triple(o):
     """
-    FIX_TRIPLE task: Construct the prompt
+    FIX_TRIPLE task: given a program triple, modify the program such that it satisfies 
+    pre- and post-conditions (i.e. the program spec)
+    
+    This function constructs the prompt from a dict that comes from the dataset API
     NB: the rows have a 'prompt' column as required by the GRPOTrainer interface:
     https://huggingface.co/docs/trl/main/grpo_trainer#trl.GRPOTrainer.train_dataset 
     """
@@ -158,8 +161,8 @@ def mk_dataset_fix_triple(
 def fix_triple_reward(completions, ground_truth_triples, **kwargs):
     """
     verification callback for fix_triple task
-    :param completions: list of program strings produced by the model
-    :param ground_truth_triples: list of input program ground truth triples
+    :param completions: list of program strings (produced by the model)
+    :param ground_truth_triples: list of input program ground truth triples (coming from the dataset)
     :returns: list of float 1s or 0s with the prediction scores that match the ground truth
     """
     def compare(completion:str, triple:dict):
@@ -171,8 +174,7 @@ def fix_triple_reward(completions, ground_truth_triples, **kwargs):
             postconditions = post
         )
         if res is not None:
-            print(res)
-            reward = 1.0 if res.get('result') is 'proven_total' else 0.0
+            reward = 1.0 if res.get('result') == 'proven_total' else 0.0
             return reward
         else:
             return 0.0
