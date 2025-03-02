@@ -105,7 +105,7 @@ def reasoning_steps_reward(completions, **kwargs):
     """
     pattern = r"(Step \d+:|^\d+\.|\n-|\n\*|First,|Second,|Next,|Finally,)"
     completion_contents = [completion[0]["content"] for completion in completions]
-    matches = [len(re.findall(pattern, content)) for content in completion_contents]
+    matches = [len(re.findall(pattern, content, re.MULTILINE)) for content in completion_contents]
 
     # Magic nubmer 3 to encourage 3 steps and more, otherwise partial reward
     return [min(1.0, count / 3) for count in matches]
