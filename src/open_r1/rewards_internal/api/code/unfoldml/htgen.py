@@ -61,8 +61,7 @@ def gen_triples(
                 v = loads(chunk)
                 if not isinstance(v, dict):
                     v = None
-            except JSONDecodeError as e:
-                print(f"JSON decode error: {e}")
+            except JSONDecodeError:
                 v = None
             if v is not None:
                 yield v
