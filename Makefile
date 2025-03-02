@@ -6,9 +6,10 @@ export PYTHONPATH = src
 check_dirs := src tests
 
 
-# dev dependencies
+# install dev dependencies (NB uses '.' instead of 'source' to work with dash/Codespaces as well)
 install:
-	uv venv openr1 --python 3.11 && source openr1/bin/activate && uv pip install --upgrade pip
+	curl -LsSf https://astral.sh/uv/install.sh | sh
+	uv venv openr1 --python 3.11 && . openr1/bin/activate && uv pip install --upgrade pip
 	uv pip install vllm==0.7.2
 	uv pip install setuptools
 	GIT_LFS_SKIP_SMUDGE=1 uv pip install -e ".[dev]"

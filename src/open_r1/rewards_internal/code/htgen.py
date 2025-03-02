@@ -1,6 +1,6 @@
 from datasets import Dataset, IterableDataset
 
-from open_r1.rewards.api.code.unfoldml.htgen import gen_triples_33, verify_triple_33
+from open_r1.rewards_internal.api.code.unfoldml.htgen import gen_triples_33, verify_triple_33
 
 
 # # GRPOTrainer requires 1. a dataset and 2. a verification callback
