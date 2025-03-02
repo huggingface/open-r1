@@ -11,6 +11,7 @@ from open_r1.rewards import (
     tag_count_reward,
 )
 
+
 class TestRewards(unittest.TestCase):
     def test_accuracy_reward_correct_answer(self):
         """Test accuracy_reward with a correct answer."""
