@@ -33,8 +33,8 @@ max_steps: -1
 num_train_epochs: 1
 output_dir: data/Qwen2.5-1.5B-Open-R1-Distill
 overwrite_output_dir: true
-per_device_eval_batch_size: 16
-per_device_train_batch_size: 16
+per_device_eval_batch_size: 8
+per_device_train_batch_size: 8
 push_to_hub: true
 report_to:
 - wandb
