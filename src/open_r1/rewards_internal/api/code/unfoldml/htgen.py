@@ -110,28 +110,38 @@ def verify_triple(
         
 
 
+def verify_triple_v2(
+    preconditions:str = "True",
+    program:str = "v4 = (0 - v3)\nv3 = v3\nv5 = v4",
+    postconditions:str = "v5 == (0 - v3)",
+    endpoint:str = '/v2/prove33'
+    ):
+    """
+    Verify a program triple, V2 endpoint
+    NB: '33' stands for the number of constant and mutable identifiers in the program
 
-if __name__ == "__main__":
-    # # generate triples
-    for t in gen_triples_33(n_examples = 1):
-        print(t)
-    # {
-    #     'env_initial': ['v0 = 15', 'v1 = 42', 'v2 = -36', 'v3 = 73', 'v4 = 72', 'v5 = 64'], 
-    #     'env_trace': [],      # no execution trace because the starting env doesn't satisfy the precondition
-    #     'label': 'bad_pre',   # bad precondition
-    #     'pre': 'v3 > (2 + v4)', 
-    #     'program': ['v3 = v5', 'v4 = (4 - (4 - (v5 - 4)))', 'v5 = v4', 'v4 = (v5 - v3)', 'v3 = 4'], 
-    #     'post': 'v3 > v4', 
-    #     'prng_state_out': [1300, 1], 
-    #     'rej_iters': 1,   # number of rejection sampling iterations
-    #     'rej_iters_time_s': 0.056072775  # time it took to generate this triple [seconds]
-    # }
+    :param preconditions: 
+    :param program: 
+    :param postconditions: 
+    :returns: whether the SMT verifier agrees with the label provided:
 
-    # # verify a triple against an inferred total correctness label
-    verify_triple_33(
-        is_total = True,
-        preconditions = "True",
-        program = "v4 = (0 - v3)\nv3 = v3\nv5 = v4",
-        postconditions = "v5 == (0 - v3)"
-        )
-    # {'prediction_is_correct': True}
+    """
+    triple = {
+        "pre": preconditions,
+        "program": program,
+        "post": postconditions
+    }
+    url = f"{api_server_url}/{endpoint}"
+    try:
+        res = post(url, json= triple, stream= True)
+        res.raise_for_status()
+        try:
+            v = res.json()
+        except JSONDecodeError:
+            v = None
+        return v
+    # else: 
+    except HTTPError as he:
+        print(f"HTTP error: {he}")
+        raise he
+        
