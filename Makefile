@@ -5,6 +5,14 @@ export PYTHONPATH = src
 
 check_dirs := src tests
 
+
+# dev dependencies
+install:
+	uv venv openr1 --python 3.11 && source openr1/bin/activate && uv pip install --upgrade pip
+	uv pip install vllm==0.7.2
+	uv pip install setuptools
+	GIT_LFS_SKIP_SMUDGE=1 uv pip install -e ".[dev]"
+
 style:
 	ruff format --line-length 119 --target-version py310 $(check_dirs) setup.py
 	isort $(check_dirs) setup.py

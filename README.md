@@ -50,6 +50,10 @@ To run the code in this project, first, create a Python virtual environment usin
 To install `uv`, follow the [UV Installation Guide](https://docs.astral.sh/uv/getting-started/installation/).
 
 
+> [!NOTE]
+> As a shortcut, run `make install` to setup development libraries (spelled out below). Afterwards if everything is setup correctly and you have a functioning CUDA, you can install `flash-attn` and try out the Open-R1 models.
+
+
 ```shell
 uv venv openr1 --python 3.11 && source openr1/bin/activate && uv pip install --upgrade pip
 ```
