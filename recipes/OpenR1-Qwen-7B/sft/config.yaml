@@ -8,8 +8,6 @@ attn_implementation: sdpa
 
 # Data training arguments
 dataset_name: open-r1/OpenR1-Math-220k
-dataset_configs:
-- default
 dataset_num_proc: 48
 
 #SFT hyperparam
