@@ -8,7 +8,7 @@ def quotes(s: str):
     return f"```{s}```"
 
 
-# # header of all prompts, describing Hoare logic at a high level
+# # header to be put in front of all task prompts, describing Hoare logic at a high level
 prompt_hdr = (
     "Below you are given a Python program triple, made of a precondition predicate, "
     "a sequence of program statements, and a postcondition predicate. "
@@ -301,25 +301,3 @@ def totality_check_reward(completions, ground_truth, **kwargs):
 
     return [compare(predicted, actual) for (predicted, actual) in zip(completions, ground_truth)]
 
-
-# # # verify against API
-
-# def totality_oracle_reward(completions, triples, **kwargs):
-#     """
-#     verification callback for GRPOTRainer
-#     :param completions: list of truthy values produced by the model
-#     :param triples: list of program triples dicts {"pre":: string, "program":: string, "post:: string}
-#     """
-
-# def verify(pre, program, post, is_total):
-#     res = verify_triple_33(
-#         preconditions = pre,
-#         program = program,
-#         postconditions = post,
-#         is_total = is_total
-#     )
-#     if res is not None:
-#         prediction = res['prediction_is_correct']
-#         return 1.0 if prediction else 0.0
-#     else:
-#         return 0.0

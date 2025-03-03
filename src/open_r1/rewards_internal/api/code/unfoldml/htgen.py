@@ -124,7 +124,7 @@ def verify_triple_v2(
     :param preconditions:
     :param program:
     :param postconditions:
-    :returns: whether the SMT verifier agrees with the label provided:
+    :returns: dict with the proof result. The 'result' key has values {'proven_total', 'proven_partial', 'indeterminate', 'failed'}
 
     """
     triple = {"pre": preconditions, "program": program, "post": postconditions}
