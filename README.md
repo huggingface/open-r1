@@ -51,7 +51,7 @@ To install `uv`, follow the [UV Installation Guide](https://docs.astral.sh/uv/ge
 
 
 > [!NOTE]
-> As a shortcut, run `make install` to setup development libraries (spelled out below). Afterwards if everything is setup correctly and you have a functioning CUDA, you can install `flash-attn` and try out the Open-R1 models.
+> As a shortcut, run `make install` to setup development libraries (spelled out below). Afterwards, if everything is setup correctly you can try out the Open-R1 models.
 
 
 ```shell
