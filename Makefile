@@ -37,17 +37,14 @@ evaluate:
 		fi \
 	),))
 	$(if $(filter tensor,$(PARALLEL)),export VLLM_WORKER_MULTIPROC_METHOD=spawn &&,) \
-	MODEL_ARGS="pretrained=$(MODEL),dtype=bfloat16,$(PARALLEL_ARGS),max_model_length=32768,gpu_memory_utilization=0.8" && \
-	lighteval vllm $$MODEL_ARGS "custom|$(TASK)|0|0" \
-		--custom-tasks src/open_r1/evaluate.py \
-		--use-chat-template \
-		--system-prompt="Please reason step by step, and put your final answer within \boxed{}." \
-		--output-dir data/evals/$(MODEL)
-
-# Example usage:
-# Single GPU:
-#   make evaluate MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-32B TASK=aime24
-# Data parallel:
-#   make evaluate MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-32B TASK=aime24 PARALLEL=data NUM_GPUS=8
-# Tensor parallel:
-#   make evaluate MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-32B TASK=aime24 PARALLEL=tensor NUM_GPUS=8
+	MODEL_ARGS="pretrained=$(MODEL),dtype=bfloat16,$(PARALLEL_ARGS),max_model_length=32768,gpu_memory_utilization=0.8,generation_parameters={max_new_tokens:32768,temperature:0.6,top_p:0.95}" && \
+	if [ "$(TASK)" = "lcb" ]; then \
+		lighteval vllm $$MODEL_ARGS "extended|lcb:codegeneration|0|0" \
+			--use-chat-template \
+			--output-dir data/evals/$(MODEL); \
+	else \
+		lighteval vllm $$MODEL_ARGS "custom|$(TASK)|0|0" \
+			--custom-tasks src/open_r1/evaluate.py \
+			--use-chat-template \
+			--output-dir data/evals/$(MODEL); \
+	fi
