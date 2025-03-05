@@ -35,6 +35,8 @@ from open_r1.rewards import (
     len_reward,
     reasoning_steps_reward,
     tag_count_reward,
+    protein_coding_gene_reward,
+    correct_gene_reward,
 )
 from open_r1.utils import get_tokenizer
 from open_r1.utils.callbacks import get_callbacks
@@ -99,7 +101,9 @@ class GRPOScriptArguments(ScriptArguments):
     )
     repetition_max_penalty: float = field(
         default=-1.0,
-        metadata={"help": "Maximum (negative) penalty for for repetition penalty reward"},
+        metadata={
+            "help": "Maximum (negative) penalty for for repetition penalty reward"
+        },
     )
     code_language: str = field(
         default="python",
@@ -176,6 +180,8 @@ def main(script_args, training_args, model_args):
         "code": code_reward,
         "code_format": get_code_format_reward(language=script_args.code_language),
         "tag_count": tag_count_reward,
+        "protein_coding_gene": protein_coding_gene_reward,
+        "correct_gene": correct_gene_reward,
     }
     reward_funcs = [REWARD_FUNCS_REGISTRY[func] for func in script_args.reward_funcs]
 
@@ -197,7 +203,9 @@ def main(script_args, training_args, model_args):
 
     logger.info("*** Initializing model kwargs ***")
     torch_dtype = (
-        model_args.torch_dtype if model_args.torch_dtype in ["auto", None] else getattr(torch, model_args.torch_dtype)
+        model_args.torch_dtype
+        if model_args.torch_dtype in ["auto", None]
+        else getattr(torch, model_args.torch_dtype)
     )
     model_kwargs = dict(
         revision=model_args.model_revision,
@@ -216,7 +224,11 @@ def main(script_args, training_args, model_args):
         reward_funcs=reward_funcs,
         args=training_args,
         train_dataset=dataset[script_args.dataset_train_split],
-        eval_dataset=dataset[script_args.dataset_test_split] if training_args.eval_strategy != "no" else None,
+        eval_dataset=(
+            dataset[script_args.dataset_test_split]
+            if training_args.eval_strategy != "no"
+            else None
+        ),
         peft_config=get_peft_config(model_args),
         callbacks=get_callbacks(training_args, model_args),
         processing_class=tokenizer,

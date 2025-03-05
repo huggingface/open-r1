@@ -9,6 +9,9 @@ from latex2sympy2_extended import NormalizationConfig
 from math_verify import LatexExtractionConfig, parse, verify
 
 from .utils import is_e2b_available
+import pandas as pd
+from datasets import load_dataset
+from functools import lru_cache
 
 
 if is_e2b_available():
@@ -53,7 +56,9 @@ def accuracy_reward(completions, solution, **kwargs):
             try:
                 reward = float(verify(answer_parsed, gold_parsed))
             except Exception as e:
-                print(f"verify failed: {e}, answer: {answer_parsed}, gold: {gold_parsed}")
+                print(
+                    f"verify failed: {e}, answer: {answer_parsed}, gold: {gold_parsed}"
+                )
                 reward = 0.0
         else:
             # If the gold solution is not parseable, we reward 1 to skip this example
@@ -68,7 +73,10 @@ def format_reward(completions, **kwargs):
     """Reward function that checks if the reasoning process is enclosed within <think> and </think> tags, while the final answer is enclosed within <answer> and </answer> tags."""
     pattern = r"^<think>\n.*?\n</think>\n<answer>\n.*?\n</answer>$"
     completion_contents = [completion[0]["content"] for completion in completions]
-    matches = [re.match(pattern, content, re.DOTALL | re.MULTILINE) for content in completion_contents]
+    matches = [
+        re.match(pattern, content, re.DOTALL | re.MULTILINE)
+        for content in completion_contents
+    ]
     return [1.0 if match else 0.0 for match in matches]
 
 
@@ -111,7 +119,9 @@ def reasoning_steps_reward(completions, **kwargs):
     return [min(1.0, count / 3) for count in matches]
 
 
-def len_reward(completions: list[Dict[str, str]], solution: list[str], **kwargs) -> float:
+def len_reward(
+    completions: list[Dict[str, str]], solution: list[str], **kwargs
+) -> float:
     """Compute length-based rewards to discourage overthinking and promote token efficiency.
 
     Taken from the Kimi 1.5 tech report: https://arxiv.org/abs/2501.12599
@@ -212,7 +222,11 @@ def get_cosine_scaled_reward(
         rewards = []
 
         for content, sol in zip(contents, solution):
-            gold_parsed = parse(sol, extraction_mode="first_match", extraction_config=[LatexExtractionConfig()])
+            gold_parsed = parse(
+                sol,
+                extraction_mode="first_match",
+                extraction_config=[LatexExtractionConfig()],
+            )
             if len(gold_parsed) == 0:
                 rewards.append(1.0)  # Skip unparseable examples
                 print("Failed to parse gold solution: ", sol)
@@ -364,11 +378,14 @@ def code_reward(completions, **kwargs) -> list[float]:
 
         evaluate_code(code_snippet, test_cases)
         """
-        code_snippets = [extract_code(completion[-1]["content"]) for completion in completions]
+        code_snippets = [
+            extract_code(completion[-1]["content"]) for completion in completions
+        ]
         verification_info = kwargs["verification_info"]
         scripts = [
             evaluation_script_template.format(
-                code=json.dumps(code), test_cases=json.dumps(json.dumps(info["test_cases"]))
+                code=json.dumps(code),
+                test_cases=json.dumps(json.dumps(info["test_cases"])),
             )
             for code, info in zip(code_snippets, verification_info)
         ]
@@ -392,11 +409,95 @@ def get_code_format_reward(language: str = "python"):
     Args:
         language: Programming language supported by E2B https://e2b.dev/docs/code-interpreting/supported-languages
     """
-    pattern = rf"^<think>\n.*?\n</think>\n<answer>\n.*?```{language}.*?```.*?\n</answer>$"
+    pattern = (
+        rf"^<think>\n.*?\n</think>\n<answer>\n.*?```{language}.*?```.*?\n</answer>$"
+    )
 
     def code_format_reward(completions, **kwargs):
         completion_contents = [completion[0]["content"] for completion in completions]
-        matches = [re.match(pattern, content, re.DOTALL | re.MULTILINE) for content in completion_contents]
+        matches = [
+            re.match(pattern, content, re.DOTALL | re.MULTILINE)
+            for content in completion_contents
+        ]
         return [1.0 if match else 0.0 for match in matches]
 
     return code_format_reward
+
+
+@lru_cache(maxsize=1)
+def load_protein_coding_genes():
+    """
+    Load the list of protein coding genes from Hugging Face dataset.
+    Uses caching to avoid repeated loading.
+
+    Returns:
+        set: A set of protein coding gene names for fast lookup
+    """
+    try:
+        # Load from Hugging Face
+        dataset = load_dataset(
+            "vcabeli/ncbi-genes-summary-protein-coding", split="train"
+        )
+        gene_list = set(dataset["gene"])
+        print(f"Loaded {len(gene_list)} protein coding genes from HF dataset")
+        return gene_list
+    except Exception as e:
+        print(f"Error loading protein coding genes from HF: {e}")
+        # Fallback to a local file if available
+        try:
+            genes_df = pd.read_csv("protein_coding_genes.csv")
+            gene_list = set(genes_df["gene"])
+            print(f"Loaded {len(gene_list)} protein coding genes from local file")
+            return gene_list
+        except:
+            print("Warning: Could not load protein coding genes list")
+            return set()  # Return empty set as fallback
+
+
+def protein_coding_gene_reward(completions, **kwargs):
+    """
+    Reward function that checks if the completion contains a valid protein coding gene.
+    """
+    # Load the protein coding genes list (cached)
+    protein_coding_genes = load_protein_coding_genes()
+
+    # Extract content from completions using the established pattern
+    contents = [completion[0]["content"] for completion in completions]
+
+    rewards = []
+    for content in contents:
+        # Extract potential gene names - this regex pattern can be adjusted
+        # Looking for words that might be gene symbols (typically uppercase, may contain numbers)
+        potential_genes = re.findall(r"\b[A-Z0-9]{2,10}\b", content)
+
+        # Check if any of the potential genes are in our list
+        found_valid_gene = any(gene in protein_coding_genes for gene in potential_genes)
+
+        rewards.append(1.0 if found_valid_gene else 0.0)
+
+    return rewards
+
+
+def correct_gene_reward(completions, **kwargs):
+    """
+    Reward function that checks if the completion correctly identifies the gene.
+    """
+    gene = kwargs.get("gene", [])
+    if not gene:
+        print("Warning: 'gene' not provided in kwargs, cannot check for correct gene")
+        return [0.0] * len(completions)
+
+    # Extract content from completions using the established pattern
+    contents = [completion[0]["content"] for completion in completions]
+
+    rewards = []
+    for content, correct_gene in zip(contents, gene):
+        # Extract potential gene names from the completion
+        potential_genes = re.findall(r"\b[A-Z0-9]{2,10}\b", content)
+
+        # Check if the correct gene is mentioned
+        correct_gene_found = correct_gene in potential_genes
+
+        rewards.append(1.0 if correct_gene_found else 0.0)
+
+    return rewards

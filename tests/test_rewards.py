@@ -1,4 +1,6 @@
 import unittest
+import pytest
+from unittest.mock import patch
 
 from open_r1.rewards import (
     accuracy_reward,
@@ -9,6 +11,9 @@ from open_r1.rewards import (
     len_reward,
     reasoning_steps_reward,
     tag_count_reward,
+    protein_coding_gene_reward,
+    correct_gene_reward,
+    load_protein_coding_genes,
 )
 
 
@@ -31,7 +36,13 @@ class TestRewards(unittest.TestCase):
 
     def test_format_reward_correct(self):
         """Test format_reward with correct format."""
-        completion = [[{"content": "<think>\nSome reasoning\n</think>\n<answer>\nThe answer\n</answer>"}]]
+        completion = [
+            [
+                {
+                    "content": "<think>\nSome reasoning\n</think>\n<answer>\nThe answer\n</answer>"
+                }
+            ]
+        ]
         rewards = format_reward(completion)
         self.assertEqual(rewards[0], 1.0)
 
@@ -70,7 +81,10 @@ class TestRewards(unittest.TestCase):
 
     def test_multiple_completions(self):
         """Test handling multiple completions at once."""
-        completions = [[{"content": r"\boxed{\frac{63}{400}}"}], [{"content": r"\boxed{\frac{64}{400}}"}]]
+        completions = [
+            [{"content": r"\boxed{\frac{63}{400}}"}],
+            [{"content": r"\boxed{\frac{64}{400}}"}],
+        ]
         solutions = [r"\frac{63}{400}", r"\frac{63}{400}"]
 
         rewards = accuracy_reward(completions, solutions)
@@ -91,11 +105,31 @@ class TestRewards(unittest.TestCase):
 
         test_cases = [
             # Correct answers with different lengths
-            (r"\boxed{\frac{63}{400}}", r"\frac{63}{400}", 20, 0.943),  # Short correct answer
-            (r"\boxed{\frac{63}{400}}", r"\frac{63}{400}", 80, 0.547),  # Long correct answer
+            (
+                r"\boxed{\frac{63}{400}}",
+                r"\frac{63}{400}",
+                20,
+                0.943,
+            ),  # Short correct answer
+            (
+                r"\boxed{\frac{63}{400}}",
+                r"\frac{63}{400}",
+                80,
+                0.547,
+            ),  # Long correct answer
             # Wrong answers with different lengths
-            (r"\boxed{\frac{64}{400}}", r"\frac{63}{400}", 20, -0.942),  # Short wrong answer
-            (r"\boxed{\frac{64}{400}}", r"\frac{63}{400}", 80, -0.547),  # Long wrong answer
+            (
+                r"\boxed{\frac{64}{400}}",
+                r"\frac{63}{400}",
+                20,
+                -0.942,
+            ),  # Short wrong answer
+            (
+                r"\boxed{\frac{64}{400}}",
+                r"\frac{63}{400}",
+                80,
+                -0.547,
+            ),  # Long wrong answer
         ]
 
         for content, solution, content_len, expected_reward in test_cases:
@@ -115,7 +149,10 @@ class TestRewards(unittest.TestCase):
 
     def test_same_length_responses(self):
         """Test len_reward when all responses have the same length."""
-        completions = [[{"content": r"\boxed{\frac{63}{400}}"}], [{"content": r"\boxed{\frac{64}{400}}"}]]
+        completions = [
+            [{"content": r"\boxed{\frac{63}{400}}"}],
+            [{"content": r"\boxed{\frac{64}{400}}"}],
+        ]
         solutions = [r"\frac{63}{400}", r"\frac{63}{400}"]
 
         rewards = len_reward(completions, solutions)
@@ -130,8 +167,12 @@ class TestRewards(unittest.TestCase):
         solutions = [r"\frac{63}{400}", r"\frac{63}{400}"]
 
         rewards = len_reward(completions, solutions)
-        self.assertGreater(rewards[0], rewards[1])  # shorter answer should get higher reward
-        self.assertAlmostEqual(rewards[0], 0.5)  # shortest correct answer gets maximum reward
+        self.assertGreater(
+            rewards[0], rewards[1]
+        )  # shorter answer should get higher reward
+        self.assertAlmostEqual(
+            rewards[0], 0.5
+        )  # shortest correct answer gets maximum reward
 
     def test_different_lengths_incorrect_answers(self):
         """Test len_reward with different length incorrect answers."""
@@ -142,9 +183,13 @@ class TestRewards(unittest.TestCase):
         solutions = [r"\frac{63}{400}", r"\frac{63}{400}"]
 
         rewards = len_reward(completions, solutions)
-        self.assertLessEqual(rewards[0], 0.0)  # incorrect answers should get non-positive rewards
+        self.assertLessEqual(
+            rewards[0], 0.0
+        )  # incorrect answers should get non-positive rewards
         self.assertLessEqual(rewards[1], 0.0)
-        self.assertGreater(rewards[0], rewards[1])  # shorter answer should still be penalized less
+        self.assertGreater(
+            rewards[0], rewards[1]
+        )  # shorter answer should still be penalized less
 
     def test_mixed_correctness(self):
         """Test len_reward with mix of correct and incorrect answers of different lengths."""
@@ -175,19 +220,28 @@ class TestRewards(unittest.TestCase):
 
     def test_unparseable_solution(self):
         """Test len_reward with unparseable solution."""
-        completions = [[{"content": r"\boxed{answer}"}], [{"content": r"\boxed{answer} " + "x" * 10}]]
+        completions = [
+            [{"content": r"\boxed{answer}"}],
+            [{"content": r"\boxed{answer} " + "x" * 10}],
+        ]
         solutions = ["unparseable_latex", "unparseable_latex"]
 
         rewards = len_reward(completions, solutions)
-        self.assertGreater(rewards[0], rewards[1])  # shorter answer should still get better reward
-        self.assertAlmostEqual(rewards[0], 0.5)  # treated as correct, shortest gets maximum reward
+        self.assertGreater(
+            rewards[0], rewards[1]
+        )  # shorter answer should still get better reward
+        self.assertAlmostEqual(
+            rewards[0], 0.5
+        )  # treated as correct, shortest gets maximum reward
 
 
 class TestRepetitionPenaltyReward(unittest.TestCase):
     def test_positive_max_penalty_raises_value_error(self):
         with self.assertRaises(ValueError):
             get_repetition_penalty_reward(ngram_size=2, max_penalty=1.0)
-        with self.assertRaisesRegex(ValueError, "max_penalty 1.5 should not be positive"):
+        with self.assertRaisesRegex(
+            ValueError, "max_penalty 1.5 should not be positive"
+        ):
             get_repetition_penalty_reward(ngram_size=2, max_penalty=1.5)
 
     def test_no_repetition(self):
@@ -316,31 +370,45 @@ class TestRepetitionPenaltyReward(unittest.TestCase):
 
     def test_tag_count_rewards_all_correct(self):
         """Test tag_count_reward with correct tags."""
-        completion = [[{"content": "<think>\nSome reasoning\n</think>\n<answer>\nThe answer\n</answer>"}]]
+        completion = [
+            [
+                {
+                    "content": "<think>\nSome reasoning\n</think>\n<answer>\nThe answer\n</answer>"
+                }
+            ]
+        ]
         rewards = tag_count_reward(completion)
         self.assertEqual(rewards[0], 1.0)
 
     def test_tag_count_rewards_missing_think_begin(self):
         """Test tag_count_reward with missing <think> tag."""
-        completion = [[{"content": "Some reasoning\n</think>\n<answer>\nThe answer\n</answer>"}]]
+        completion = [
+            [{"content": "Some reasoning\n</think>\n<answer>\nThe answer\n</answer>"}]
+        ]
         rewards = tag_count_reward(completion)
         self.assertEqual(rewards[0], 0.75)
 
     def test_tag_count_rewards_missing_think_end(self):
         """Test tag_count_reward with missing </think> tag."""
-        completion = [[{"content": "<think>\nSome reasoning\n<answer>\nThe answer\n</answer>"}]]
+        completion = [
+            [{"content": "<think>\nSome reasoning\n<answer>\nThe answer\n</answer>"}]
+        ]
         rewards = tag_count_reward(completion)
         self.assertEqual(rewards[0], 0.75)
 
     def test_tag_count_rewards_missing_answer_begin(self):
         """Test tag_count_reward with missing <answer> tag."""
-        completion = [[{"content": "<think>\nSome reasoning\n</think>\nThe answer\n</answer>"}]]
+        completion = [
+            [{"content": "<think>\nSome reasoning\n</think>\nThe answer\n</answer>"}]
+        ]
         rewards = tag_count_reward(completion)
         self.assertEqual(rewards[0], 0.75)
 
     def test_tag_count_rewards_missing_answer_end(self):
         """Test tag_count_reward with missing </answer> tag."""
-        completion = [[{"content": "<think>\nSome reasoning\n</think>\n<answer>\nThe answer"}]]
+        completion = [
+            [{"content": "<think>\nSome reasoning\n</think>\n<answer>\nThe answer"}]
+        ]
         rewards = tag_count_reward(completion)
         self.assertEqual(rewards[0], 0.75)
 
@@ -431,6 +499,134 @@ class TestCodeFormat(unittest.TestCase):
         reward_fn = get_code_format_reward(language="python")
         rewards = reward_fn(completion)
         self.assertEqual(rewards[0], 1.0)
+
+
+class TestProteinCodingGeneReward(unittest.TestCase):
+    @patch("open_r1.rewards.load_protein_coding_genes")
+    def test_protein_coding_gene_found(self, mock_load_genes):
+        """Test protein_coding_gene_reward when a protein coding gene is found."""
+        # Mock the gene list to include test genes
+        mock_load_genes.return_value = {"TP53", "BRCA1", "EGFR", "KRAS"}
+
+        # Test with a completion containing a gene
+        completion = [[{"content": "The gene TP53 is associated with cancer."}]]
+        rewards = protein_coding_gene_reward(completion)
+        self.assertEqual(rewards[0], 1.0)
+
+        # Test with a completion containing multiple genes
+        completion = [[{"content": "Both BRCA1 and EGFR are important genes."}]]
+        rewards = protein_coding_gene_reward(completion)
+        self.assertEqual(rewards[0], 1.0)
+
+    @patch("open_r1.rewards.load_protein_coding_genes")
+    def test_protein_coding_gene_not_found(self, mock_load_genes):
+        """Test protein_coding_gene_reward when no protein coding gene is found."""
+        # Mock the gene list
+        mock_load_genes.return_value = {"TP53", "BRCA1", "EGFR", "KRAS"}
+
+        # Test with a completion not containing any gene
+        completion = [[{"content": "This text doesn't mention any genes."}]]
+        rewards = protein_coding_gene_reward(completion)
+        self.assertEqual(rewards[0], 0.0)
+
+        # Test with a completion containing a non-matching word that looks like a gene
+        completion = [[{"content": "ABC123 is not a real gene."}]]
+        rewards = protein_coding_gene_reward(completion)
+        self.assertEqual(rewards[0], 0.0)
+
+    @patch("open_r1.rewards.load_protein_coding_genes")
+    def test_multiple_completions(self, mock_load_genes):
+        """Test protein_coding_gene_reward with multiple completions."""
+        # Mock the gene list
+        mock_load_genes.return_value = {"TP53", "BRCA1", "EGFR", "KRAS"}
+
+        # Test with multiple completions
+        completions = [
+            [{"content": "The gene TP53 is associated with cancer."}],
+            [{"content": "This text doesn't mention any genes."}],
+            [{"content": "Both BRCA1 and KRAS are important genes."}],
+        ]
+        rewards = protein_coding_gene_reward(completions)
+        self.assertEqual(rewards, [1.0, 0.0, 1.0])
+
+    @patch("open_r1.rewards.load_protein_coding_genes")
+    def test_case_sensitivity(self, mock_load_genes):
+        """Test protein_coding_gene_reward with case sensitivity."""
+        # Mock the gene list with uppercase genes
+        mock_load_genes.return_value = {"TP53", "BRCA1"}
+
+        # Test with different cases
+        completions = [
+            [{"content": "The gene TP53 is important."}],  # Exact match
+            [{"content": "The gene tp53 is important."}],  # Lowercase
+            [{"content": "The gene Tp53 is important."}],  # Mixed case
+        ]
+        rewards = protein_coding_gene_reward(completions)
+        # Only the exact match should be found
+        self.assertEqual(rewards, [1.0, 0.0, 0.0])
+
+
+class TestCorrectGeneReward(unittest.TestCase):
+    def test_correct_gene_found(self):
+        """Test correct_gene_reward when the correct gene is found."""
+        # Test with a completion containing the correct gene
+        completion = [[{"content": "The gene TP53 is associated with cancer."}]]
+        rewards = correct_gene_reward(completion, gene=["TP53"])
+        self.assertEqual(rewards[0], 1.0)
+
+        # Test with a completion containing multiple genes including the correct one
+        completion = [[{"content": "Both BRCA1 and TP53 are important genes."}]]
+        rewards = correct_gene_reward(completion, gene=["TP53"])
+        self.assertEqual(rewards[0], 1.0)
+
+    def test_correct_gene_not_found(self):
+        """Test correct_gene_reward when the correct gene is not found."""
+        # Test with a completion not containing the correct gene
+        completion = [[{"content": "The gene BRCA1 is important."}]]
+        rewards = correct_gene_reward(completion, gene=["TP53"])
+        self.assertEqual(rewards[0], 0.0)
+
+        # Test with a completion containing no genes
+        completion = [[{"content": "This text doesn't mention any genes."}]]
+        rewards = correct_gene_reward(completion, gene=["TP53"])
+        self.assertEqual(rewards[0], 0.0)
+
+    def test_multiple_completions(self):
+        """Test correct_gene_reward with multiple completions."""
+        # Test with multiple completions and multiple correct genes
+        completions = [
+            [{"content": "The gene TP53 is associated with cancer."}],
+            [{"content": "BRCA1 is linked to breast cancer."}],
+            [{"content": "EGFR mutations can lead to lung cancer."}],
+        ]
+        rewards = correct_gene_reward(completions, gene=["TP53", "BRCA1", "KRAS"])
+        self.assertEqual(rewards, [1.0, 1.0, 0.0])
+
+    def test_case_sensitivity(self):
+        """Test correct_gene_reward with case sensitivity."""
+        # Test with different cases
+        completions = [
+            [{"content": "The gene TP53 is important."}],  # Exact match
+            [{"content": "The gene tp53 is important."}],  # Lowercase
+            [{"content": "The gene Tp53 is important."}],  # Mixed case
+        ]
+        rewards = correct_gene_reward(completions, gene=["TP53", "TP53", "TP53"])
+        # Only the exact match should be found
+        self.assertEqual(rewards, [1.0, 0.0, 0.0])
+
+    def test_missing_gene_parameter(self):
+        """Test correct_gene_reward when gene parameter is missing."""
+        completion = [[{"content": "The gene TP53 is important."}]]
+        rewards = correct_gene_reward(completion)
+        # Should return 0.0 when gene parameter is missing
+        self.assertEqual(rewards, [0.0])
+
+    def test_empty_gene_parameter(self):
+        """Test correct_gene_reward when gene parameter is empty."""
+        completion = [[{"content": "The gene TP53 is important."}]]
+        rewards = correct_gene_reward(completion, gene=[])
+        # Should return 0.0 when gene parameter is empty
+        self.assertEqual(rewards, [0.0])
 
 
 if __name__ == "__main__":
