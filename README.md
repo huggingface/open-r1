@@ -590,7 +590,7 @@ If you find this project is useful in your own work, please consider citing as f
 ```
 @misc{openr1,
     title = {Open R1: A fully open reproduction of DeepSeek-R1},
-    url = {[https://qwenlm.github.io/blog/qwq-32b/](https://github.com/huggingface/open-r1)},
+    url = {https://github.com/huggingface/open-r1},
     author = {Hugging Face},
     month = {January},
     year = {2025}
