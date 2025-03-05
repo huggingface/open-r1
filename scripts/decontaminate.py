@@ -140,6 +140,8 @@ if __name__ == "__main__":
     if args.cleanup:
         ds = cleanup(ds)
 
+    ds = ds.rename_column(f"prompt", "problem")
+
     new_ds_name = args.new_dataset_name or f"{args.dataset}_decontaminated"
     config_name = args.config if args.config is not None else "default"
     url = ds.push_to_hub(new_ds_name, config_name=config_name, split="train")
