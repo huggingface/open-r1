@@ -18,8 +18,10 @@ This script is used to decontaminate a dataset by checking for n-gram overlap wi
 It uses the same approach presented in https://arxiv.org/abs/2501.19393,
 as found in: https://github.com/simplescaling/s1/blob/main/data/decontaminate_util.py
 
+Usage:
+
 python scripts/decontaminate.py \
-    --dataset "open-r1/verifiable-coding-problems-python" \
+    --dataset open-r1/verifiable-coding-problems-python \
     --split train \
     --ngram_size 8 \
     --problem_column problem \
@@ -71,6 +73,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset", type=str, required=True, help="Name of the dataset to check for contamination.")
+    parser.add_argument("--config", type=str, default=None, help="Name of the dataset config to load.")
     parser.add_argument("--split", type=str, default="train", help="Split to check for contamination, defaults to `train`.")
     parser.add_argument("--ngram_size", type=int, default=8, help="Size of n-grams to build, defaults to 8.")
     parser.add_argument(
@@ -92,7 +95,7 @@ if __name__ == "__main__":
     from datasets import load_dataset, Dataset
 
     # Load the dataset to check for contamination
-    ds = load_dataset(args.dataset, split=args.split)
+    ds = load_dataset(args.dataset, name=args.config, split=args.split)
 
     eval_datasets = {
         "aime_2024": (load_dataset("HuggingFaceH4/aime_2024", split="train"), "problem"),
@@ -138,5 +141,6 @@ if __name__ == "__main__":
         ds = cleanup(ds)
 
     new_ds_name = args.new_dataset_name or f"{args.dataset}_decontaminated"
-    ds.push_to_hub(new_ds_name, split="train", private=False)
-    print(f"Decontaminated dataset: {new_ds_name}")
+    config_name = args.config if args.config is not None else "default"
+    url = ds.push_to_hub(new_ds_name, config_name=config_name, split="train")
+    print(f"Decontaminated dataset: {url}")

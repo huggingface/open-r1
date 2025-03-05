@@ -9,8 +9,6 @@ attn_implementation: flash_attention_2
 # Data training arguments
 # dataset_name: yentinglin/s1K-1.1-trl-format
 dataset_name: yentinglin/OpenR1-Math-220k-trl-format
-dataset_configs:
-- all
 preprocessing_num_workers: 8
 
 # SFT trainer config
