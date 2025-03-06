@@ -330,7 +330,6 @@ def code_reward(completions, run_sync: bool = False, **kwargs) -> list[float]:
             "`pip install e2b-code-interpreter` and add an API key to a `.env` file."
         )
 
-    rewards = []
     # TODO: add support for other languages in E2B: https://e2b.dev/docs/code-interpreting/supported-languages
     """Returns a reward function that evaluates code snippets in a sandbox."""
     evaluation_script_template = """
