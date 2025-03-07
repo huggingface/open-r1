@@ -407,7 +407,7 @@ def run_sync(scripts: list[str], language: str) -> list[float]:
     rewards = []
     with Sandbox(timeout=30, request_timeout=3) as sbx:
         for script in scripts:
-            execution = sbx.run_code(script, language=verification_info["language"])
+            execution = sbx.run_code(script, language=language)
             try:
                 output = float(execution.text)
             except (TypeError, ValueError):
