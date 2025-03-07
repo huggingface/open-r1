@@ -317,12 +317,10 @@ def extract_code(completion: str) -> str:
     return extracted_answer
 
 
-def code_reward(completions, run_sync: bool = False, **kwargs) -> list[float]:
+def code_reward(completions, **kwargs) -> list[float]:
     """Reward function that evaluates code snippets using the E2B code interpreter.
 
     Assumes the dataset contains a `verification_info` column with test cases.
-
-    Set run_sync=True to run with a synchronous e2b Sandbox, by default it will run asynchronously.
     """
     if not is_e2b_available():
         raise ImportError(
@@ -372,10 +370,7 @@ def code_reward(completions, run_sync: bool = False, **kwargs) -> list[float]:
         for code, info in zip(code_snippets, verification_info)
     ]
     try:
-        if run_sync:
-            rewards = run_sync(scripts, verification_info["language"])
-        else:
-            rewards = run_async_from_sync(scripts, verification_info["language"])
+        rewards = run_async_from_sync(scripts, verification_info["language"])
 
     except Exception as e:
         print(f"Error from E2B executor: {e}")
@@ -400,24 +395,8 @@ def get_code_format_reward(language: str = "python"):
     return code_format_reward
 
 
-def run_sync(scripts: list[str], language: str) -> list[float]:
-    """Synchronous version of e2b.Sanbox."""
-    rewards = []
-    with Sandbox(timeout=30, request_timeout=3) as sbx:
-        for script in scripts:
-            execution = sbx.run_code(script, language=language)
-            try:
-                output = float(execution.text)
-            except (TypeError, ValueError):
-                output = 0.0
-            rewards.append(output)
-    return rewards
-
-
 def run_async_from_sync(scripts: list[str], language: str) -> list[float]:
-    """Function wrapping the `run_async` function, an async version
-    of `run_sync`.
-    """
+    """Function wrapping the `run_async` function."""
     # Create a new event loop and set it
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
@@ -431,7 +410,7 @@ def run_async_from_sync(scripts: list[str], language: str) -> list[float]:
     return rewards
 
 
-async def run_async(scripts: list[str], language: str):
+async def run_async(scripts: list[str], language: str) -> list[float]:
     # Create the sandbox by hand, currently there's no context manager for this version
     sbx = await AsyncSandbox.create(timeout=30, request_timeout=3)
 
