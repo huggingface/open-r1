@@ -36,10 +36,36 @@ We will use the DeepSeek-R1 [tech report](https://github.com/deepseek-ai/DeepSee
 * Step 2: replicate the pure RL pipeline that DeepSeek used to create R1-Zero. This will likely involve curating new, large-scale datasets for math, reasoning, and code.
 * Step 3: show we can go from base model to RL-tuned via multi-stage training.
 
-<center>
-    <img src="assets/plan-of-attack.png" width="500">
-</center>
+```mermaid
+flowchart LR
+    subgraph one["Step 1"]
+        A1[Deepseek-R1]:::modelStyle --> B1[Distilled reasoning data]:::dataStyle
+        C1[Instruct Model]:::modelStyle --> D1[SFT]:::processStyle
+        B1 --> D1
+        D1 --> E1[Open R1-Distill]:::modelStyle
+    end
 
+    subgraph two["Step 2"]
+        B2[RL reasoning data]:::dataStyle --> D2[GRPO with verifiable rewards]:::processStyle
+        C2[Base Model]:::modelStyle --> D2
+        D2 --> E2[Open R1-Zero]:::modelStyle
+    end
+
+    subgraph three["Step 3"]
+        A3[Open R1-Zero]:::modelStyle --> B3[SFT reasoning data]:::dataStyle
+        C3[Base Model]:::modelStyle --> D3[SFT]:::processStyle
+        B3 --> D3
+        D3 --> E3[GRPO with verifiable rewards]:::processStyle
+        F3[RL reasoning data]:::dataStyle --> E3
+        E3 --> G3[Open R1]:::modelStyle
+    end
+
+    one --> two --> three
+
+    classDef modelStyle fill:#ffb6c1,stroke:#333,stroke-width:2px,color:#000000
+    classDef dataStyle fill:#ffeb99,stroke:#333,stroke-width:2px,color:#000000
+    classDef processStyle fill:#87ceeb,stroke:#333,stroke-width:2px,color:#000000
+```
 
 ## Installation
 
