@@ -14,7 +14,7 @@ from .utils import is_e2b_available
 
 if is_e2b_available():
     from dotenv import load_dotenv
-    from e2b_code_interpreter import Sandbox, AsyncSandbox
+    from e2b_code_interpreter import AsyncSandbox, Sandbox
 
     load_dotenv()
 
@@ -368,9 +368,7 @@ def code_reward(completions, run_sync: bool = False, **kwargs) -> list[float]:
     code_snippets = [extract_code(completion[-1]["content"]) for completion in completions]
     verification_info = kwargs["verification_info"]
     scripts = [
-        evaluation_script_template.format(
-            code=json.dumps(code), test_cases=json.dumps(json.dumps(info["test_cases"]))
-        )
+        evaluation_script_template.format(code=json.dumps(code), test_cases=json.dumps(json.dumps(info["test_cases"])))
         for code, info in zip(code_snippets, verification_info)
     ]
     try:
@@ -378,7 +376,7 @@ def code_reward(completions, run_sync: bool = False, **kwargs) -> list[float]:
             rewards = run_sync(scripts, verification_info["language"])
         else:
             rewards = run_async_from_sync(scripts, verification_info["language"])
-            
+
     except Exception as e:
         print(f"Error from E2B executor: {e}")
         rewards = [0.0] * len(completions)
@@ -403,7 +401,7 @@ def get_code_format_reward(language: str = "python"):
 
 
 def run_sync(scripts: list[str], language: str) -> list[float]:
-    """Synchronous version of e2b.Sanbox. """
+    """Synchronous version of e2b.Sanbox."""
     rewards = []
     with Sandbox(timeout=30, request_timeout=3) as sbx:
         for script in scripts:
@@ -423,13 +421,13 @@ def run_async_from_sync(scripts: list[str], language: str) -> list[float]:
     # Create a new event loop and set it
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    
+
     try:
         # Run the async function and get the result
         rewards = loop.run_until_complete(run_async(scripts, language))
     finally:
         loop.close()
-    
+
     return rewards
 
 
