@@ -369,13 +369,8 @@ def code_reward(completions, **kwargs) -> list[float]:
         evaluation_script_template.format(code=json.dumps(code), test_cases=json.dumps(json.dumps(info["test_cases"])))
         for code, info in zip(code_snippets, verification_info)
     ]
-    try:
-        rewards = run_async_from_sync(scripts, verification_info["language"])
-
-    except Exception as e:
-        print(f"Error from E2B executor: {e}")
-        rewards = [0.0] * len(completions)
-
+    languages = [info["language"] for info in verification_info]
+    rewards = run_async_from_sync(scripts, languages)
     return rewards
 
 
@@ -395,7 +390,7 @@ def get_code_format_reward(language: str = "python"):
     return code_format_reward
 
 
-def run_async_from_sync(scripts: list[str], language: str) -> list[float]:
+def run_async_from_sync(scripts: list[str], languages: list[str]) -> list[float]:
     """Function wrapping the `run_async` function."""
     # Create a new event loop and set it
     loop = asyncio.new_event_loop()
@@ -403,19 +398,23 @@ def run_async_from_sync(scripts: list[str], language: str) -> list[float]:
 
     try:
         # Run the async function and get the result
-        rewards = loop.run_until_complete(run_async(scripts, language))
+        rewards = loop.run_until_complete(run_async(scripts, languages))
     finally:
         loop.close()
 
     return rewards
 
 
-async def run_async(scripts: list[str], language: str) -> list[float]:
+async def run_async(scripts: list[str], languages: list[str]) -> list[float]:
     # Create the sandbox by hand, currently there's no context manager for this version
-    sbx = await AsyncSandbox.create(timeout=30, request_timeout=3)
+    try:
+        sbx = await AsyncSandbox.create(timeout=30, request_timeout=3)
+    except Exception as e:
+        print(f"Error from E2B executor: {e}")
+        return [0.0] * len(scripts)
 
     # Create a list of tasks for running scripts concurrently
-    tasks = [run_script(sbx, script) for script in scripts]
+    tasks = [run_script(sbx, script, language) for script, language in zip(scripts, languages)]
 
     # Wait for all tasks to complete and gather their results as they finish
     results = await asyncio.gather(*tasks)
@@ -428,7 +427,11 @@ async def run_async(scripts: list[str], language: str) -> list[float]:
 
 
 async def run_script(sbx, script: str, language: str) -> float:
-    execution = await sbx.run_code(script, language=language)
+    try:
+        execution = await sbx.run_code(script, language=language)
+    except Exception as e:
+        print(f"Error from E2B executor: {e}")
+        return 0.0
     try:
         return float(execution.text)
     except (TypeError, ValueError):
