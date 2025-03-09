@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from functools import partial, update_wrapper
 import logging
 import os
 import sys
@@ -32,6 +33,7 @@ from open_r1.rewards import (
     get_code_format_reward,
     get_cosine_scaled_reward,
     get_repetition_penalty_reward,
+    ioi_code_reward,
     len_reward,
     reasoning_steps_reward,
     tag_count_reward,
@@ -52,7 +54,7 @@ class GRPOScriptArguments(ScriptArguments):
 
     Args:
         reward_funcs (`list[str]`):
-            List of reward functions. Possible values: 'accuracy', 'format', 'reasoning_steps', 'cosine', 'repetition_penalty', 'length', 'tag_count', 'code', 'code_format'.
+            List of reward functions. Possible values: 'accuracy', 'format', 'reasoning_steps', 'cosine', 'repetition_penalty', 'length', 'tag_count', 'code', 'ioi_code', 'code_format'.
         cosine_min_value_wrong (`float`):
             Minimum reward for cosine scaling for wrong answers.
         cosine_max_value_wrong (`float`):
@@ -105,8 +107,12 @@ class GRPOScriptArguments(ScriptArguments):
         default="python",
         metadata={
             "help": "Language for code format reward. Based on E2B supported languages https://e2b.dev/docs/code-interpreting/supported-languages",
-            "choices": ["python", "javascript", "r", "java", "bash"],
+            "choices": ["python", "javascript", "r", "java", "bash", "cpp"],
         },
+    )
+    code_eval_test_batch_size: int = field(
+        default=1,
+        metadata={"help": "for each generation, evaluate these many test cases in parallel, then check if any of them failed (0 score): if so stop evaluating; otherwise continue with the next batch of test cases. Useful to avoid overloading the eval server + save time on wrong solutions"},
     )
 
 
@@ -174,6 +180,7 @@ def main(script_args, training_args, model_args):
         ),
         "length": len_reward,
         "code": code_reward,
+        "ioi_code": update_wrapper(partial(ioi_code_reward, test_batch_size=script_args.code_eval_test_batch_size), ioi_code_reward),
         "code_format": get_code_format_reward(language=script_args.code_language),
         "tag_count": tag_count_reward,
     }
