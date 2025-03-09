@@ -428,7 +428,7 @@ async def run_async(scripts: list[str], languages: list[str]) -> list[float]:
 
 async def run_script(sbx, script: str, language: str) -> float:
     try:
-        execution = await sbx.run_code(script, language=language)
+        execution = await sbx.run_code(script, language=language, timeout=30)
     except Exception as e:
         print(f"Error from E2B executor: {e}")
         return 0.0
