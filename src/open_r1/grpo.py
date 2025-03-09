@@ -74,7 +74,7 @@ class GRPOScriptArguments(ScriptArguments):
         },
     )
     cosine_min_value_wrong: float = field(
-        default=0.0,
+        default=-1.0,
         metadata={"help": "Minimum reward for wrong answers"},
     )
     cosine_max_value_wrong: float = field(
