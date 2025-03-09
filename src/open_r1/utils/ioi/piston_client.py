@@ -2,6 +2,7 @@ import asyncio
 from collections import Counter
 from functools import lru_cache
 import os
+import random
 import subprocess
 import re
 
@@ -15,6 +16,8 @@ def get_piston_client_from_env():
     piston_endpoints = os.getenv("PISTON_ENDPOINTS")
     if piston_endpoints is None:
         raise ValueError("For IOI problems Piston endpoints running our IOI package are required. Please add a list of valid Piston endpoints to a PISTON_ENDPOINTS varialbe in a `.env` file.")
+    piston_endpoints = piston_endpoints.split(",") if piston_endpoints != "slurm" else get_slurm_piston_endpoints()
+    random.shuffle(piston_endpoints)
     max_requests_per_endpoint = os.getenv("PISTON_MAX_REQUESTS_PER_ENDPOINT", "1")
     return PistonClient(piston_endpoints, max_requests_per_endpoint=int(max_requests_per_endpoint))
 
@@ -44,13 +47,8 @@ class PistonClient:
         self.max_requests_per_endpoint = max_requests_per_endpoint
         self.base_endpoints = [base_endpoint] if isinstance(base_endpoint, str) else base_endpoint
         self.endpoint_ids = {endpoint: i for i, endpoint in enumerate(self.base_endpoints)}
-        if not session:
-            session = aiohttp.ClientSession(
-                timeout=aiohttp.ClientTimeout(sock_read=10), 
-                connector=aiohttp.TCPConnector(limit=max_requests_per_endpoint * len(self.base_endpoints), ttl_dns_cache=300, keepalive_timeout=5 * 60)
-            )
 
-        self.session = session
+        self._session = session
         self.endpoint_tokens = asyncio.Queue(maxsize=max_requests_per_endpoint * len(self.base_endpoints))
 
         for _ in range(max_requests_per_endpoint):
@@ -60,6 +58,18 @@ class PistonClient:
         self._unhealthy_endpoints = set()
         self._endpoint_failures_lock = asyncio.Lock()
         
+    @property
+    def session(self):
+        if self._session is None:
+            self._session = aiohttp.ClientSession(
+                timeout=aiohttp.ClientTimeout(sock_read=10), 
+                connector=aiohttp.TCPConnector(
+                    limit=self.max_requests_per_endpoint * len(self.base_endpoints), 
+                    ttl_dns_cache=300, 
+                    keepalive_timeout=5 * 60
+                )
+            )
+        return self._session
 
     async def _wait_for_endpoint(self):
         endpoint = await self.endpoint_tokens.get()
@@ -199,10 +209,10 @@ class PistonClient:
                     endpoint = None
 
 
-def get_piston_endpoints():
+def get_slurm_piston_endpoints():
     """Get list of active piston worker endpoints from squeue output"""
     # Run squeue command to get job name, hostname and status, filtering for RUNNING state
-    result = subprocess.run(['squeue', '--me', '--format="%j %N %T"', '--noheader', '--states=RUNNING'], capture_output=True, text=True)
+    result = subprocess.run(['squeue', '--format="%j %N %T"', '--noheader', '--states=RUNNING'], capture_output=True, text=True)
     
     # Split output into lines and skip header
     lines = result.stdout.strip().split('\n')

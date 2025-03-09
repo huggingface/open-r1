@@ -371,7 +371,8 @@ def code_reward(completions, **kwargs) -> list[float]:
         for code, info in zip(code_snippets, verification_info)
     ]
     try:
-        rewards = run_async_from_sync(run_e2b_async(scripts, verification_info["language"]))
+        loop = _init_event_loop()
+        rewards = loop.run_until_complete(run_e2b_async(scripts, verification_info["language"]))
 
     except Exception as e:
         print(f"Error from E2B executor: {e}")
@@ -380,14 +381,17 @@ def code_reward(completions, **kwargs) -> list[float]:
     return rewards
 
 
-def ioi_code_reward(completions, **kwargs) -> list[float]:
+def ioi_code_reward(completions, test_batch_size: int = 1, **kwargs) -> list[float]:
     """Reward function that evaluates IOI problems using Piston+our IOI package.
     
     Assumes the dataset has the same format as hf.co/datasets/open-r1/ioi
+
+    test_batch_size: evaluate these many test cases in parallel, then check if any of them failed (0 score): if so stop evaluating; otherwise continue with the next batch of test cases.
     """
     piston_client = get_piston_client_from_env()
     
     code_snippets = [
+        # note: grading is automatically skipped if no code is extracted
         add_includes(extract_code(completion[-1]["content"], 'cpp'), problem_id) 
         for completion, problem_id in zip(completions, kwargs["id"])
     ]
@@ -401,13 +405,13 @@ def ioi_code_reward(completions, **kwargs) -> list[float]:
 
     # load problem data. undo separating kwargs by column
     problems_data = [dict(zip(kwargs.keys(), values)) for values in zip(*kwargs.values())]
-
+    
+    loop = _init_event_loop()
     evals = [
-        asyncio.create_task(run_catch_exceptions(score_subtask(piston_client, problem_data, code)))
+        loop.create_task(run_catch_exceptions(score_subtask(piston_client, problem_data, code, test_batch_size=test_batch_size)))
         for problem_data, code in zip(problems_data, code_snippets)
     ]
-    
-    results = run_async_from_sync(asyncio.gather(*evals))
+    results = loop.run_until_complete(asyncio.gather(*evals))
 
     return [result.score for result in results]
 
@@ -428,20 +432,13 @@ def get_code_format_reward(language: str = "python"):
     return code_format_reward
 
 
-def run_async_from_sync(task) -> list[float]:
-    """Function to run async functions from sync code."""
+def _init_event_loop():
     try:
-        # Try to get the existing event loop
         loop = asyncio.get_event_loop()
     except RuntimeError:
-        # If no event loop exists in this thread, create a new one
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-
-    # Run the async function and get the result
-    rewards = loop.run_until_complete(task)
-    
-    return rewards
+    return loop
 
 
 async def run_e2b_async(scripts: list[str], language: str) -> list[float]:

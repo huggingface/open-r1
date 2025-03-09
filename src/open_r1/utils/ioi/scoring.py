@@ -2,8 +2,8 @@ import asyncio
 from dataclasses import dataclass, field, asdict
 from typing import Union
 
-from open_r1.utils.ioi.utils import load_ioi_tests
-from piston_client import PistonClient
+from .utils import load_ioi_tests, batched
+from .piston_client import PistonClient
 
 @dataclass
 class TestResult:
@@ -61,7 +61,7 @@ class SubtaskResult:
         Returns:
             float: The rounded minimum score
         """
-        return round(min([0] + [test_result.score for test_result in self.test_results]), self.score_precision)
+        return 0 if not self.test_results else round(min([test_result.score for test_result in self.test_results]), self.score_precision)
 
     @property
     def weighted_score(self):
@@ -71,7 +71,7 @@ class SubtaskResult:
         Returns:
             float: The rounded weighted score
         """
-        return round(min([0] + [test_result.score for test_result in self.test_results]) * self.points, self.score_precision)
+        return 0 if not self.test_results else round(min([test_result.score for test_result in self.test_results]) * self.points, self.score_precision)
 
     def to_dict(self):
         """
@@ -140,7 +140,7 @@ async def score_single_test_case(client: PistonClient, subtask: dict, test_name:
 
     return TestResult(test_name=test_name, score=score, status=_extract_single_status(score, feedback), feedback=feedback)
 
-async def score_subtask(client: PistonClient, subtask: dict, submission: str, test_case_run_cache: Union[dict, None] = None, skip_mode: bool = True) -> SubtaskResult:
+async def score_subtask(client: PistonClient, subtask: dict, submission: str, test_case_run_cache: Union[dict, None] = None, test_batch_size: int = 1) -> SubtaskResult:
     """
     Scores all test cases in a subtask.
     
@@ -150,8 +150,8 @@ async def score_subtask(client: PistonClient, subtask: dict, submission: str, te
         test_cases: Dictionary mapping test names to (input, output) tuples
         submission: Source code of the submission
         test_case_run_cache: Optional cache of previously run test cases
-        skip_mode: If True, evaluates test by test and stops after the first failure. Otherwise, runs all tests in parallel. Should be True when evaluating a large number of submissions.
-        
+        test_batch_size: evaluate these many test cases in parallel, then check if any of them failed (0 score): if so stop evaluating; otherwise continue with the next batch of test cases.
+        -1 to evaluate all test cases in parallel
     Returns:
         SubtaskResult: Result of the subtask evaluation
     """
@@ -171,37 +171,34 @@ async def score_subtask(client: PistonClient, subtask: dict, submission: str, te
         for test_name in subtask['test_names']
     ]
 
+    # we skip submissions where no code was extracted
+    # no need to do anything, as we have a failed cached result
+    if not submission or any(test_result.status != 'SKIPPED' and test_result.score == 0.0 for test_result in subtask_result.test_results):
+        return subtask_result
+
     if "test_cases" in subtask:
         test_cases = subtask["test_cases"]
+        if isinstance(subtask["test_cases"], list):
+            test_cases = {
+                test_name: test for test_name, test in zip(subtask["test_names"], subtask["test_cases"])
+            }
     else:
         test_cases = load_ioi_tests(subtask["year"], subtask["id"])
 
-    # no need to do anything, as we have a failed cached result
-    if any(test_result.status != 'SKIPPED' and test_result.score == 0.0 for test_result in subtask_result.test_results):
-        return subtask_result
-
-    if not skip_mode:
-        # run all tests in parallel. faster when there are few submissions to evaluate
+    # run one batch, check if any of them failed (0 score): if so stop evaluating; otherwise continue with the next batch of test cases.
+    for test_batch_to_run in batched(tests_to_run, test_batch_size):
         results = await asyncio.gather(*[
             asyncio.create_task(score_single_test_case(client, subtask, test_name, test_cases[test_name][0], test_cases[test_name][1], submission))
-            for _, test_name in tests_to_run
+            for _, test_name in test_batch_to_run
         ])
-        for (ti, test_name), test_result in zip(tests_to_run, results):
-            subtask_result.test_results[ti] = test_result
-    else:
-        # run tests one by one, stopping early on certain failures and using the test case run cache
-        # this is faster when there are many submissions to evaluate, as we can skip tests that have already been run/on subtasks that already failed
-        for ti, test_name in tests_to_run:
-            test_input, test_output = test_cases[test_name]
-            test_result = await score_single_test_case(client, subtask, test_name, test_input, test_output, submission)
+        for (ti, test_name), test_result in zip(test_batch_to_run, results):
             if test_case_run_cache is not None:
                 test_case_run_cache[test_name] = test_result
-
             subtask_result.test_results[ti] = test_result
 
-            # Stop early if it failed
-            if test_result.score == 0.0:
-                break
+        # Stop early if it failed
+        if any(test_result.score == 0.0 for test_result in results):
+            break
     
     return subtask_result
 
