@@ -1,7 +1,6 @@
 """Reward functions for GRPO training."""
 
 import asyncio
-from collections import defaultdict
 import json
 import math
 import re
