@@ -1,6 +1,7 @@
 """Reward functions for GRPO training."""
 
 import asyncio
+from collections import defaultdict
 import json
 import math
 import re
@@ -8,6 +9,7 @@ from typing import Dict
 
 from latex2sympy2_extended import NormalizationConfig
 from math_verify import LatexExtractionConfig, parse, verify
+from .utils.ioi import get_piston_client_from_env, score_subtask, add_includes, SubtaskResult
 
 from .utils import is_e2b_available
 
@@ -310,8 +312,8 @@ def get_repetition_penalty_reward(ngram_size: int, max_penalty: float):
     return repetition_penalty_reward
 
 
-def extract_code(completion: str) -> str:
-    pattern = re.compile(r"```python\n(.*?)```", re.DOTALL)
+def extract_code(completion: str, language: str = "python") -> str:
+    pattern = re.compile(rf"```{language}\n(.*?)```", re.DOTALL)
     matches = pattern.findall(completion)
     extracted_answer = matches[-1] if len(matches) >= 1 else ""
     return extracted_answer
@@ -370,13 +372,45 @@ def code_reward(completions, **kwargs) -> list[float]:
         for code, info in zip(code_snippets, verification_info)
     ]
     try:
-        rewards = run_async_from_sync(scripts, verification_info["language"])
+        rewards = run_async_from_sync(run_e2b_async(scripts, verification_info["language"]))
 
     except Exception as e:
         print(f"Error from E2B executor: {e}")
         rewards = [0.0] * len(completions)
 
     return rewards
+
+
+def ioi_code_reward(completions, **kwargs) -> list[float]:
+    """Reward function that evaluates IOI problems using Piston+our IOI package.
+    
+    Assumes the dataset has the same format as hf.co/datasets/open-r1/ioi
+    """
+    piston_client = get_piston_client_from_env()
+    
+    code_snippets = [
+        add_includes(extract_code(completion[-1]["content"], 'cpp'), problem_id) 
+        for completion, problem_id in zip(completions, kwargs["id"])
+    ]
+
+    async def run_catch_exceptions(task):
+        try:
+            return await task
+        except Exception as e:
+            print(f"Error from Piston worker: {e}")
+            return SubtaskResult()  # score 0.0
+
+    # load problem data. undo separating kwargs by column
+    problems_data = [dict(zip(kwargs.keys(), values)) for values in zip(*kwargs.values())]
+
+    evals = [
+        asyncio.create_task(run_catch_exceptions(score_subtask(piston_client, problem_data, code)))
+        for problem_data, code in zip(problems_data, code_snippets)
+    ]
+    
+    results = run_async_from_sync(asyncio.gather(*evals))
+
+    return [result.score for result in results]
 
 
 def get_code_format_reward(language: str = "python"):
@@ -395,27 +429,28 @@ def get_code_format_reward(language: str = "python"):
     return code_format_reward
 
 
-def run_async_from_sync(scripts: list[str], language: str) -> list[float]:
-    """Function wrapping the `run_async` function."""
-    # Create a new event loop and set it
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-
+def run_async_from_sync(task) -> list[float]:
+    """Function to run async functions from sync code."""
     try:
-        # Run the async function and get the result
-        rewards = loop.run_until_complete(run_async(scripts, language))
-    finally:
-        loop.close()
+        # Try to get the existing event loop
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        # If no event loop exists in this thread, create a new one
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
 
+    # Run the async function and get the result
+    rewards = loop.run_until_complete(task)
+    
     return rewards
 
 
-async def run_async(scripts: list[str], language: str) -> list[float]:
+async def run_e2b_async(scripts: list[str], language: str) -> list[float]:
     # Create the sandbox by hand, currently there's no context manager for this version
     sbx = await AsyncSandbox.create(timeout=30, request_timeout=3)
 
     # Create a list of tasks for running scripts concurrently
-    tasks = [run_script(sbx, script) for script in scripts]
+    tasks = [run_e2b_script(sbx, script) for script in scripts]
 
     # Wait for all tasks to complete and gather their results as they finish
     results = await asyncio.gather(*tasks)
@@ -427,7 +462,7 @@ async def run_async(scripts: list[str], language: str) -> list[float]:
     return rewards
 
 
-async def run_script(sbx, script: str, language: str) -> float:
+async def run_e2b_script(sbx, script: str, language: str) -> float:
     execution = await sbx.run_code(script, language=language)
     try:
         return float(execution.text)
