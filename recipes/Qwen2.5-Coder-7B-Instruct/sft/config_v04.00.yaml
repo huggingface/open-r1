@@ -1,0 +1,52 @@
+# Model arguments
+model_name_or_path: Qwen/Qwen2.5-Coder-7B-Instruct
+model_revision: main
+torch_dtype: bfloat16
+attn_implementation: flash_attention_2
+
+# Data training arguments
+dataset_name: open-r1/codeforces-cots_decontaminated
+dataset_config: test_input_generator
+dataset_num_proc: 48
+
+# SFT trainer config
+callbacks:
+- push_to_hub_revision
+benchmarks:
+- lcb
+bf16: true
+do_eval: false
+eval_strategy: 'no'
+gradient_accumulation_steps: 8
+gradient_checkpointing: true
+gradient_checkpointing_kwargs:
+  use_reentrant: false
+hub_model_id: open-r1/Qwen2.5-Coder-7B-Instruct-SFT
+hub_model_revision: v04.00
+hub_strategy: every_save
+learning_rate: 1.0e-05
+log_level: info
+logging_steps: 1
+logging_strategy: steps
+lr_scheduler_type: cosine_with_min_lr
+lr_scheduler_kwargs:
+  min_lr_rate: 0.1
+packing: true
+max_length: 32768
+max_steps: -1
+num_train_epochs: 10
+output_dir: data/open-r1/Qwen2.5-Coder-7B-Instruct-SFT-v04.00
+overwrite_output_dir: true
+per_device_eval_batch_size: 1
+per_device_train_batch_size: 2
+push_to_hub: true
+report_to:
+- wandb
+save_strategy: "steps"
+save_steps: 0.2
+save_total_limit: 1
+seed: 42
+use_liger: true
+wandb_entity: huggingface
+wandb_project: open-r1
+warmup_ratio: 0.03
