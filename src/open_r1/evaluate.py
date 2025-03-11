@@ -27,6 +27,28 @@ from lighteval.tasks.requests import Doc
 from lighteval.utils.language import Language
 
 
+# Prompt template adapted from
+# - simple-evals: https://github.com/openai/simple-evals/blob/6e84f4e2aed6b60f6a0c7b8f06bbbf4bfde72e58/math_eval.py#L17
+# - Llama 3: https://huggingface.co/datasets/meta-llama/Llama-3.2-1B-Instruct-evals/viewer/Llama-3.2-1B-Instruct-evals__math__details?views%5B%5D=llama_32_1b_instruct_evals__math__details
+# Note that it is important to have the final answer in a box for math-verify to work correctly
+MATH_QUERY_TEMPLATE = """
+Solve the following math problem efficiently and clearly.  The last line of your response should be of the following format: 'Therefore, the final answer is: $\\boxed{{ANSWER}}$. I hope it is correct' (without quotes) where ANSWER is just the final number or expression that solves the problem. Think step by step before answering.
+
+{Question}
+""".strip()
+
+# Prompt template from simple-evals: https://github.com/openai/simple-evals/blob/83ed7640a7d9cd26849bcb3340125002ef14abbe/common.py#L14
+GPQA_QUERY_TEMPLATE = """
+Answer the following multiple choice question. The last line of your response should be of the following format: 'Answer: $LETTER' (without quotes) where LETTER is one of ABCD. Think step by step before answering.
+
+{Question}
+
+A) {A}
+B) {B}
+C) {C}
+D) {D}
+""".strip()
+
 latex_gold_metric = multilingual_extractive_match_metric(
     language=Language.ENGLISH,
     fallback_mode="first_match",
@@ -55,11 +77,10 @@ gpqa_metric = multilingual_extractive_match_metric(
 )
 
 
-def prompt_fn(line, task_name: str = None):
-    """Assumes the model is either prompted to emit \\boxed{answer} or does so automatically"""
+def math_prompt_fn(line, task_name: str = None):
     return Doc(
         task_name=task_name,
-        query=line["problem"],
+        query=MATH_QUERY_TEMPLATE.format(Question=line["problem"]),
         choices=[line["solution"]],
         gold_index=0,
     )
@@ -68,20 +89,19 @@ def prompt_fn(line, task_name: str = None):
 def aime_prompt_fn(line, task_name: str = None):
     return Doc(
         task_name=task_name,
-        query=line["problem"],
+        query=MATH_QUERY_TEMPLATE.format(Question=line["problem"]),
         choices=[line["answer"]],
         gold_index=0,
     )
 
 
 def gpqa_prompt_fn(line, task_name: str = None):
-    """Prompt template adapted from simple-evals: https://github.com/openai/simple-evals/blob/83ed7640a7d9cd26849bcb3340125002ef14abbe/common.py#L14"""
     gold_index = random.randint(0, 3)
     choices = [line["Incorrect Answer 1"], line["Incorrect Answer 2"], line["Incorrect Answer 3"]]
     choices.insert(gold_index, line["Correct Answer"])
-    query_template = "Answer the following multiple choice question. The last line of your response should be of the following format: 'Answer: $LETTER' (without quotes) where LETTER is one of ABCD. Think step by step before answering.\n\n{Question}\n\nA) {A}\nB) {B}\nC) {C}\nD) {D}"
-    query = query_template.format(A=choices[0], B=choices[1], C=choices[2], D=choices[3], Question=line["Question"])
-
+    query = GPQA_QUERY_TEMPLATE.format(
+        A=choices[0], B=choices[1], C=choices[2], D=choices[3], Question=line["Question"]
+    )
     return Doc(
         task_name=task_name,
         query=query,
@@ -106,12 +126,11 @@ aime24 = LightevalTaskConfig(
     metric=[expr_gold_metric],
     version=1,
 )
-# Part I from AIME 2025 exam: https://artofproblemsolving.com/wiki/index.php/2025_AIME_I?srsltid=AfmBOoof5gaaqlt3-l6LH7Tt6qmJZtl_2PQEDYlLFlMqhq9dLL8FMCRR
-aime25_part1 = LightevalTaskConfig(
-    name="aime25:part1",
+aime25 = LightevalTaskConfig(
+    name="aime25",
     suite=["custom"],
     prompt_function=aime_prompt_fn,
-    hf_repo="open-r1/aime_2025_1",
+    hf_repo="yentinglin/aime_2025",
     hf_subset="default",
     hf_avail_splits=["train"],
     evaluation_splits=["train"],
@@ -124,7 +143,7 @@ aime25_part1 = LightevalTaskConfig(
 math_500 = LightevalTaskConfig(
     name="math_500",
     suite=["custom"],
-    prompt_function=prompt_fn,
+    prompt_function=math_prompt_fn,
     hf_repo="HuggingFaceH4/MATH-500",
     hf_subset="default",
     hf_avail_splits=["test"],
@@ -156,7 +175,7 @@ gpqa_diamond = LightevalTaskConfig(
 # Add tasks to the table
 TASKS_TABLE = []
 TASKS_TABLE.append(aime24)
-TASKS_TABLE.append(aime25_part1)
+TASKS_TABLE.append(aime25)
 TASKS_TABLE.append(math_500)
 TASKS_TABLE.append(gpqa_diamond)
 

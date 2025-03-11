@@ -1,0 +1,46 @@
+# Model arguments
+# You can download the model and manually change the rope to 300k/500k and max_position_embeddings to 32768
+model_name_or_path: HuggingFaceTB/SmolLM2-1.7B
+model_revision: main
+torch_dtype: bfloat16
+attn_implementation: sdpa
+
+# Data training arguments
+dataset_name: open-r1/OpenR1-Math-220k 
+dataset_num_proc: 48
+
+#SFT hyperparam
+max_length: 8192 # You can set this to 32768 if you change the rope, but you need to change the config.json file 
+weight_decay: 0.0001
+optim: adamw_torch
+lr_scheduler_type: linear
+warmup_ratio: 0.1
+learning_rate: 5.0e-05
+gradient_accumulation_steps: 2
+per_device_eval_batch_size: 4
+per_device_train_batch_size: 4 # Change this depending on the context length of the model to keep a 500M GBS. 
+
+# SFT trainer config
+max_steps: -1
+num_train_epochs: 3
+bf16: true
+do_eval: false
+eval_strategy: 'no'
+gradient_checkpointing: true
+gradient_checkpointing_kwargs:
+  use_reentrant: false
+hub_model_id: OpenR1-Qwen-7B-SFT
+hub_strategy: every_save
+log_level: info
+logging_steps: 5
+logging_strategy: steps
+packing: true
+output_dir: data/OpenR1-Qwen-7B-SFT
+overwrite_output_dir: true
+push_to_hub: true
+report_to:
+- wandb
+save_strategy: "steps"
+save_steps: 500
+save_total_limit: 1
+seed: 42

@@ -32,10 +32,16 @@ WORLD_SIZE=$(($NUM_NODES*$GPUS_PER_NODE))
 # Due to conflicts between Accelerate's DeepSpeed configs and Transformers' TrainingArguments, we need to parse the gradient accumulation steps from the config file to ensure they match
 CONFIG_FILE=recipes/$MODEL/$TASK/config_$CONFIG_SUFFIX.yaml
 GRAD_ACC_STEPS=$(grep 'gradient_accumulation_steps' $CONFIG_FILE | awk '{print $2}')
-USE_VLLM=$(grep 'use_vllm:\s*true' $CONFIG_FILE) # Match "use_vllm: true" (with optional whitespace)
 
-if [ -n "$USE_VLLM" ]; then  # Check if USE_VLLM is *not* empty (found)
-    WORLD_SIZE=$(($WORLD_SIZE-1))
+# Check if we are running vLLM during training to adjust the world size
+if grep -q 'use_vllm:\s*true' "$CONFIG_FILE"; then
+    USE_VLLM="true"
+else
+    USE_VLLM="false"
+fi
+
+if [[ "$USE_VLLM" == "true" ]]; then
+    WORLD_SIZE=$(($WORLD_SIZE - 1))
 fi
 
 # Split the string into individual arguments
