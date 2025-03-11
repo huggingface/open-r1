@@ -8,9 +8,9 @@ from typing import Dict
 
 from latex2sympy2_extended import NormalizationConfig
 from math_verify import LatexExtractionConfig, parse, verify
-from .utils.ioi import get_piston_client_from_env, score_subtask, add_includes, SubtaskResult
 
 from .utils import is_e2b_available
+from .utils.ioi import SubtaskResult, add_includes, get_piston_client_from_env, score_subtask
 
 
 if is_e2b_available():

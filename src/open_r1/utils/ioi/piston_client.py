@@ -1,12 +1,13 @@
 import asyncio
-from collections import Counter
-from functools import lru_cache
 import os
 import random
-import subprocess
 import re
+import subprocess
+from collections import Counter
+from functools import lru_cache
 
 import aiohttp
+
 
 class PistonError(Exception):
     pass

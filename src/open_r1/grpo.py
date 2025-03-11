@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from functools import partial, update_wrapper
 import logging
 import os
 import sys
 from dataclasses import dataclass, field
+from functools import partial, update_wrapper
 
 import datasets
 import torch

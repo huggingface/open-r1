@@ -1,9 +1,10 @@
 import asyncio
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from typing import Union
 
-from .utils import load_ioi_tests, batched
 from .piston_client import PistonClient
+from .utils import batched, load_ioi_tests
+
 
 @dataclass
 class TestResult:

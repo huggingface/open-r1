@@ -1,5 +1,5 @@
 from .piston_client import get_piston_client_from_env, get_slurm_piston_endpoints
-from .scoring import score_subtask, SubtaskResult
+from .scoring import SubtaskResult, score_subtask
 from .utils import add_includes
 
 
