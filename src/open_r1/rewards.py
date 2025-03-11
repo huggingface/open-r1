@@ -388,6 +388,7 @@ def ioi_code_reward(completions, test_batch_size: int = 1, **kwargs) -> list[flo
 
     test_batch_size: evaluate these many test cases in parallel, then check if any of them failed (0 score): if so stop evaluating; otherwise continue with the next batch of test cases.
     """
+    # for info on setting up piston workers, see slurm/piston/README.md
     piston_client = get_piston_client_from_env()
     
     code_snippets = [
