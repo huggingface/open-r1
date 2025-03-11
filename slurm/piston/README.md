@@ -9,6 +9,20 @@ To launch a fleet of piston workers on a slurm cluster, you can adapt the paths 
 
 This command will launch a slurm job for each worker, which will be called `piston-worker-<port>`, where `<port>` is the port where the worker will be listening.
 
+## First time setup
+You will need to install the [IOI package](https://github.com/guipenedo/piston/tree/master/packages/cms_ioi/1.0.0) in the workers.
+1. Launch a single worker:
+```bash
+./launch_piston_workers.sh 1
+```
+
+2. Assuming it's running on `ip-10-53-86-146:1234`, send the package install request:
+```bash
+curl -X POST http://ip-10-53-86-146:1234/api/v2/packages -H "Content-Type: application/json" -d '{"language": "cms_ioi", "version": "1.0.0"}'
+```
+
+3. You can now launch more workers and due to the shared mounted packages directory, they should already have the package installed.
+
 To have the main script find the workers automatically, you can export the following environment variable:
 ```bash
 export PISTON_ENDPOINTS=slurm
@@ -20,6 +34,8 @@ If you would like to adapt the code to run without piston, please see the [ioi r
 
 # Piston workers (local docker)
 This will launch a single worker in a docker container. Consider launching multiple workers for better scalability. Replace 2000 with the port you want to use.
+Make sure to change `/path/to/local/packages` to the path you want to persist for package installs.
+
 ```bash
 docker run -d \
   --name piston_worker \
@@ -37,6 +53,11 @@ docker run -d \
   -c "sed -i '/app.use(body_parser.urlencoded/c\    app.use(body_parser.urlencoded({ extended: true, limit: \"512mb\" }));' src/index.js && \
       sed -i '/app.use(body_parser.json/c\    app.use(body_parser.json({ limit: \"512mb\" }));' src/index.js && \
       node src"
+```
+
+Install the package:
+```bash
+curl -X POST http://localhost:2000/api/v2/packages -H "Content-Type: application/json" -d '{"language": "cms_ioi", "version": "1.0.0"}'
 ```
 
 Remember to set `PISTON_ENDPOINTS`:
