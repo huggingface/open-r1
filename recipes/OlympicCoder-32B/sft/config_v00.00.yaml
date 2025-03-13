@@ -30,11 +30,11 @@ lr_scheduler_kwargs:
   min_lr_rate: 0.1
 packing: false
 max_grad_norm: 0.2
-max_length: 22528 # we were unable to train at 32k due to OOM
+max_length: 22528 # we were unable to train at 32k due to OOM. See https://github.com/huggingface/transformers/issues/35983 for context parallelism support.
 max_steps: -1
 num_train_epochs: 10
 optim: paged_adamw_8bit
-output_dir: data/open-r1/OlympicCoder-32B
+output_dir: data/OlympicCoder-32B
 overwrite_output_dir: true
 per_device_eval_batch_size: 1
 per_device_train_batch_size: 1
