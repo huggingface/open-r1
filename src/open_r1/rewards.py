@@ -17,6 +17,8 @@ if is_e2b_available():
     from e2b_code_interpreter import AsyncSandbox
 
     load_dotenv()
+else:
+    AsyncSandbox = None
 
 
 def accuracy_reward(completions, solution, **kwargs):
