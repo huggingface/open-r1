@@ -408,26 +408,15 @@ def get_code_format_reward(language: str = "python"):
 def run_async_from_sync(scripts: list[str], language: str) -> list[float]:
     """Function wrapping the `run_async` function."""
     # Create a new event loop and set it
-    loop = _init_event_loop()
+    # loop = _init_event_loop()
     try:
         # Run the async function and get the result
-        rewards = loop.run_until_complete(run_async(scripts, language))
+        rewards = asyncio.run(run_async(scripts, language))
     except Exception as e:
         print(f"Error from E2B executor async: {e}")
-        return
-    finally:
-        loop.close()
+        raise e
 
     return rewards
-
-
-def _init_event_loop():
-    try:
-        loop = asyncio.get_event_loop()
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-    return loop
 
 
 async def run_async(scripts: list[str], language: str) -> list[float]:
