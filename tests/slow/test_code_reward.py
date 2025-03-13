@@ -13,9 +13,11 @@
 # limitations under the License.
 
 
-from datasets import load_dataset
-from open_r1.rewards import code_reward
 import unittest
+
+from datasets import load_dataset
+
+from open_r1.rewards import code_reward
 
 
 class TestCodeRewards(unittest.TestCase):
