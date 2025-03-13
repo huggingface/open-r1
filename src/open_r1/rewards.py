@@ -374,14 +374,14 @@ def code_reward(completions, **kwargs) -> list[float]:
         evaluation_script_template.format(code=json.dumps(code), test_cases=json.dumps(json.dumps(info["test_cases"])))
         for code, info in zip(code_snippets, verification_info)
     ]
-    
+
     language = verification_info[0]["language"]
-    
+
     if not all(v["language"] == language for v in verification_info):
         raise ValueError("All verification_info must have the same language", verification_info)
     rewards = []
     try:
-        rewards = run_async_from_sync(scripts, language)#verification_info[0]["language"])
+        rewards = run_async_from_sync(scripts, language)  # verification_info[0]["language"])
 
     except Exception as e:
         print(f"Error from E2B executor: {e}")
@@ -421,6 +421,7 @@ def run_async_from_sync(scripts: list[str], language: str) -> list[float]:
 
     return rewards
 
+
 def _init_event_loop():
     try:
         loop = asyncio.get_event_loop()
@@ -428,6 +429,7 @@ def _init_event_loop():
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
     return loop
+
 
 async def run_async(scripts: list[str], language: str) -> list[float]:
     # Create the sandbox by hand, currently there's no context manager for this version
