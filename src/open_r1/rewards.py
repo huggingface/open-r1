@@ -356,7 +356,7 @@ def code_reward(completions, **kwargs) -> list[float]:
             all_correct = True
             for line1, line2 in zip(output.split('\\n'), case['output'].split('\\n')):
                 all_correct = all_correct and line1.strip() == line2.strip()
-            
+
             if all_correct:
                 passed += 1
 
