@@ -39,8 +39,7 @@ per_device_train_batch_size: 2
 push_to_hub: true
 report_to:
 - wandb
-save_strategy: "steps"
-save_steps: 0.2
+save_strategy: epoch
 save_total_limit: 1
 seed: 42
 use_liger: true
