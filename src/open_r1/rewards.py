@@ -379,7 +379,6 @@ def code_reward(completions, **kwargs) -> list[float]:
 
     if not all(v["language"] == language for v in verification_info):
         raise ValueError("All verification_info must have the same language", verification_info)
-    rewards = []
     try:
         rewards = run_async_from_sync(scripts, language)
 
