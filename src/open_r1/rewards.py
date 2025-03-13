@@ -353,6 +353,7 @@ def code_reward(completions, **kwargs) -> list[float]:
 
             output = process.stdout.strip()
 
+            # TODO: implement a proper validator to compare against ground truth. For now we just check for exact string match on each line of stdout.
             all_correct = True
             for line1, line2 in zip(output.split('\\n'), case['output'].split('\\n')):
                 all_correct = all_correct and line1.strip() == line2.strip()
@@ -408,7 +409,6 @@ def get_code_format_reward(language: str = "python"):
 def run_async_from_sync(scripts: list[str], language: str) -> list[float]:
     """Function wrapping the `run_async` function."""
     # Create a new event loop and set it
-    # loop = _init_event_loop()
     try:
         # Run the async function and get the result
         rewards = asyncio.run(run_async(scripts, language))
