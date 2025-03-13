@@ -381,7 +381,7 @@ def code_reward(completions, **kwargs) -> list[float]:
         raise ValueError("All verification_info must have the same language", verification_info)
     rewards = []
     try:
-        rewards = run_async_from_sync(scripts, language)  # verification_info[0]["language"])
+        rewards = run_async_from_sync(scripts, language)
 
     except Exception as e:
         print(f"Error from E2B executor: {e}")
