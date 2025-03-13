@@ -447,7 +447,7 @@ async def run_e2b_async(scripts: list[str], language: str) -> list[float]:
     sbx = await AsyncSandbox.create(timeout=30, request_timeout=3)
 
     # Create a list of tasks for running scripts concurrently
-    tasks = [run_e2b_script(sbx, script) for script in scripts]
+    tasks = [run_e2b_script(sbx, script, language) for script in scripts]
 
     # Wait for all tasks to complete and gather their results as they finish
     results = await asyncio.gather(*tasks)
