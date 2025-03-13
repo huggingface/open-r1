@@ -452,5 +452,5 @@ async def run_script(sbx: AsyncSandbox, script: str, language: str) -> float:
     execution = await sbx.run_code(script, language=language)
     try:
         return float(execution.text)
-    except (TypeError, ValueError) as e:
+    except (TypeError, ValueError):
         return 0.0
