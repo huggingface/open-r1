@@ -467,7 +467,7 @@ python scripts/run_benchmarks.py --model-id {model_id}  --benchmarks gpqa
 
 We are able to reproduce Deepseek's reported results on the LiveCodeBench code generation benchmark within ~1-3 standard deviations:
 
-| Model                         | LiveCodeBench (🤗 LightEval) | GPQA Diamond (DeepSeek Reported) |
+| Model                         | LiveCodeBench (🤗 LightEval) | LiveCodeBench (DeepSeek Reported) |
 |:------------------------------|:----------------------------:|:--------------------------------:|
 | DeepSeek-R1-Distill-Qwen-1.5B |             16.3             |               16.9               |
 | DeepSeek-R1-Distill-Qwen-7B   |             36.6             |               37.6               |
