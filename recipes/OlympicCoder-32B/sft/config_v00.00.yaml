@@ -1,0 +1,49 @@
+# Config for 16 nodes of 8 H100s with FSDP1
+# Model arguments
+model_name_or_path: Qwen/Qwen2.5-Coder-32B-Instruct
+model_revision: main
+torch_dtype: bfloat16
+attn_implementation: flash_attention_2
+
+# Data training arguments
+dataset_name: open-r1/codeforces-cots
+dataset_config: solutions_decontaminated
+dataset_num_proc: 12
+
+# SFT trainer config
+bf16: true
+do_eval: false
+eval_strategy: 'no'
+gradient_accumulation_steps: 1
+gradient_checkpointing: true
+gradient_checkpointing_kwargs:
+  use_reentrant: false
+hub_always_push: true
+hub_model_id: OlympicCoder-32B
+hub_strategy: every_save
+learning_rate: 4.0e-05
+log_level: info
+logging_steps: 1
+logging_strategy: steps
+lr_scheduler_type: cosine_with_min_lr
+lr_scheduler_kwargs:
+  min_lr_rate: 0.1
+packing: false
+max_grad_norm: 0.2
+max_length: 22528 # we were unable to train at 32k due to OOM. See https://github.com/huggingface/transformers/issues/35983 for context parallelism support.
+max_steps: -1
+num_train_epochs: 10
+optim: paged_adamw_8bit
+output_dir: data/OlympicCoder-32B
+overwrite_output_dir: true
+per_device_eval_batch_size: 1
+per_device_train_batch_size: 1
+push_to_hub: true
+report_to:
+- wandb
+save_only_model: true # needed to bypass FSDP errors with saving paged optimizers
+save_strategy: epoch
+save_total_limit: 1
+seed: 42
+use_liger: false # fails on multi-node
+warmup_ratio: 0.03

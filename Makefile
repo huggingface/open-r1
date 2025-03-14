@@ -40,7 +40,10 @@ quality:
 ############### Test
 
 test:
-	pytest -sv tests/
+	pytest -sv --ignore=tests/slow/ tests/
+
+slow_test:
+	pytest -sv -vv tests/slow/
 
 # Evaluation
 
