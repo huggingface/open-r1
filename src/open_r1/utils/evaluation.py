@@ -88,7 +88,7 @@ def run_lighteval_job(
         f"{model_args.trust_remote_code}",
     ]
     if training_args.system_prompt is not None:
-        cmd_args.append(f"--system_prompt={training_args.system_prompt}")
+        cmd_args.append(f"'{training_args.system_prompt}'")
     cmd[-1] += " " + " ".join(cmd_args)
     subprocess.run(cmd, check=True)
 
