@@ -259,6 +259,8 @@ class RemoteGRPOTrainer(Trainer):
         def data_collator(features):  # No data collation is needed in GRPO
             return features
 
+        self.batch_buffer = []
+
         super().__init__(
             model,
             args,
