@@ -20,9 +20,9 @@ do_eval: false
 eval_strategy: "no"
 use_vllm: true
 vllm_device: auto
-vllm_gpu_memory_utilization: 0.9
+vllm_gpu_memory_utilization: 0.7
 do_eval: false
-gradient_accumulation_steps: 16
+gradient_accumulation_steps: 14
 gradient_checkpointing: true
 gradient_checkpointing_kwargs:
   use_reentrant: false
@@ -39,8 +39,8 @@ lr_scheduler_type: constant_with_warmup
 max_grad_norm: 0.2
 max_prompt_length: 1024
 max_completion_length: 4096
-max_steps: 1000
-num_generations: 16
+max_steps: -1
+num_generations: 14
 num_train_epochs: 1
 output_dir: data/Qwen2.5-7B-Instruct-GRPO
 overwrite_output_dir: true
