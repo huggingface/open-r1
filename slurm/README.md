@@ -5,7 +5,7 @@
 conda create -n sglang124 python=3.11
 conda activate sglang124
 
-pip install torch=2.5.1 --index-url https://download.pytorch.org/whl/cu124
+pip install torch==2.5.1 --index-url https://download.pytorch.org/whl/cu124
 
 pip install sgl-kernel --force-reinstall --no-deps
 pip install "sglang[all]>=0.4.2.post4" --find-links https://flashinfer.ai/whl/cu124/torch2.5/flashinfer/
