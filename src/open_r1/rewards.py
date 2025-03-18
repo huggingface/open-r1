@@ -263,7 +263,7 @@ def get_cosine_scaled_reward(
     return cosine_scaled_reward
 
 
-def get_repetition_penalty_reward(ngram_size: int, max_penalty: float):
+def get_repetition_penalty_reward(ngram_size: int, max_penalty: float, language: str = "en"):
     """
     Computes N-gram repetition penalty as described in Appendix C.2 of https://arxiv.org/abs/2502.03373.
     Reference implementation from: https://github.com/eddycmu/demystify-long-cot/blob/release/openrlhf/openrlhf/reward/repetition.py
@@ -271,13 +271,25 @@ def get_repetition_penalty_reward(ngram_size: int, max_penalty: float):
     Args:
     ngram_size: size of the n-grams
     max_penalty: Maximum (negative) penalty for wrong answers
+    language: Language of the text (default: en), used to choose the way to split the text into n-grams
     """
     if max_penalty > 0:
         raise ValueError(f"max_penalty {max_penalty} should not be positive")
 
-    def zipngram(text: str, ngram_size: int):
-        words = text.lower().split()
-        return zip(*[words[i:] for i in range(ngram_size)])
+    if language == "en":
+        def zipngram(text: str, ngram_size: int):
+            words = text.lower().split()
+            return zip(*[words[i:] for i in range(ngram_size)]), words
+    elif language == "zh":
+        from transformers.utils.import_utils import _is_package_available
+        if not _is_package_available("jieba"):
+            raise ValueError("Please install jieba to use Chinese language")
+        def zipngram(text: str, ngram_size: int):
+            import jieba
+            seg_list = list(jieba.cut(text))
+            return zip(*[seg_list[i:] for i in range(ngram_size)]), seg_list
+    else:
+        raise ValueError(f"Language {language} word split is not yet implemented, please implement your own zipngram function.")
 
     def repetition_penalty_reward(completions, **kwargs) -> float:
         """
@@ -294,13 +306,16 @@ def get_repetition_penalty_reward(ngram_size: int, max_penalty: float):
             if completion == "":
                 rewards.append(0.0)
                 continue
-            if len(completion.split()) < ngram_size:
-                rewards.append(0.0)
-                continue
 
             ngrams = set()
             total = 0
-            for ng in zipngram(completion, ngram_size):
+            ngram_array, words = zipngram(completion, ngram_size)
+
+            if len(words) < ngram_size:
+                rewards.append(0.0)
+                continue
+
+            for ng in ngram_array:
                 ngrams.add(ng)
                 total += 1
 
