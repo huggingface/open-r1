@@ -360,8 +360,8 @@ def ioi_code_reward(completions, test_batch_size: int = 1, **kwargs) -> list[flo
     return [result.score for result in results]
 
 
-def extract_code(completion: str) -> str:
-    pattern = re.compile(r"```python\n(.*?)```", re.DOTALL)
+def extract_code(completion: str, language: str = "python") -> str:
+    pattern = re.compile(rf"```{language}\n(.*?)```", re.DOTALL)
     matches = pattern.findall(completion)
     extracted_answer = matches[-1] if len(matches) >= 1 else ""
     return extracted_answer
