@@ -21,7 +21,7 @@ from open_r1.rewards import code_reward
 
 
 class TestCodeRewards(unittest.TestCase):
-    def test_code_reward(self):
+    def test_python_code_reward(self):
         code_dataset = load_dataset("open-r1/verifiable-coding-problems-python-10k")
         NUM_SAMPLES = 20
         samples = code_dataset["train"].select(range(NUM_SAMPLES))
@@ -31,6 +31,8 @@ class TestCodeRewards(unittest.TestCase):
         print(rewards)
         assert rewards == [1.0] * NUM_SAMPLES
 
+    def test_ioi_code_reward(self):
+        pass
 
 if __name__ == "__main__":
     unittest.main()
