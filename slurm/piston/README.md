@@ -4,7 +4,7 @@ We have built a [piston](https://github.com/engineer-man/piston) package to run 
 
 To launch a fleet of piston workers on a slurm cluster, you can adapt the paths in `launch_piston_workers.sh` and `launch_single_piston.sh` and run:
 ```bash
-./launch_piston_workers.sh (number of workers to launch)
+slurm/piston/launch_piston_workers.sh (number of workers to launch)
 ```
 
 This command will launch a slurm job for each worker, which will be called `piston-worker-<port>`, where `<port>` is the port where the worker will be listening.
@@ -13,7 +13,7 @@ This command will launch a slurm job for each worker, which will be called `pist
 You will need to install the [IOI package](https://github.com/guipenedo/piston/tree/master/packages/cms_ioi/1.0.0) in the workers.
 1. Launch a single worker:
 ```bash
-./launch_piston_workers.sh 1
+slurm/piston/launch_piston_workers.sh 1
 ```
 
 2. Assuming it's running on `ip-10-53-86-146:1234`, send the package install request:
@@ -27,6 +27,7 @@ To have the main script find the workers automatically, you can export the follo
 ```bash
 export PISTON_ENDPOINTS=slurm
 ```
+Alternatively your can add `PISTON_ENDPOINTS=slurm` to your .env file.
 
 You can also change `PISTON_MAX_REQUESTS_PER_ENDPOINT`, which tries to limit how many simultaneous requests each worker will handle (1 by default). Keep in mind that this is a local limit and in distributed setups, as there is no global limit, workers might sometimes be overwhelmed when some processes hit the same worker.
 
