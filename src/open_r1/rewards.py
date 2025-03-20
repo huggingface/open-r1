@@ -312,6 +312,7 @@ def get_repetition_penalty_reward(ngram_size: int, max_penalty: float):
 
     return repetition_penalty_reward
 
+
 def _init_event_loop():
     try:
         loop = asyncio.get_event_loop()
@@ -320,19 +321,20 @@ def _init_event_loop():
         asyncio.set_event_loop(loop)
     return loop
 
+
 def ioi_code_reward(completions, test_batch_size: int = 1, **kwargs) -> list[float]:
     """Reward function that evaluates IOI problems using Piston+our IOI package.
-    
+
     Assumes the dataset has the same format as hf.co/datasets/open-r1/ioi
 
     test_batch_size: evaluate these many test cases in parallel, then check if any of them failed (0 score): if so stop evaluating; otherwise continue with the next batch of test cases.
     """
     # for info on setting up piston workers, see slurm/piston/README.md
     piston_client = get_piston_client_from_env()
-    
+
     code_snippets = [
         # note: grading is automatically skipped if no code is extracted
-        add_includes(extract_code(completion[-1]["content"], 'cpp'), problem_id) 
+        add_includes(extract_code(completion[-1]["content"], "cpp"), problem_id)
         for completion, problem_id in zip(completions, kwargs["id"])
     ]
 
@@ -345,10 +347,12 @@ def ioi_code_reward(completions, test_batch_size: int = 1, **kwargs) -> list[flo
 
     # load problem data. undo separating kwargs by column
     problems_data = [dict(zip(kwargs.keys(), values)) for values in zip(*kwargs.values())]
-    
-    # loop = _init_event_loop()
+
+    loop = _init_event_loop()
     evals = [
-        loop.create_task(run_catch_exceptions(score_subtask(piston_client, problem_data, code, test_batch_size=test_batch_size)))
+        loop.create_task(
+            run_catch_exceptions(score_subtask(piston_client, problem_data, code, test_batch_size=test_batch_size))
+        )
         for problem_data, code in zip(problems_data, code_snippets)
     ]
     results = loop.run_until_complete(asyncio.gather(*evals))

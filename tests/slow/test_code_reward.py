@@ -34,5 +34,6 @@ class TestCodeRewards(unittest.TestCase):
     def test_ioi_code_reward(self):
         pass
 
+
 if __name__ == "__main__":
     unittest.main()

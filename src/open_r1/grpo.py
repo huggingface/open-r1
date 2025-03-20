@@ -112,7 +112,9 @@ class GRPOScriptArguments(ScriptArguments):
     )
     code_eval_test_batch_size: int = field(
         default=1,
-        metadata={"help": "for each generation, evaluate these many test cases in parallel, then check if any of them failed (0 score): if so stop evaluating; otherwise continue with the next batch of test cases. Useful to avoid overloading the eval server + save time on wrong solutions"},
+        metadata={
+            "help": "for each generation, evaluate these many test cases in parallel, then check if any of them failed (0 score): if so stop evaluating; otherwise continue with the next batch of test cases. Useful to avoid overloading the eval server + save time on wrong solutions"
+        },
     )
 
 
@@ -180,7 +182,9 @@ def main(script_args, training_args, model_args):
         ),
         "length": len_reward,
         "code": code_reward,
-        "ioi_code": update_wrapper(partial(ioi_code_reward, test_batch_size=script_args.code_eval_test_batch_size), ioi_code_reward),
+        "ioi_code": update_wrapper(
+            partial(ioi_code_reward, test_batch_size=script_args.code_eval_test_batch_size), ioi_code_reward
+        ),
         "code_format": get_code_format_reward(language=script_args.code_language),
         "tag_count": tag_count_reward,
     }
