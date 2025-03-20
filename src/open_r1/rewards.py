@@ -312,9 +312,52 @@ def get_repetition_penalty_reward(ngram_size: int, max_penalty: float):
 
     return repetition_penalty_reward
 
+def _init_event_loop():
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    return loop
 
-def extract_code(completion: str, language: str = "python") -> str:
-    pattern = re.compile(rf"```{language}\n(.*?)```", re.DOTALL)
+def ioi_code_reward(completions, test_batch_size: int = 1, **kwargs) -> list[float]:
+    """Reward function that evaluates IOI problems using Piston+our IOI package.
+    
+    Assumes the dataset has the same format as hf.co/datasets/open-r1/ioi
+
+    test_batch_size: evaluate these many test cases in parallel, then check if any of them failed (0 score): if so stop evaluating; otherwise continue with the next batch of test cases.
+    """
+    # for info on setting up piston workers, see slurm/piston/README.md
+    piston_client = get_piston_client_from_env()
+    
+    code_snippets = [
+        # note: grading is automatically skipped if no code is extracted
+        add_includes(extract_code(completion[-1]["content"], 'cpp'), problem_id) 
+        for completion, problem_id in zip(completions, kwargs["id"])
+    ]
+
+    async def run_catch_exceptions(task):
+        try:
+            return await task
+        except Exception as e:
+            print(f"Error from Piston worker: {e}")
+            return SubtaskResult()  # score 0.0
+
+    # load problem data. undo separating kwargs by column
+    problems_data = [dict(zip(kwargs.keys(), values)) for values in zip(*kwargs.values())]
+    
+    # loop = _init_event_loop()
+    evals = [
+        loop.create_task(run_catch_exceptions(score_subtask(piston_client, problem_data, code, test_batch_size=test_batch_size)))
+        for problem_data, code in zip(problems_data, code_snippets)
+    ]
+    results = loop.run_until_complete(asyncio.gather(*evals))
+
+    return [result.score for result in results]
+
+
+def extract_code(completion: str) -> str:
+    pattern = re.compile(r"```python\n(.*?)```", re.DOTALL)
     matches = pattern.findall(completion)
     extracted_answer = matches[-1] if len(matches) >= 1 else ""
     return extracted_answer
@@ -384,50 +427,13 @@ def code_reward(completions, **kwargs) -> list[float]:
     if not all(v["language"] == language for v in verification_info):
         raise ValueError("All verification_info must have the same language", verification_info)
     try:
-        loop = _init_event_loop()
-        rewards = loop.run_until_complete(run_e2b_async(scripts, verification_info["language"]))
+        rewards = run_async_from_sync(scripts, language)
 
     except Exception as e:
         print(f"Error from E2B executor: {e}")
         rewards = [0.0] * len(completions)
 
     return rewards
-
-
-def ioi_code_reward(completions, test_batch_size: int = 1, **kwargs) -> list[float]:
-    """Reward function that evaluates IOI problems using Piston+our IOI package.
-    
-    Assumes the dataset has the same format as hf.co/datasets/open-r1/ioi
-
-    test_batch_size: evaluate these many test cases in parallel, then check if any of them failed (0 score): if so stop evaluating; otherwise continue with the next batch of test cases.
-    """
-    # for info on setting up piston workers, see slurm/piston/README.md
-    piston_client = get_piston_client_from_env()
-    
-    code_snippets = [
-        # note: grading is automatically skipped if no code is extracted
-        add_includes(extract_code(completion[-1]["content"], 'cpp'), problem_id) 
-        for completion, problem_id in zip(completions, kwargs["id"])
-    ]
-
-    async def run_catch_exceptions(task):
-        try:
-            return await task
-        except Exception as e:
-            print(f"Error from Piston worker: {e}")
-            return SubtaskResult()  # score 0.0
-
-    # load problem data. undo separating kwargs by column
-    problems_data = [dict(zip(kwargs.keys(), values)) for values in zip(*kwargs.values())]
-    
-    loop = _init_event_loop()
-    evals = [
-        loop.create_task(run_catch_exceptions(score_subtask(piston_client, problem_data, code, test_batch_size=test_batch_size)))
-        for problem_data, code in zip(problems_data, code_snippets)
-    ]
-    results = loop.run_until_complete(asyncio.gather(*evals))
-
-    return [result.score for result in results]
 
 
 def get_code_format_reward(language: str = "python"):
@@ -446,21 +452,25 @@ def get_code_format_reward(language: str = "python"):
     return code_format_reward
 
 
-def _init_event_loop():
+def run_async_from_sync(scripts: list[str], language: str) -> list[float]:
+    """Function wrapping the `run_async` function."""
+    # Create a new event loop and set it
     try:
-        loop = asyncio.get_event_loop()
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-    return loop
+        # Run the async function and get the result
+        rewards = asyncio.run(run_async(scripts, language))
+    except Exception as e:
+        print(f"Error from E2B executor async: {e}")
+        raise e
+
+    return rewards
 
 
-async def run_e2b_async(scripts: list[str], language: str) -> list[float]:
+async def run_async(scripts: list[str], language: str) -> list[float]:
     # Create the sandbox by hand, currently there's no context manager for this version
     sbx = await AsyncSandbox.create(timeout=30, request_timeout=3)
 
     # Create a list of tasks for running scripts concurrently
-    tasks = [run_e2b_script(sbx, script, language) for script in scripts]
+    tasks = [run_script(sbx, script, language) for script in scripts]
 
     # Wait for all tasks to complete and gather their results as they finish
     results = await asyncio.gather(*tasks)
@@ -472,7 +482,7 @@ async def run_e2b_async(scripts: list[str], language: str) -> list[float]:
     return rewards
 
 
-async def run_e2b_script(sbx, script: str, language: str) -> float:
+async def run_script(sbx: AsyncSandbox, script: str, language: str) -> float:
     execution = await sbx.run_code(script, language=language)
     try:
         return float(execution.text)
