@@ -17,7 +17,7 @@ import time
 from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any, Callable, Iterator, Optional, Union
-
+from trl.trainer.utils import disable_dropout_in_model
 import torch
 import transformers
 from datasets import Dataset, IterableDataset, disable_progress_bars, enable_progress_bars
@@ -164,7 +164,8 @@ class RemoteGRPOTrainer(Trainer):
         model_init_kwargs = args.model_init_kwargs or {}
         if isinstance(model, str):
             model_id = model
-            model = self._create_model_from_path(model, args)
+            model = self._create_model_from_path(model_id, args)
+            disable_dropout_in_model(model)
         else:
             model_id = model.config._name_or_path
             if args.model_init_kwargs is not None:
@@ -190,7 +191,8 @@ class RemoteGRPOTrainer(Trainer):
             # If beta is 0.0, the reference model is not needed
             self.ref_model = None
         elif is_deepspeed_zero3_enabled():
-            self.ref_model = AutoModelForCausalLM.from_pretrained(model_id, **model_init_kwargs)
+            self.ref_model = self._create_model_from_path(model_id, args)
+            disable_dropout_in_model(self.ref_model)
         elif is_peft_model(model):
             raise NotImplementedError("Peft is not supported")
         else:
@@ -513,7 +515,7 @@ class RemoteGRPOTrainer(Trainer):
             per_token_logps = self._get_per_token_logps(model, input_ids, attention_mask, logits_to_keep).detach()
 
             lengths = [len(example["completion_ids"]) for example in examples]
-            # STRIP OFF THE COMPLETION MASK
+            # Strip the completion padding
             per_token_logps = per_token_logps.to("cpu").tolist()
             per_token_logps = [logps[:length] for logps, length in zip(per_token_logps, lengths)]
             example[output_name] = per_token_logps
@@ -523,6 +525,7 @@ class RemoteGRPOTrainer(Trainer):
             set_verbosity_error()
             disable_progress_bars()
             if self.ref_model is not None:
+                self.ref_model.eval()
                 gen_dataset = gen_dataset.map(
                     get_logprobs,
                     batched=True,
@@ -652,15 +655,17 @@ class RemoteGRPOTrainer(Trainer):
         # padd the ref and old logps
         pad_old_per_token_logps = pad(old_per_token_logps, padding_value=pad_token_id, padding_side="right").to(device)
 
+        # model.eval()
         per_token_logps = self._get_per_token_logps(model, input_ids, attention_mask, logits_to_keep)
         if self.ref_model is not None:
             ref_per_token_logps = [torch.Tensor(example["ref_per_token_logps"]) for example in inputs]
             pad_ref_per_token_logps = pad(ref_per_token_logps, padding_value=pad_token_id, padding_side="right").to(device)
+            clamped_diff= torch.clamp(pad_ref_per_token_logps - per_token_logps,-10.0,10.0) # for numerical stability
             per_token_kl = (
-                torch.exp(pad_ref_per_token_logps - per_token_logps) - (pad_ref_per_token_logps - per_token_logps) - 1
+                torch.exp(clamped_diff) - clamped_diff - 1
             )
 
-        del inputs, input_ids, attention_mask  # free up memory
+        # del inputs, input_ids, attention_mask  # free up memory
         # clipped loss
         coef_1 = torch.exp(per_token_logps - pad_old_per_token_logps)
         coef_2 = torch.clamp(coef_1, 1 - self.args.epsilon, 1 + self.args.epsilon)

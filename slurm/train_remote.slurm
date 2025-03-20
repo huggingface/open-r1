@@ -6,7 +6,6 @@
 #SBATCH --partition=hopper-prod  # Adjust this for your cluster
 #SBATCH --output=./logs/%x-%j.out
 #SBATCH --err=./logs/%x-%j.err
-#SBATCH --requeue
 
 """Usage:
 

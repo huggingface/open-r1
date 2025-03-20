@@ -4,11 +4,9 @@
 #SBATCH --partition=hopper-prod
 #SBATCH --output=/fsx/open-r1/logs/%x-%j.out
 #SBATCH --err=/fsx/open-r1/logs/%x-%j.err
-#SBATCH --requeue
 
 # Specific configuration optimized for the Hugging Face Compute Cluster
 # Be ye warned this may not work on other clusters!
-
 
 set -x -e
 

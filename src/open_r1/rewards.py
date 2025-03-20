@@ -423,10 +423,12 @@ def run_async_from_sync(scripts: list[str], language: str) -> list[float]:
 
 async def run_async(scripts: list[str], language: str) -> list[float]:
     # Create the sandbox by hand, currently there's no context manager for this version
-    sbx = await AsyncSandbox.create(timeout=30, request_timeout=3)
+    sbx = await AsyncSandbox.create(timeout=60, request_timeout=5)
 
     # Create a list of tasks for running scripts concurrently
-    tasks = [run_script(sbx, script, language) for script in scripts]
+    MAX_TASKS_PER_PROCESS = 2 # E2B has a limit of 20 concurrent requests, assume 1 noe, 8 processes, this is 2 per process (20//8 = 2)
+    semaphore = asyncio.Semaphore(MAX_TASKS_PER_PROCESS)
+    tasks = [run_script(sbx, script, language, semaphore) for script in scripts]
 
     # Wait for all tasks to complete and gather their results as they finish
     results = await asyncio.gather(*tasks)
@@ -438,9 +440,10 @@ async def run_async(scripts: list[str], language: str) -> list[float]:
     return rewards
 
 
-async def run_script(sbx: AsyncSandbox, script: str, language: str) -> float:
-    execution = await sbx.run_code(script, language=language)
-    try:
-        return float(execution.text)
-    except (TypeError, ValueError):
-        return 0.0
+async def run_script(sbx: AsyncSandbox, script: str, language: str, semaphore) -> float:
+    async with semaphore:  # Limit concurrency
+        execution = await sbx.run_code(script, language=language)
+        try:
+            return float(execution.text)
+        except (TypeError, ValueError):
+            return 0.0

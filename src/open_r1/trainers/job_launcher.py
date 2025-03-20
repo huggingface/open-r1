@@ -22,7 +22,7 @@ class SGLangSlurmJobLauncher:
     def __init__(
         self,
         model_id_or_path,
-        model_revision,
+        model_revision="main",
         num_gpus=1,
         sglang_port=30010,
         slurm_script="slurm/launch_sglang.slurm",
@@ -75,6 +75,7 @@ class SGLangSlurmJobLauncher:
         except subprocess.CalledProcessError as e:
             print(f"Error submitting job: {e.stderr}")
             raise
+
 
     def get_job_status(self):
         """Checks the job status using squeue."""
@@ -164,4 +165,7 @@ if __name__ == "__main__":
     remote_model.wait_for_server()
 
     result = remote_model.generate([[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]])
+    
+    assert 0
+    
     print(result)

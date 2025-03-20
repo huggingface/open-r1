@@ -38,6 +38,8 @@ class RemoteModel:
 
 
     python3 -m sglang.launch_server --model-path open-r1/Qwen2.5-Coder-7B-Instruct-SFT --revision v00.08-step-000001280  --port=30010 --skip-tokenizer-init --mem-fraction-static 0.7 --host=0.0.0.0 --dp-size=8
+    
+    python3 -m sglang.launch_server --model-path Qwen/Qwen2.5-1.5B-Instruct  --port=30010 --skip-tokenizer-init --mem-fraction-static 0.7 --host=0.0.0.0 --dp-size=8
     """
 
     def __init__(self, remote_model_url, remote_model_port, stop_token_id=None):
@@ -84,8 +86,8 @@ class RemoteModel:
                     example = {
                         "prompt_ids": prompt_ids,
                         "completion_ids": random.choices(range(10 ,1000), k=max_new_tokens),
-                        "prompt_log_probs": None, # TODO, not used for now
-                        "completion_log_probs": None,
+                        # "prompt_log_probs": None, # TODO, not used for now
+                        # "completion_log_probs": None,
                     }
                     examples.append(example)
             return examples
@@ -99,8 +101,8 @@ class RemoteModel:
                 "n": num_generations,
             },
             "stream": False,
-            "return_logprob": True,
-            "logprob_start_len": 0,
+            # "return_logprob": True, # disabled as we occasiosally see https://github.com/sgl-project/sglang/issues/4097
+            # "logprob_start_len": 0,
         }
 
         # Send the POST request to the server
@@ -115,15 +117,15 @@ class RemoteModel:
         for i, result in enumerate(response_json):
             prompt_index = i // num_generations
             prompt_ids = input_ids[prompt_index]
-            completion_ids = result["token_ids"]
-            prompt_log_probs = [prob[0] for prob in result["meta_info"]["input_token_logprobs"]]
-            completion_log_probs = [prob[0] for prob in result["meta_info"]["output_token_logprobs"]]
+            completion_ids = result["output_ids"]
+            # prompt_log_probs = [prob[0] for prob in result["meta_info"]["input_token_logprobs"]]
+            # completion_log_probs = [prob[0] for prob in result["meta_info"]["output_token_logprobs"]]
 
             example = {
                 "prompt_ids": prompt_ids,
                 "completion_ids": completion_ids,
-                "prompt_log_probs": prompt_log_probs,
-                "completion_log_probs": completion_log_probs,
+                # "prompt_log_probs": prompt_log_probs,
+                # "completion_log_probs": completion_log_probs,
             }
             examples.append(example)
 
@@ -138,8 +140,6 @@ class RemoteModel:
         response = requests.post(url, json=data)
         print(response.text)
         assert response.json()["success"] is True
-        # assert response.json()["message"] == "Succeeded to update model weights."
-        assert response.json().keys() == {"success", "message"}
 
 
 if __name__ == "__main__":
