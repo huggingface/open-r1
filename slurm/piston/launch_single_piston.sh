@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=piston_worker
-#SBATCH --output=/fsx/guilherme/piston/worker-logs/%x-%j.out
-#SBATCH --error=/fsx/guilherme/piston/worker-logs/%x-%j.out  # Redirect error logs to .out
+#SBATCH --output=/fsx/open-r1/logs/piston/worker-logs/%x-%j.out
+#SBATCH --error=/fsx/open-r1/logs/piston/worker-logs/%x-%j.out  # Redirect error logs to .out
 #SBATCH --cpus-per-task=2
 #SBATCH --mem-per-cpu=1950M
 #SBATCH --partition=hopper-cpu

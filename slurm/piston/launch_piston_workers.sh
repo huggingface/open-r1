@@ -12,5 +12,5 @@ for i in $(seq 1 $N_INSTANCES); do
     sbatch \
         --job-name="piston-worker-$PORT" \
         --export=ALL,PORT=$PORT \
-        /fsx/guilherme/piston/launch_single_piston.sh
+        slurm/piston/launch_single_piston.sh
 done
