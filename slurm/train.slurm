@@ -33,12 +33,6 @@ WORLD_SIZE=$(($NUM_NODES*$GPUS_PER_NODE))
 CONFIG_FILE=recipes/$MODEL/$TASK/config_$CONFIG_SUFFIX.yaml
 GRAD_ACC_STEPS=$(grep 'gradient_accumulation_steps' $CONFIG_FILE | awk '{print $2}')
 
-# Default to not using vLLM but override if the config file specifies it
-USE_VLLM="false"
-if [[ -f "$CONFIG_FILE" ]] && grep -qE '^\s*use_vllm:\s*true' "$CONFIG_FILE"; then
-    USE_VLLM="true"
-fi
-
 # Split the string into individual arguments
 IFS=' ' read -ra ARGS <<< "$OPTIONAL_ARGS"
 
@@ -65,8 +59,16 @@ LAST_NODE_IP=$(getent hosts $LAST_NODE | awk '{ print $1 }')
 # Default: all nodes are training nodes
 TRAIN_NODES=("${HOSTNAMES[@]}")
 
+# Default to not using vLLM but override if the config file specifies it
+USE_VLLM="false"
+if [[ -f "$CONFIG_FILE" ]] && grep -qE '^\s*use_vllm:\s*true' "$CONFIG_FILE"; then
+    USE_VLLM="true"
+fi
+
 if [[ "$USE_VLLM" == "true" ]]; then
+    # We allocate 1 node for vLLM inference, so we need to subtract that from the training nodes
     WORLD_SIZE=$((WORLD_SIZE - GPUS_PER_NODE))
+    NUM_NODES=$((NUM_NODES - 1))
     MODEL=$(grep 'model_name_or_path:' $CONFIG_FILE | awk '{print $2}')
     REVISION=$(grep 'model_revision:' $CONFIG_FILE | awk '{print $2}')
 
@@ -100,8 +102,8 @@ EOF
     srun --nodes=1 \
         --nodelist=$LAST_NODE \
         --gres=gpu:$GPUS_PER_NODE \
-        --ntasks=1 \
         --exclusive \
+        --ntasks=1 \
         --job-name=${SLURM_JOB_NAME}-vllm-server \
         bash -c "source ~/.bashrc && source openr1/bin/activate && trl vllm-serve --model $MODEL --revision $REVISION --tensor_parallel_size $TP --host $LAST_NODE_IP" &
 
@@ -122,7 +124,7 @@ EOF
             exit 1
         fi
 
-        echo "Still waiting... ($(($CURRENT_TIME - $START_TIME)) seconds elapsed)"
+        echo "Still waiting for vLLM server to initialize... ($(($CURRENT_TIME - $START_TIME)) seconds elapsed)"
         sleep 30
     done
 
