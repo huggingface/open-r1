@@ -4,6 +4,7 @@ import asyncio
 import json
 import math
 import re
+from functools import partial, update_wrapper
 from typing import Dict
 
 from latex2sympy2_extended import NormalizationConfig
@@ -367,6 +368,12 @@ def extract_code(completion: str, language: str = "python") -> str:
     return extracted_answer
 
 
+def binary_code_reward(completions, **kwargs) -> list[float]:
+    rewards = code_reward(completions, **kwargs)
+    BINARY_THRESHOLD = 0.99
+    return [1.0 if reward > BINARY_THRESHOLD else 0.0 for reward in rewards]
+
+
 def code_reward(completions, **kwargs) -> list[float]:
     """Reward function that evaluates code snippets using the E2B code interpreter.
 
@@ -492,3 +499,33 @@ async def run_script(sbx: AsyncSandbox, script: str, language: str) -> float:
         return float(execution.text)
     except (TypeError, ValueError):
         return 0.0
+
+
+def get_reward_funcs(script_args):
+    REWARD_FUNCS_REGISTRY = {
+        "accuracy": accuracy_reward,
+        "format": format_reward,
+        "reasoning_steps": reasoning_steps_reward,
+        "cosine": get_cosine_scaled_reward(
+            min_value_wrong=script_args.cosine_min_value_wrong,
+            max_value_wrong=script_args.cosine_max_value_wrong,
+            min_value_correct=script_args.cosine_min_value_correct,
+            max_value_correct=script_args.cosine_max_value_correct,
+            max_len=script_args.cosine_max_len,
+        ),
+        "repetition_penalty": get_repetition_penalty_reward(
+            ngram_size=script_args.repetition_n_grams,
+            max_penalty=script_args.repetition_max_penalty,
+        ),
+        "length": len_reward,
+        "code": code_reward,
+        "binary_code": binary_code_reward,
+        "ioi_code": update_wrapper(
+            partial(ioi_code_reward, test_batch_size=script_args.code_eval_test_batch_size), ioi_code_reward
+        ),
+        "code_format": get_code_format_reward(language=script_args.code_language),
+        "tag_count": tag_count_reward,
+    }
+    reward_funcs = [REWARD_FUNCS_REGISTRY[func] for func in script_args.reward_funcs]
+
+    return reward_funcs
