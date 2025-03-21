@@ -33,15 +33,17 @@ WORLD_SIZE=$(($NUM_NODES*$GPUS_PER_NODE))
 CONFIG_FILE=recipes/$MODEL/$TASK/config_$CONFIG_SUFFIX.yaml
 GRAD_ACC_STEPS=$(grep 'gradient_accumulation_steps' $CONFIG_FILE | awk '{print $2}')
 
+# Default to not using vLLM
+USE_VLLM="false"
+
 # Check if we are running vLLM during training to adjust the world size
-if grep -q 'use_vllm:\s*true' "$CONFIG_FILE"; then
+if [[ -f "$CONFIG_FILE" ]] && grep -qE '^\s*use_vllm:\s*true' "$CONFIG_FILE"; then
     USE_VLLM="true"
-else
-    USE_VLLM="false"
 fi
 
+# Assume we are using a full node for vLLM
 if [[ "$USE_VLLM" == "true" ]]; then
-    WORLD_SIZE=$(($WORLD_SIZE - 1))
+    WORLD_SIZE=$((WORLD_SIZE - GPUS_PER_NODE))
 fi
 
 # Split the string into individual arguments
@@ -60,6 +62,62 @@ echo "Gradient accumulation steps: $GRAD_ACC_STEPS"
 # so processes know who to talk to
 MASTER_ADDR=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)
 MASTER_PORT=6000
+
+# Get all hostnames in allocation
+HOSTNAMES=($(scontrol show hostnames $SLURM_JOB_NODELIST))
+NUM_HOSTS=${#HOSTNAMES[@]}
+LAST_NODE=${HOSTNAMES[-1]}
+LAST_NODE_IP=$(getent hosts $LAST_NODE | awk '{ print $1 }')
+
+# Default: all nodes are training nodes
+TRAIN_NODES=("${HOSTNAMES[@]}")
+
+if [[ "$USE_VLLM" == "true" ]]; then
+    MODEL=$(grep 'model_name_or_path:' $CONFIG_FILE | awk '{print $2}')
+    REVISION=$(grep 'model_revision:' $CONFIG_FILE | awk '{print $2}')
+
+    # Some models like Qwen have a number of attention heads that is not divisible by the default tensor parallel size, so we need to adjust that
+    TP=$(python3 - <<EOF
+import sys
+from transformers import AutoConfig
+from math import gcd
+
+model_name = "$MODEL"
+revision = "$REVISION"
+default_tp = int("$GPUS_PER_NODE")
+
+try:
+    config = AutoConfig.from_pretrained(model_name, revision=revision, trust_remote_code=True)
+    num_heads = getattr(config, 'num_attention_heads', None)
+    if num_heads is not None and num_heads % default_tp != 0:
+        tp = gcd(num_heads, default_tp)
+        print(max(tp, 1))
+    else:
+        print(default_tp)
+except Exception as e:
+    print(default_tp)
+EOF
+)
+
+
+    OPTIONAL_ARGS="$OPTIONAL_ARGS --vllm_server_host=$LAST_NODE_IP"
+
+    # Launch vLLM server in background on the last node
+    srun --nodes=1 \
+        --nodelist=$LAST_NODE \
+        --gres=gpu:$GPUS_PER_NODE \
+        --ntasks=1 \
+        --exclusive \
+        --job-name=${SLURM_JOB_NAME}-vllm-server \
+        bash -c "source ~/.bashrc && source openr1/bin/activate && trl vllm-serve --model $MODEL --revision $REVISION --tensor_parallel_size $TP --host $LAST_NODE_IP" &
+
+    
+    # Remove last node from training
+    TRAIN_NODES=("${HOSTNAMES[@]:0:$((NUM_HOSTS - 1))}")
+fi
+
+echo "Training nodes: ${TRAIN_NODES[@]}"
+
 
 export CMD=" \
     src/open_r1/$TASK.py --config $CONFIG_FILE $OPTIONAL_ARGS
@@ -95,6 +153,11 @@ SRUN_ARGS=" \
     --kill-on-bad-exit=1 \
     "
 
-clear; srun $SRUN_ARGS --jobid $SLURM_JOB_ID bash -c "$LAUNCHER --role \$SLURMD_NODENAME: $CMD" 2>&1
+# clear; srun $SRUN_ARGS --jobid $SLURM_JOB_ID bash -c "$LAUNCHER --role \$SLURMD_NODENAME: $CMD" 2>&1
+
+clear; srun $SRUN_ARGS --jobid $SLURM_JOB_ID \
+    --exclusive --nodelist=$(IFS=, ; echo "${TRAIN_NODES[*]}") \
+    bash -c "$LAUNCHER --role \$SLURMD_NODENAME: $CMD" 2>&1
+
 
 echo "END TIME: $(date)"
