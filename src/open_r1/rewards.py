@@ -504,7 +504,7 @@ async def run_script(sbx: AsyncSandbox, script: str, language: str) -> float:
         return 0.0
 
 
-def get_reward_funcs(script_args: "GRPOScriptArguments") -> list[Callable]:
+def get_reward_funcs(script_args) -> list[Callable]:
     REWARD_FUNCS_REGISTRY = {
         "accuracy": accuracy_reward,
         "format": format_reward,
