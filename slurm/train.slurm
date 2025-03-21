@@ -33,17 +33,10 @@ WORLD_SIZE=$(($NUM_NODES*$GPUS_PER_NODE))
 CONFIG_FILE=recipes/$MODEL/$TASK/config_$CONFIG_SUFFIX.yaml
 GRAD_ACC_STEPS=$(grep 'gradient_accumulation_steps' $CONFIG_FILE | awk '{print $2}')
 
-# Default to not using vLLM
+# Default to not using vLLM but override if the config file specifies it
 USE_VLLM="false"
-
-# Check if we are running vLLM during training to adjust the world size
 if [[ -f "$CONFIG_FILE" ]] && grep -qE '^\s*use_vllm:\s*true' "$CONFIG_FILE"; then
     USE_VLLM="true"
-fi
-
-# Assume we are using a full node for vLLM
-if [[ "$USE_VLLM" == "true" ]]; then
-    WORLD_SIZE=$((WORLD_SIZE - GPUS_PER_NODE))
 fi
 
 # Split the string into individual arguments
@@ -73,6 +66,7 @@ LAST_NODE_IP=$(getent hosts $LAST_NODE | awk '{ print $1 }')
 TRAIN_NODES=("${HOSTNAMES[@]}")
 
 if [[ "$USE_VLLM" == "true" ]]; then
+    WORLD_SIZE=$((WORLD_SIZE - GPUS_PER_NODE))
     MODEL=$(grep 'model_name_or_path:' $CONFIG_FILE | awk '{print $2}')
     REVISION=$(grep 'model_revision:' $CONFIG_FILE | awk '{print $2}')
 
@@ -111,7 +105,27 @@ EOF
         --job-name=${SLURM_JOB_NAME}-vllm-server \
         bash -c "source ~/.bashrc && source openr1/bin/activate && trl vllm-serve --model $MODEL --revision $REVISION --tensor_parallel_size $TP --host $LAST_NODE_IP" &
 
-    
+    # Add a wait for the vLLM server to initialize with health checks
+    echo "Waiting for vLLM server to initialize at http://$LAST_NODE_IP:8000..."
+    TIMEOUT=900  # 15 minutes
+    START_TIME=$(date +%s)
+
+    while true; do
+        if curl -s -o /dev/null -w "%{http_code}" "http://$LAST_NODE_IP:8000/health" >/dev/null 2>&1; then
+            echo "vLLM server is ready at http://$LAST_NODE_IP:8000"
+            break
+        fi
+
+        CURRENT_TIME=$(date +%s)
+        if [ $((CURRENT_TIME - START_TIME)) -gt $TIMEOUT ]; then
+            echo "Error: vLLM server failed to start within $TIMEOUT seconds"
+            exit 1
+        fi
+
+        echo "Still waiting... ($(($CURRENT_TIME - $START_TIME)) seconds elapsed)"
+        sleep 30
+    done
+
     # Remove last node from training
     TRAIN_NODES=("${HOSTNAMES[@]:0:$((NUM_HOSTS - 1))}")
 fi
@@ -156,7 +170,8 @@ SRUN_ARGS=" \
 # clear; srun $SRUN_ARGS --jobid $SLURM_JOB_ID bash -c "$LAUNCHER --role \$SLURMD_NODENAME: $CMD" 2>&1
 
 clear; srun $SRUN_ARGS --jobid $SLURM_JOB_ID \
-    --exclusive --nodelist=$(IFS=, ; echo "${TRAIN_NODES[*]}") \
+    --overlap \
+    --nodelist=$(IFS=, ; echo "${TRAIN_NODES[*]}") \
     bash -c "$LAUNCHER --role \$SLURMD_NODENAME: $CMD" 2>&1
 
 
