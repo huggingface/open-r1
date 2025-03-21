@@ -46,7 +46,7 @@ logging_first_step: true
 logging_steps: 5
 logging_strategy: steps
 lr_scheduler_type: cosine
-max_prompt_length: 512
+max_prompt_length: 650
 max_completion_length: 1024
 max_steps: -1
 num_generations: 7
