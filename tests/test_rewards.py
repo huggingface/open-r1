@@ -15,7 +15,7 @@
 
 import unittest
 
-from open_r1.grpo import GRPOScriptArguments
+from open_r1.configs import GRPOScriptArguments
 from open_r1.rewards import (
     accuracy_reward,
     format_reward,
