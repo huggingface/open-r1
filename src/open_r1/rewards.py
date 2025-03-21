@@ -5,7 +5,7 @@ import json
 import math
 import re
 from functools import partial, update_wrapper
-from typing import Dict
+from typing import Callable, Dict
 
 from latex2sympy2_extended import NormalizationConfig
 from math_verify import LatexExtractionConfig, parse, verify
@@ -501,7 +501,7 @@ async def run_script(sbx: AsyncSandbox, script: str, language: str) -> float:
         return 0.0
 
 
-def get_reward_funcs(script_args):
+def get_reward_funcs(script_args: "GRPOScriptArguments") -> list[Callable]:
     REWARD_FUNCS_REGISTRY = {
         "accuracy": accuracy_reward,
         "format": format_reward,
