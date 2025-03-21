@@ -499,6 +499,9 @@ async def run_script(sbx: AsyncSandbox, script: str, language: str) -> float:
         return float(execution.text)
     except (TypeError, ValueError):
         return 0.0
+    except Exception as e:
+        print(f"Error from E2B executor run_script: {e}")
+        return 0.0
 
 
 def get_reward_funcs(script_args) -> list[Callable]:
