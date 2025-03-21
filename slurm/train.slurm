@@ -73,27 +73,7 @@ if [[ "$USE_VLLM" == "true" ]]; then
     REVISION=$(grep 'model_revision:' $CONFIG_FILE | awk '{print $2}')
 
     # Some models like Qwen have a number of attention heads that is not divisible by the default tensor parallel size, so we need to adjust that
-    TP=$(python3 - <<EOF
-import sys
-from transformers import AutoConfig
-from math import gcd
-
-model_name = "$MODEL"
-revision = "$REVISION"
-default_tp = int("$GPUS_PER_NODE")
-
-try:
-    config = AutoConfig.from_pretrained(model_name, revision=revision, trust_remote_code=True)
-    num_heads = getattr(config, 'num_attention_heads', None)
-    if num_heads is not None and num_heads % default_tp != 0:
-        tp = gcd(num_heads, default_tp)
-        print(max(tp, 1))
-    else:
-        print(default_tp)
-except Exception as e:
-    print(default_tp)
-EOF
-)
+    TP=$(python scripts/get_tensor_parallel_size.py --model_name $MODEL --revision $REVISION --default_tp $GPUS_PER_NODE)
 
 
     OPTIONAL_ARGS="$OPTIONAL_ARGS --vllm_server_host=$LAST_NODE_IP"
