@@ -1,5 +1,6 @@
 import os
-
+import wandb
+from dataclasses import asdict
 
 def init_wandb_training(training_args):
     """
@@ -9,3 +10,9 @@ def init_wandb_training(training_args):
         os.environ["WANDB_ENTITY"] = training_args.wandb_entity
     if training_args.wandb_project is not None:
         os.environ["WANDB_PROJECT"] = training_args.wandb_project
+    wandb.init(
+        project=training_args.wandb_project,
+        entity=training_args.wandb_entity,
+        config=asdict(training_args),
+        notes=training_args.wandb_description,
+    )

@@ -28,6 +28,8 @@ system_prompt: |-
 # GRPO trainer config
 hub_model_id: Qwen-2.5-7B-Simple-RL-v3
 output_dir: data/Qwen-2.5-7B-Simple-RL-v3
+wandb_project: open-r1-math-rl
+wandb_description: "tbd"
 # resume_from_checkpoint: data/Qwen-2.5-7B-Simple-RL-v2/checkpoint-58
 
 bf16: true

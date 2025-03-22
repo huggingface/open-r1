@@ -41,7 +41,6 @@ from open_r1.utils.callbacks import get_callbacks
 from open_r1.utils.wandb_logging import init_wandb_training
 from trl import GRPOTrainer, ModelConfig, ScriptArguments, TrlParser, get_peft_config
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -107,6 +106,10 @@ class GRPOScriptArguments(ScriptArguments):
             "help": "Language for code format reward. Based on E2B supported languages https://e2b.dev/docs/code-interpreting/supported-languages",
             "choices": ["python", "javascript", "r", "java", "bash"],
         },
+    )
+    wandb_description: str = field(
+        default="",
+        metadata={"help": "Description for wandb"},
     )
 
 
