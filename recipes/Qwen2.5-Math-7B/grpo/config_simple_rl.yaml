@@ -12,8 +12,6 @@ system_prompt: "You are a helpful AI Assistant, designed to provided well-reason
 # GRPO trainer config
 bf16: true
 use_vllm: true
-vllm_device: auto
-vllm_gpu_memory_utilization: 0.7
 do_eval: true
 eval_strategy: steps
 eval_steps: 100
