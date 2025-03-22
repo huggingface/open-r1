@@ -1,5 +1,5 @@
 # Model arguments
-model_name_or_path: Qwen/Qwen2.5-Math-7B
+model_name_or_path: aidando73/Qwen-2.5-7B-Simple-RL-v2
 model_revision: main
 torch_dtype: bfloat16
 attn_implementation: flash_attention_2
@@ -28,8 +28,7 @@ system_prompt: |-
 # GRPO trainer config
 hub_model_id: Qwen-2.5-7B-Simple-RL-v3
 output_dir: data/Qwen-2.5-7B-Simple-RL-v3
-resume_from_checkpoint: data/Qwen-2.5-7B-Simple-RL-v2
-
+# resume_from_checkpoint: data/Qwen-2.5-7B-Simple-RL-v2/checkpoint-58
 
 bf16: true
 use_vllm: true
@@ -54,7 +53,7 @@ max_prompt_length: 650
 max_completion_length: 1024
 max_steps: -1
 num_generations: 7
-num_train_epochs: 1
+num_train_epochs: 2
 overwrite_output_dir: true
 per_device_eval_batch_size: 16
 per_device_train_batch_size: 16
@@ -67,6 +66,6 @@ reward_funcs:
 reward_weights:
 - 1.0
 - 1.0
-save_strategy: "no"
+save_strategy: "epoch"
 seed: 42
 warmup_ratio: 0.1
