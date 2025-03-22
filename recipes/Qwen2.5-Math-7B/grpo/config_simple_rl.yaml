@@ -28,7 +28,7 @@ system_prompt: |-
 # GRPO trainer config
 hub_model_id: Qwen-2.5-7B-Simple-RL-v3
 output_dir: data/Qwen-2.5-7B-Simple-RL-v3
-resume_from_checkpoint: aidando73/Qwen-2.5-7B-Simple-RL-v2
+resume_from_checkpoint: data/Qwen-2.5-7B-Simple-RL-v2
 
 
 bf16: true
