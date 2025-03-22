@@ -1,5 +1,4 @@
 # Model arguments
-model_name_or_path: aidando73/Qwen-2.5-7B-Simple-RL-v2
 model_revision: main
 torch_dtype: bfloat16
 attn_implementation: flash_attention_2
@@ -26,14 +25,15 @@ system_prompt: |-
   #### 14
 
 # GRPO trainer config
-hub_model_id: Qwen-2.5-7B-Simple-RL-v3
-output_dir: data/Qwen-2.5-7B-Simple-RL-v3
+model_name_or_path: aidando73/Qwen-2.5-7B-Simple-RL-v2
+hub_model_id: Qwen-2.5-7B-Simple-RL-v4
+output_dir: data/Qwen-2.5-7B-Simple-RL-v4
 wandb_project: open-r1-math-rl
-wandb_description: "tbd"
+wandb_description: "Reduced learning rate & format reward"
 learning_rate: 1.5e-06
 reward_weights:
 - 1.0
-- 1.0
+- 0.5
 
 # resume_from_checkpoint: data/Qwen-2.5-7B-Simple-RL-v2/checkpoint-58
 reward_funcs:
