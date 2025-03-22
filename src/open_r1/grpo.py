@@ -15,7 +15,7 @@
 import logging
 import os
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 
 import datasets
 import torch
