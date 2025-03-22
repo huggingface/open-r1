@@ -15,7 +15,7 @@ huggingface-cli login
 wandb login
 
 
-apt install tmux
+apt install -y tmux
 tmux new -s openr1
 
 source openr1/bin/activate
