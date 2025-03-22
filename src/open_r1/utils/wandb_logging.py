@@ -13,6 +13,5 @@ def init_wandb_training(training_args):
     wandb.init(
         project=training_args.wandb_project,
         entity=training_args.wandb_entity,
-        config=asdict(training_args),
-        notes=training_args.wandb_description,
+        config=asdict(training_args)
     )

@@ -29,7 +29,6 @@ model_name_or_path: aidando73/Qwen-2.5-7B-Simple-RL-v2
 hub_model_id: Qwen-2.5-7B-Simple-RL-v4
 output_dir: data/Qwen-2.5-7B-Simple-RL-v4
 wandb_project: open-r1-math-rl
-wandb_description: "Reduced learning rate & format reward"
 learning_rate: 1.5e-06
 reward_weights:
 - 1.0

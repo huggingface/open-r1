@@ -107,10 +107,6 @@ class GRPOScriptArguments(ScriptArguments):
             "choices": ["python", "javascript", "r", "java", "bash"],
         },
     )
-    wandb_description: str = field(
-        default="",
-        metadata={"help": "Description for wandb"},
-    )
 
 
 def main(script_args, training_args, model_args):
