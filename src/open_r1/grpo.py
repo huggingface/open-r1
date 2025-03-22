@@ -40,6 +40,7 @@ from open_r1.utils import get_tokenizer
 from open_r1.utils.callbacks import get_callbacks
 from open_r1.utils.wandb_logging import init_wandb_training
 from trl import GRPOTrainer, ModelConfig, ScriptArguments, TrlParser, get_peft_config
+import wandb
 
 logger = logging.getLogger(__name__)
 
@@ -220,6 +221,14 @@ def main(script_args, training_args, model_args):
         callbacks=get_callbacks(training_args, model_args),
         processing_class=tokenizer,
     )
+
+    if trainer.accelerator.is_main_process:
+        wandb.init(
+            name=training_args.hub_model_id,
+            project=training_args.wandb_project,
+            entity=training_args.wandb_entity,
+            config=asdict(training_args)
+        )
 
     ###############
     # Training loop
