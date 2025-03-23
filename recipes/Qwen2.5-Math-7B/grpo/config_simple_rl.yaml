@@ -25,7 +25,7 @@ system_prompt: |-
   #### 14
 
 # GRPO trainer config
-model_name_or_path: Qwen/Qwen2.5-Math-7B  # Start with the base model
+model_name_or_path: aidando73/Qwen-2.5-7B-Simple-RL-v5
 hub_model_id: Qwen-2.5-7B-Simple-RL-v5
 output_dir: data/Qwen-2.5-7B-Simple-RL-v5
 wandb_project: open-r1-math-rl
