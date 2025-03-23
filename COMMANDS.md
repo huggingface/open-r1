@@ -5,6 +5,7 @@ curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.s
 apt-get install git-lfs
 git lfs install
 
+apt install -y tmux
 pip install uv
 uv venv openr1 --python 3.11 && source openr1/bin/activate && uv pip install --upgrade pip
 uv pip install vllm==0.7.2
@@ -14,8 +15,6 @@ GIT_LFS_SKIP_SMUDGE=1 uv pip install -e .
 huggingface-cli login --token $HF_TOKEN
 wandb login
 
-
-apt install -y tmux
 tmux new -s openr1
 
 source openr1/bin/activate
