@@ -26,7 +26,7 @@ system_prompt: |-
 
 # GRPO trainer config
 model_name_or_path: Qwen/Qwen2.5-Math-7B  # Start with the base model
-hub_model_id: Qwen-2.5-7B-Simple-RL-v7recipes/Qwen2.5-Math-7B/grpo/config_simple_rl.yaml
+hub_model_id: Qwen-2.5-7B-Simple-RL-v7
 output_dir: data/Qwen-2.5-7B-Simple-RL-v7
 wandb_project: open-r1-math-rl
 learning_rate: 3e-06
@@ -69,6 +69,6 @@ per_device_train_batch_size: 16
 push_to_hub: true
 report_to:
 - wandb
-save_strategy: "epoch"
+save_strategy: "none"
 seed: 42
 warmup_ratio: 0.1
