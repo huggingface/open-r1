@@ -57,7 +57,7 @@ def accuracy_reward(completions, solution, **kwargs):
                 reward = float(verify(answer_parsed, gold_parsed))
             except Exception as e:
                 print(f"verify failed: {e}, answer: {answer_parsed}, gold: {gold_parsed}")
-                reward = 0.0
+                reward = -0.5
         else:
             # If the gold solution is not parseable, we reward 1 to skip this example
             reward = 1.0
@@ -72,7 +72,7 @@ def format_reward(completions, **kwargs):
     pattern = r"^<think>.*?</think>.+"
     completion_contents = [completion[0]["content"] for completion in completions]
     matches = [re.match(pattern, content, re.DOTALL | re.MULTILINE) for content in completion_contents]
-    return [1.0 if match else 0.0 for match in matches]
+    return [0.0 if match else -1.0 for match in matches]
 
 
 def tag_count_reward(completions, **kwargs) -> list[float]:
