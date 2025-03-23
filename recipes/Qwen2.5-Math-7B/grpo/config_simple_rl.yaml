@@ -29,6 +29,7 @@ model_name_or_path: Qwen/Qwen2.5-Math-7B  # Start with the base model
 hub_model_id: Qwen-2.5-7B-Simple-RL-v5
 output_dir: data/Qwen-2.5-7B-Simple-RL-v5
 wandb_project: open-r1-math-rl
+# Address issue with potentially v2 catastrophic forgetting
 learning_rate: 3e-06
 reward_weights:
 - 1.0  # Accuracy weight
