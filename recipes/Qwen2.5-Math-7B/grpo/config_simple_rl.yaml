@@ -25,16 +25,18 @@ system_prompt: |-
   #### 14
 
 # GRPO trainer config
-model_name_or_path: aidando73/Qwen-2.5-7B-Simple-RL-v2
-hub_model_id: Qwen-2.5-7B-Simple-RL-v4
-output_dir: data/Qwen-2.5-7B-Simple-RL-v4
+model_name_or_path: Qwen/Qwen2.5-Math-7B  # Start with the base model
+hub_model_id: Qwen-2.5-7B-Simple-RL-v5
+output_dir: data/Qwen-2.5-7B-Simple-RL-v5
 wandb_project: open-r1-math-rl
-learning_rate: 1.5e-06
+learning_rate: 3e-06
 reward_weights:
-- 1.0
-- 0.5
+- 1.0  # Accuracy weight
+- 0.5  # Format weight - balanced approach
+max_grad_norm: 1.0  # Add gradient clipping to prevent spikes
+kl_penalty: 0.05  # Add mild KL penalty to prevent catastrophic forgetting
 
-# resume_from_checkpoint: data/Qwen-2.5-7B-Simple-RL-v2/checkpoint-58
+# Standard configuration
 reward_funcs:
 - accuracy
 - format
