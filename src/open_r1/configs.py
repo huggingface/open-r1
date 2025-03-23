@@ -83,3 +83,74 @@ class SFTConfig(trl.SFTConfig):
         default=None,
         metadata={"help": ("The project to store runs under.")},
     )
+
+
+@dataclass
+class GRPOScriptArguments(trl.ScriptArguments):
+    """
+    Script arguments for the GRPO training script.
+
+    Args:
+        reward_funcs (`list[str]`):
+            List of reward functions. Possible values: 'accuracy', 'format', 'reasoning_steps', 'cosine', 'repetition_penalty', 'length', 'tag_count', 'code', 'ioi_code', 'code_format'.
+        cosine_min_value_wrong (`float`):
+            Minimum reward for cosine scaling for wrong answers.
+        cosine_max_value_wrong (`float`):
+            Maximum reward for cosine scaling for wrong answers.
+        cosine_min_value_correct (`float`):
+            Minimum reward for cosine scaling for correct answers.
+        cosine_max_value_correct (`float`):
+            Maximum reward for cosine scaling for correct answers.
+        cosine_max_len (`int`):
+            Maximum length for cosine scaling.
+        code_language (`str`):
+            Language for code format reward.
+    """
+
+    reward_funcs: list[str] = field(
+        default_factory=lambda: ["accuracy", "format", "tag_count"],
+        metadata={
+            "help": "List of reward functions. Possible values: 'accuracy', 'format', 'reasoning_steps', 'cosine', 'repetition_penalty', 'length', tag_count', 'code', 'code_format'"
+        },
+    )
+    cosine_min_value_wrong: float = field(
+        default=0.0,
+        metadata={"help": "Minimum reward for wrong answers"},
+    )
+    cosine_max_value_wrong: float = field(
+        default=-0.5,
+        metadata={"help": "Maximum reward for wrong answers"},
+    )
+    cosine_min_value_correct: float = field(
+        default=0.5,
+        metadata={"help": "Minimum reward for correct answers"},
+    )
+    cosine_max_value_correct: float = field(
+        default=1.0,
+        metadata={"help": "Maximum reward for correct answers"},
+    )
+    cosine_max_len: int = field(
+        default=1000,
+        metadata={"help": "Maximum length for scaling"},
+    )
+    repetition_n_grams: int = field(
+        default=3,
+        metadata={"help": "Number of n-grams for repetition penalty reward"},
+    )
+    repetition_max_penalty: float = field(
+        default=-1.0,
+        metadata={"help": "Maximum (negative) penalty for for repetition penalty reward"},
+    )
+    code_language: str = field(
+        default="python",
+        metadata={
+            "help": "Language for code format reward. Based on E2B supported languages https://e2b.dev/docs/code-interpreting/supported-languages",
+            "choices": ["python", "javascript", "r", "java", "bash", "cpp"],
+        },
+    )
+    code_eval_test_batch_size: int = field(
+        default=1,
+        metadata={
+            "help": "for each generation, evaluate these many test cases in parallel, then check if any of them failed (0 score): if so stop evaluating; otherwise continue with the next batch of test cases. Useful to avoid overloading the eval server + save time on wrong solutions"
+        },
+    )

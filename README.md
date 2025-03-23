@@ -220,6 +220,21 @@ ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_con
     --config recipes/Qwen2.5-1.5B-Instruct/grpo/config_demo_code.yaml
 ```
 
+#### IOI problems
+
+We provide a `ioi_code_reward` reward function for executing problems from [IOI](https://hf.co/datasets/open-r1/ioi) using [piston](https://github.com/engineer-man/piston).
+
+To get piston workers running, see [slurm/piston/README.md](./slurm/piston/README.md).
+Set your environment variable `PISTON_ENDPOINTS` to `slurm` or to a list of piston worker endpoints.
+
+See the [example recipe](./recipes/Qwen2.5-1.5B-Instruct/grpo/config_demo_code_ioi.yaml) for how to use the reward function:
+```shell
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/zero2.yaml \
+    --num_processes=7 src/open_r1/grpo.py \
+    --config recipes/Qwen2.5-1.5B-Instruct/grpo/config_demo_code_ioi.yaml
+```
+
+
 #### Data decontamination
 
 Following [s1: Simple test-time scaling](https://arxiv.org/abs/2501.19393) the data can be decontaminated using the script at: [scripts/decontaminate.py](./scripts/decontaminate.py), which decontaminates a dataset using 8-grams and deduplicate the data. Sample run:
