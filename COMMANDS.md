@@ -11,7 +11,7 @@ uv pip install vllm==0.7.2
 uv pip install setuptools && uv pip install flash-attn --no-build-isolation
 GIT_LFS_SKIP_SMUDGE=1 uv pip install -e .
 
-huggingface-cli login
+huggingface-cli login --token $HF_TOKEN
 wandb login
 
 
