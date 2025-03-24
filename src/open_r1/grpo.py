@@ -84,13 +84,16 @@ def main(script_args, training_args, model_args):
     reward_funcs = get_reward_funcs(script_args)
 
     # Format into conversation
-    def make_conversation(example):
+    def make_conversation(example, question_field: str=script_args.dataset_question_field):
         prompt = []
 
         if training_args.system_prompt is not None:
             prompt.append({"role": "system", "content": training_args.system_prompt})
-
-        prompt.append({"role": "user", "content": example["problem"]})
+            
+        if question_field not in example:
+            raise ValueError(f"Dataset Question Field Error: {question_field} is not supported.")
+        
+        prompt.append({"role": "user", "content": example[question_field]})
         return {"prompt": prompt}
 
     dataset = dataset.map(make_conversation)
