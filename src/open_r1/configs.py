@@ -154,3 +154,9 @@ class GRPOScriptArguments(trl.ScriptArguments):
             "help": "for each generation, evaluate these many test cases in parallel, then check if any of them failed (0 score): if so stop evaluating; otherwise continue with the next batch of test cases. Useful to avoid overloading the eval server + save time on wrong solutions"
         },
     )
+    dataset_question_field: str = field(
+        default="problem",
+        metadata={
+            "help": "Field to parse questions for datasets formatting"
+        },
+    )
