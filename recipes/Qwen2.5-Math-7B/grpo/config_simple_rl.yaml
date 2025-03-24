@@ -4,7 +4,7 @@ torch_dtype: bfloat16
 attn_implementation: flash_attention_2
 
 # Data training arguments
-dataset_name: DigitalLearningGmbH/MATH-lighteval
+dataset_name: aidando73/math_level3to5_data
 dataset_config: default
 system_prompt: |-
   You are a helpful math assistant. Solve problems step by step using the following format:
@@ -26,8 +26,8 @@ system_prompt: |-
 
 # GRPO trainer config
 model_name_or_path: Qwen/Qwen2.5-Math-7B  # Start with the base model
-hub_model_id: Qwen-2.5-7B-Simple-RL-v7
-output_dir: data/Qwen-2.5-7B-Simple-RL-v7
+hub_model_id: Qwen-2.5-7B-Simple-RL-v9
+output_dir: data/Qwen-2.5-7B-Simple-RL-v9
 wandb_project: open-r1-math-rl
 learning_rate: 3e-06
 reward_weights:
