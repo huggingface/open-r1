@@ -8,13 +8,13 @@
 #SBATCH --err=./logs/%x-%j.err
 #SBATCH --requeue
 
+# Specific configuration optimized for the Hugging Face Compute Cluster
 module load cuda/12.4
 set -x -e
 
 source ~/.bashrc
 source openr1/bin/activate
 echo "START TIME: $(date)"
-export GPUS_PER_NODE=8
 
 MODEL=$1
 TASK=$2
@@ -24,7 +24,7 @@ OPTIONAL_ARGS=$5
 CONFIG_FILE=recipes/$MODEL/$TASK/config_$CONFIG_SUFFIX.yaml
 GRAD_ACC_STEPS=$(grep 'gradient_accumulation_steps' $CONFIG_FILE | awk '{print $2}')
 MODEL=$(grep 'model_name_or_path:' $CONFIG_FILE | awk '{print $2}')
-REVISION=$(grep 'model_revision:' $CONFIG_FILE |head -n 1 | awk '{print $2}')
+REVISION=$(grep 'model_revision:' $CONFIG_FILE | head -n 1 | awk '{print $2}')
 
 # Distributed configuration
 NUM_NODES=$SLURM_NNODES
@@ -46,7 +46,6 @@ if [[ "$USE_VLLM" == "true" ]]; then
      TP=$(python scripts/get_tensor_parallel_size.py --model_name $MODEL --revision $REVISION --default_tp $GPUS_PER_NODE)
      WORLD_SIZE=$((WORLD_SIZE - GPUS_PER_NODE))
      NUM_NODES=$((NUM_NODES - 1))
-     # Run `trl vllm-serve` on Group 2 (Node 4)
      srun --nodes=1 --ntasks=1 --nodelist=$VLLM_NODE trl vllm-serve --model $MODEL --revision $REVISION --tensor_parallel_size $TP &
 
      OPTIONAL_ARGS="$OPTIONAL_ARGS --vllm_server_host=$VLLM_NODE"
