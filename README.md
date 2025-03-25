@@ -160,26 +160,12 @@ ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_con
 ```
 
 ### GRPO
-
-To train via the GRPO trainer, we use one GPU to run vLLM for faster generation and the remaining GPUs for training. For example, one a node with 8 GPUs, set `--num_processes` to override the default value in the `accelerate` configs:
-
+We use TRL's new distributed vLLM server and GRPOTraining in order to scale to larger >7B models. We provide an example slurm script:
 ```shell
-ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/zero2.yaml \
-    --num_processes=7 src/open_r1/grpo.py \
-    --config recipes/DeepSeek-R1-Distill-Qwen-1.5B/grpo/config_demo.yaml
+sbatch --job-name=trl-Qwen2.5-Math-7B-config_simple_rl --nodes=2 slurm/train.slurm Qwen2.5-Math-7B grpo config_simple_rl zero3 
 ```
 
-> [!WARNING]
-> The chat template used in the distilled DeepSeek models omits the contents of the reasoning block within the `<think>` and `</think>` tags. It also prefills the assistant response with `<think>` which interferes with the format reward function. To handle that, it is important to override the chat template as done in e.g.  [recipes/DeepSeek-R1-Distill-Qwen-1.5B/grpo/config_demo.yaml](./recipes/DeepSeek-R1-Distill-Qwen-1.5B/grpo/config_demo.yaml).
-
-
-We provide a minimal reproducible experiment using GRPO for mathematical reasoning, referencing the approach from [SimpleRL-Reason](https://hkust-nlp.notion.site/simplerl-reason) which uses a 7B model trained on 8K examples. Running this on 8 H100 80G GPU takes about 3 hours:
-
-```shell
-ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/zero2.yaml \
-    --num_processes=7 src/open_r1/grpo.py \
-    --config recipes/Qwen2.5-Math-7B/grpo/config_simple_rl.yaml
-```
+You will need to adapt the `slurm/train.slurm` script to match your cluster.
 
 Our final [model](https://huggingface.co/Dongwei/Qwen-2.5-7B_Base_Math_smalllr), while using different learning rates, loss functions and reward structures, achieves 69.4% accuracy on MATH-500, demonstrating a 17%+ improvement over the base model.
 
