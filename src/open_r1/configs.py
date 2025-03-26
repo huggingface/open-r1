@@ -157,6 +157,6 @@ class GRPOScriptArguments(trl.ScriptArguments):
     parallel_code_exec_per_proc: int = field(
         default=2,
         metadata={
-            "help": "Number of parallel E2B code executions per process.(suitable for hobby E2B with 8 training GPUs)"
+            "help": "Number of parallel E2B code executions per process. Default of 2 is suitable for hobby E2B with 8 training GPUs"
         },
     )
