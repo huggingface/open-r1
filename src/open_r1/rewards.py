@@ -492,8 +492,8 @@ def run_async_from_sync(scripts: list[str], language: str, num_parallel: int) ->
 
 
 async def run_async(scripts: list[str], language: str, num_parallel: int) -> list[float]:
-     # Limit the number of concurrent tasks
-    semaphore = asyncio.Semaphore(num_parallel) 
+    # Limit the number of concurrent tasks
+    semaphore = asyncio.Semaphore(num_parallel)
 
     # Create a list of tasks for running scripts concurrently
     tasks = [run_script(script, language, semaphore) for script in scripts]
@@ -510,12 +510,12 @@ async def run_script(script: str, language: str, semaphore: asyncio.Semaphore) -
     # These values are based on running 256 examples with the gold solution
     # from open-r1/verifiable-coding-problems-python_decontaminated
     # see scripts/benchmark_e2b.py
-    
+
     SANDBOX_TIMEOUT = 15
     MARGIN = 2
     REQUEST_TIMEOUT = SANDBOX_TIMEOUT - MARGIN
     ASYNCIO_TIMEOUT = SANDBOX_TIMEOUT + MARGIN
-    
+
     async with semaphore:
         try:
             sandbox = await AsyncSandbox.create(timeout=SANDBOX_TIMEOUT, request_timeout=REQUEST_TIMEOUT)
