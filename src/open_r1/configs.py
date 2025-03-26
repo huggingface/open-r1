@@ -52,7 +52,6 @@ class GRPOConfig(trl.GRPOConfig):
     )
 
 
-
 @dataclass
 class SFTConfig(trl.SFTConfig):
     """
@@ -157,5 +156,7 @@ class GRPOScriptArguments(trl.ScriptArguments):
     )
     parallel_code_exec_per_proc: int = field(
         default=2,
-        metadata={"help": "Number of parallel E2B code executions per process.(suitable for hobby E2B with 8 training GPUs)"},
+        metadata={
+            "help": "Number of parallel E2B code executions per process.(suitable for hobby E2B with 8 training GPUs)"
+        },
     )
