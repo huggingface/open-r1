@@ -511,7 +511,7 @@ async def run_script(script: str, language: str, semaphore: asyncio.Semaphore) -
     # from open-r1/verifiable-coding-problems-python_decontaminated
     # see scripts/benchmark_e2b.py
 
-    SANDBOX_TIMEOUT = 15
+    SANDBOX_TIMEOUT = 30
     MARGIN = 2
     REQUEST_TIMEOUT = SANDBOX_TIMEOUT - MARGIN
     ASYNCIO_TIMEOUT = SANDBOX_TIMEOUT + MARGIN
