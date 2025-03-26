@@ -178,3 +178,4 @@ eval_results/
 results/
 
 .vscode/
+.python-version
