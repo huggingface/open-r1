@@ -12,10 +12,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""
+Benchmark script for the code_reward function with E2B.
+
+This script measures the performance of the code_reward function with varying numbers
+of samples and parallelization levels.
+
+Each sample is a CodeForces problem with a gold standard solution that is executed against a set of public test cases.
+"""
 
 from datasets import load_dataset
 from open_r1.rewards import code_reward
 import time
+from tqdm.auto import tqdm
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -34,9 +43,12 @@ if __name__ == "__main__":
     parallel_dict = {
         16:[1,4,16],
         64:[4,16, 64],
-        256:[16, 64, 96], # cap at 96 at PRO account is limited to 100
+        256:[16, 64, 96], # cap at 96 as PRO account is limited to 100
     }
-    for num_samples in [16,64,256]:
+    # Store results for table formatting
+    results = []
+    
+    for num_samples in tqdm([16, 64,256], desc="Benchmarking samples"):
         for num_parallel in parallel_dict[num_samples]:
             code_dataset = load_dataset("open-r1/verifiable-coding-problems-python_decontaminated")
             code_dataset = code_dataset["train"].shuffle(seed=42).select(range(num_samples))
@@ -46,7 +58,27 @@ if __name__ == "__main__":
 
             start_time = time.time()
             rewards = code_reward(test_completions, num_parallel=num_parallel, **reward_kwargs)
-            print(num_samples, num_parallel, f"Total time: {time.time() - start_time}")
-            print(rewards)
-            print("#"*80)
+            execution_time = time.time() - start_time
+            
+            # Calculate some statistics about rewards
+            mean_reward = sum(rewards) / len(rewards)
+            min_reward = min(rewards)
+            max_reward = max(rewards)
+            
+            # Store results
+            results.append({
+                "num_samples": num_samples,
+                "num_parallel": num_parallel,
+                "execution_time": execution_time,
+                "mean_reward": mean_reward,
+                "min_reward": min_reward,
+                "max_reward": max_reward
+            })
+    
+    print("\n## Benchmark Results\n")
+    print("| Sample Size | Parallelization | Execution Time (s) | Mean Reward | Min Reward | Max Reward |")
+    print("|:-----------:|:---------------:|------------------:|:-----------:|:-----------:|:-----------:|")
+    
+    for result in results:
+        print(f"| {result['num_samples']:^11} | {result['num_parallel']:^15} | {result['execution_time']:17.2f} | {result['mean_reward']:^11.4f} | {result['min_reward']:^11.4f} | {result['max_reward']:^11.4f} |")
     

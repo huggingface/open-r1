@@ -527,7 +527,7 @@ async def run_script(script: str, language: str, semaphore: asyncio.Semaphore) -
             print("Operation timed out")
             return 0.0
         except Exception as e:
-            print(f"Error from E2B executor run_script: {e}")
+            print(f"Error in `run_script` from E2B sandbox ID {sandbox.sandbox_id} : {e}")
             return 0.0
         finally:
             try:

@@ -91,7 +91,7 @@ extras["torch"] = deps_list("torch")
 extras["quality"] = deps_list("ruff", "isort", "flake8")
 extras["code"] = deps_list("e2b-code-interpreter", "python-dotenv")
 extras["eval"] = deps_list("lighteval", "math-verify")
-extras["dev"] = extras["quality"] + extras["tests"] + extras["eval"]
+extras["dev"] = extras["quality"] + extras["tests"] + extras["eval"] + extras["code"]
 
 # core dependencies shared across the whole project - keep this to a bare minimum :)
 install_requires = [
