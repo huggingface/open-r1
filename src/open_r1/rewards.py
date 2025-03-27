@@ -21,6 +21,8 @@ import math
 import re
 from functools import partial, update_wrapper
 from typing import Callable, Dict
+import importlib
+from pip._internal import main as pipmain
 
 from latex2sympy2_extended import NormalizationConfig
 from math_verify import LatexExtractionConfig, parse, verify
@@ -279,6 +281,17 @@ def get_cosine_scaled_reward(
 
     return cosine_scaled_reward
 
+
+def get_python_package_reward(
+    package_name: str = "missing",
+    module_name: str = "missing",
+    python_function: str = "missing",
+):
+   if package_name:
+      pipmain(['install', package_name]) # TODO pip_args
+
+   mod = importlib.import_module(module_name)
+   return getattr(mod, python_function)
 
 def get_repetition_penalty_reward(ngram_size: int, max_penalty: float):
     """
@@ -564,6 +577,11 @@ def get_reward_funcs(script_args) -> list[Callable]:
         ),
         "code_format": get_code_format_reward(language=script_args.code_language),
         "tag_count": tag_count_reward,
+        "python_package": get_python_package_reward(
+            min_value_wrong=script_args.python_package,
+            max_value_wrong=script_args.python_module,
+            min_value_correct=script_args.python_function,
+        ),
     }
     reward_funcs = [REWARD_FUNCS_REGISTRY[func] for func in script_args.reward_funcs]
 
