@@ -506,7 +506,7 @@ async def run_async(scripts: list[str], language: str, num_parallel: int) -> lis
 
 
 async def run_script(script: str, language: str, semaphore: asyncio.Semaphore) -> float:
-    # timeouts, as the AsyncSandbox timeout does not seem to work
+    # We set a timeout margin, as the AsyncSandbox timeout does not seem to work
     # These values are based on running 256 examples with the gold solution
     # from open-r1/verifiable-coding-problems-python_decontaminated
     # see scripts/benchmark_e2b.py
@@ -533,7 +533,7 @@ async def run_script(script: str, language: str, semaphore: asyncio.Semaphore) -
             try:
                 await sandbox.kill()
             except Exception as e:
-                print(f"Error from E2B executor kill: {e}")
+                print(f"Error from E2B executor kill with sandbox ID {sandbox.sandbox_id} : {e}")
 
 
 def get_reward_funcs(script_args) -> list[Callable]:
