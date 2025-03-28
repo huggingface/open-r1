@@ -159,6 +159,7 @@ class GRPOScriptArguments(trl.ScriptArguments):
         metadata={
             "help": "Number of parallel E2B code executions per process. Default of 2 is suitable for the Free Hobby tier of E2B with 8 GPUs used for training."
         },
+    )
 
     dataset_prompt_column: str = field(
         default="prompt",
