@@ -287,10 +287,14 @@ def get_python_package_reward(
     module_name: str = "missing",
     python_function: str = "missing",
 ):
+   print(f"@@@ ecs REACHED get_python_package_reward, package_name={package_name}, module_name={module_name}, python_function={python_function}")
    if package_name:
       pipmain(['install', package_name]) # TODO pip_args
 
+   print("@@@ ecs about to import")
    mod = importlib.import_module(module_name)
+
+   print("@@@ ecs about to lookup and return function")
    return getattr(mod, python_function)
 
 def get_repetition_penalty_reward(ngram_size: int, max_penalty: float):
