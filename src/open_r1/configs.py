@@ -162,6 +162,6 @@ class GRPOScriptArguments(trl.ScriptArguments):
     )
 
     dataset_prompt_column: str = field(
-        default="prompt",
+        default="problem",
         metadata={"help": "Column to use as prompts for training."},
     )
