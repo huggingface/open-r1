@@ -161,27 +161,30 @@ ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_con
 
 ### GRPO
 
-To train via the GRPO trainer, we use one GPU to run vLLM for faster generation and the remaining GPUs for training. For example, one a node with 8 GPUs, set `--num_processes` to override the default value in the `accelerate` configs:
+We use TRL's [vLLM backend](https://huggingface.co/docs/trl/speeding_up_training?vllm+examples=GRPO#vllm-for-fast-generation-in-online-methods) to scale training to large models across multiple nodes. For single-node training of smol models across 8 GPUs, first spin up the vLLM server to run on e.g. 1 GPU as follows:
 
 ```shell
-ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/zero2.yaml \
-    --num_processes=7 src/open_r1/grpo.py \
-    --config recipes/DeepSeek-R1-Distill-Qwen-1.5B/grpo/config_demo.yaml
+CUDA_VISIBLE_DEVICES=0 trl vllm-serve --model deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B
+```
+
+Once the server is up, run training on the remaining GPUs as follows:
+
+```shell
+CUDA_VISIBLE_DEVICES=1,2,3,4,5,6,7 ACCELERATE_LOG_LEVEL=info \
+    accelerate launch --config_file recipes/accelerate_configs/zero2.yaml --num_processes 7 \
+    src/open_r1/grpo.py --config recipes/DeepSeek-R1-Distill-Qwen-1.5B/grpo/config_demo.yaml
 ```
 
 > [!WARNING]
 > The chat template used in the distilled DeepSeek models omits the contents of the reasoning block within the `<think>` and `</think>` tags. It also prefills the assistant response with `<think>` which interferes with the format reward function. To handle that, it is important to override the chat template as done in e.g.  [recipes/DeepSeek-R1-Distill-Qwen-1.5B/grpo/config_demo.yaml](./recipes/DeepSeek-R1-Distill-Qwen-1.5B/grpo/config_demo.yaml).
 
-
-We provide a minimal reproducible experiment using GRPO for mathematical reasoning, referencing the approach from [SimpleRL-Reason](https://hkust-nlp.notion.site/simplerl-reason) which uses a 7B model trained on 8K examples. Running this on 8 H100 80G GPU takes about 3 hours:
+For multi-node training, we provide an example Slurm script:
 
 ```shell
-ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/zero2.yaml \
-    --num_processes=7 src/open_r1/grpo.py \
-    --config recipes/Qwen2.5-Math-7B/grpo/config_simple_rl.yaml
+sbatch --nodes=2 slurm/train.slurm Qwen2.5-Math-7B grpo config_simple_rl zero3 
 ```
 
-Our final [model](https://huggingface.co/Dongwei/Qwen-2.5-7B_Base_Math_smalllr), while using different learning rates, loss functions and reward structures, achieves 69.4% accuracy on MATH-500, demonstrating a 17%+ improvement over the base model.
+You will need to adapt the `slurm/train.slurm` script to match your cluster.
 
 #### 👨‍💻 Training with a code interpreter
 
@@ -212,12 +215,18 @@ Then make sure your dataset contains a `verification_info` column with the follo
 }
 ```
 
-For example, to train a smol model on Python problems, run:
+For example, to train a smol model on Python problems, start the vLLM server:
 
 ```shell
-ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/zero2.yaml \
-    --num_processes=7 src/open_r1/grpo.py \
-    --config recipes/Qwen2.5-1.5B-Instruct/grpo/config_demo_code.yaml
+CUDA_VISIBLE_DEVICES=0 trl vllm-serve --model Qwen/Qwen2.5-1.5B-Instruct
+```
+
+Then run training with:
+
+```shell
+CUDA_VISIBLE_DEVICES=1,2,3,4,5,6,7 ACCELERATE_LOG_LEVEL=info \ 
+    accelerate launch --config_file recipes/accelerate_configs/zero2.yaml --num_processes=7 
+    src/open_r1/grpo.py --config recipes/Qwen2.5-1.5B-Instruct/grpo/config_demo_code.yaml
 ```
 
 #### IOI problems
@@ -228,6 +237,7 @@ To get piston workers running, see [slurm/piston/README.md](./slurm/piston/READM
 Set your environment variable `PISTON_ENDPOINTS` to `slurm` or to a list of piston worker endpoints.
 
 See the [example recipe](./recipes/Qwen2.5-1.5B-Instruct/grpo/config_demo_code_ioi.yaml) for how to use the reward function:
+
 ```shell
 ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/zero2.yaml \
     --num_processes=7 src/open_r1/grpo.py \
