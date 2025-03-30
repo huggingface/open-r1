@@ -450,25 +450,24 @@ def code_reward(completions, num_parallel: int = 2, e2b_router_url=None, **kwarg
 
     language = verification_info[0]["language"]
 
-    # if e2b_router_url is not None:
-    #     payload = {"scripts": scripts, "language": language}
-    #     response = requests.post(f"http://{e2b_router_url}/execute_batch", json=payload)
-    #     results = response.json()
-    #     print(payload)
-    #     if not response.ok:
-    #         print(f"Request failed: {response.status_code}")
-    #         results = [0.0] * len(completions)
+    if e2b_router_url is not None:
+        scripts = [{"code": script} for script in scripts]  
+        payload = {"scripts": scripts, "language": language}
+        response = requests.post(f"http://{e2b_router_url}/execute_batch", json=payload)
+        results = response.json()
+        if not response.ok:
+            print(f"Request failed: {response.status_code}")
+            results = [0.0] * len(completions)
             
-    #         return results
+            return results
         
-    #     rewards = []
-    #     for result in results:
-    #         print(result)
-    #         if result["error"] is not None:
-    #             rewards.append(0.0)
-    #         else:
-    #             rewards.append(result["result"])
-    #     return rewards
+        rewards = []
+        for result in results:
+            if result["error"] is not None:
+                rewards.append(0.0)
+            else:
+                rewards.append(result["result"])
+        return rewards
 
     if not all(v["language"] == language for v in verification_info):
         raise ValueError("All verification_info must have the same language", verification_info)

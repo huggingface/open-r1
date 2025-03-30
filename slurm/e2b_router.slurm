@@ -4,8 +4,9 @@
 #SBATCH --mem=16g
 #SBATCH --time=72:00:00
 #SBATCH --cpus-per-task=16
-#SBATCH -o logs/dataset_proc-%j-%x.out
-#SBTACH --requeue
+#SBATCH --output=./logs/%x-%j.out
+#SBATCH --err=./logs/%x-%j.err
+#SBATCH --requeue
 
 echo "Starting job"
 module load cuda/12.4

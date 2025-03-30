@@ -67,6 +67,6 @@ if __name__ == "__main__":
     samples = code_dataset["train"].select(range(NUM_SAMPLES))
     test_completions = [[{"content": sample["gold_standard_solution"]}] for sample in samples]
     reward_kwargs = {"verification_info": [sample["verification_info"] for sample in samples]}
-    rewards = code_reward(test_completions,e2b_router_url="0.0.0.0:8000", **reward_kwargs)
+    rewards = code_reward(test_completions, e2b_router_url="0.0.0.0:8000", **reward_kwargs)
     print(rewards)
     assert rewards == [1.0] * NUM_SAMPLES
