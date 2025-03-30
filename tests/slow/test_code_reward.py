@@ -57,11 +57,9 @@ class TestCodeRewards(unittest.TestCase):
         assert rewards == [1.0] * NUM_SAMPLES
 
 
-
-
 if __name__ == "__main__":
     # requires E2B, see the README.md file
-        # requires E2B, see the README.md file
+    # requires E2B, see the README.md file
     code_dataset = load_dataset("open-r1/verifiable-coding-problems-python_decontaminated-tested")
     NUM_SAMPLES = 128
     samples = code_dataset["train"].select(range(NUM_SAMPLES))

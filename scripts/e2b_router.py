@@ -19,9 +19,6 @@ else:
     AsyncSandbox = None
 
 
-
-
-
 # Request/response models
 class ScriptInput(BaseModel):
     code: str
@@ -58,12 +55,10 @@ def create_app(args):
                         timeout=args.sandbox_timeout,
                         request_timeout=args.request_timeout,
                     )
-                    print(f"Running script: {script.code}")
                     execution = await asyncio.wait_for(
                         sandbox.run_code(script.code, language=language),
                         timeout=args.asyncio_timeout,
                     )
-                    print(execution)
                     return ScriptResult(result=float(execution.text), error=None)
             except Exception as e:
                 return ScriptResult(result=None, error=str(e))

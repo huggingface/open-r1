@@ -21,6 +21,7 @@ import math
 import re
 from functools import partial, update_wrapper
 from typing import Callable, Dict
+
 import requests
 from latex2sympy2_extended import NormalizationConfig
 from math_verify import LatexExtractionConfig, parse, verify
@@ -451,16 +452,16 @@ def code_reward(completions, num_parallel: int = 2, e2b_router_url=None, **kwarg
     language = verification_info[0]["language"]
 
     if e2b_router_url is not None:
-        scripts = [{"code": script} for script in scripts]  
+        scripts = [{"code": script} for script in scripts]
         payload = {"scripts": scripts, "language": language}
         response = requests.post(f"http://{e2b_router_url}/execute_batch", json=payload)
         results = response.json()
         if not response.ok:
             print(f"Request failed: {response.status_code}")
             results = [0.0] * len(completions)
-            
+
             return results
-        
+
         rewards = []
         for result in results:
             if result["error"] is not None:
@@ -573,10 +574,20 @@ def get_reward_funcs(script_args) -> list[Callable]:
         ),
         "length": len_reward,
         "code": update_wrapper(
-            partial(code_reward, num_parallel=script_args.parallel_code_exec_per_proc, e2b_router_url=script_args.e2b_router_url), code_reward
+            partial(
+                code_reward,
+                num_parallel=script_args.parallel_code_exec_per_proc,
+                e2b_router_url=script_args.e2b_router_url,
+            ),
+            code_reward,
         ),
         "binary_code": update_wrapper(
-            partial(binary_code_reward, num_parallel=script_args.parallel_code_exec_per_proc, e2b_router_url=script_args.e2b_router_url), binary_code_reward
+            partial(
+                binary_code_reward,
+                num_parallel=script_args.parallel_code_exec_per_proc,
+                e2b_router_url=script_args.e2b_router_url,
+            ),
+            binary_code_reward,
         ),
         "ioi_code": update_wrapper(
             partial(ioi_code_reward, test_batch_size=script_args.code_eval_test_batch_size), ioi_code_reward
