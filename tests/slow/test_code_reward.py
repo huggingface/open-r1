@@ -35,11 +35,11 @@ class TestCodeRewards(unittest.TestCase):
     def test_e2b_router(self):
         # run router locally: python scripts/e2b_router.py
         code_dataset = load_dataset("open-r1/verifiable-coding-problems-python_decontaminated-tested")
-        NUM_SAMPLES = 20
+        NUM_SAMPLES = 128
         samples = code_dataset["train"].select(range(NUM_SAMPLES))
         test_completions = [[{"content": sample["gold_standard_solution"]}] for sample in samples]
         reward_kwargs = {"verification_info": [sample["verification_info"] for sample in samples]}
-        rewards = code_reward(test_completions,e2b_router_url="0.0.0.0:8000", **reward_kwargs)
+        rewards = code_reward(test_completions, e2b_router_url="ip-10-53-85-124:8000", **reward_kwargs)
         print(rewards)
         assert rewards == [1.0] * NUM_SAMPLES
 
@@ -63,10 +63,10 @@ if __name__ == "__main__":
     # requires E2B, see the README.md file
         # requires E2B, see the README.md file
     code_dataset = load_dataset("open-r1/verifiable-coding-problems-python_decontaminated-tested")
-    NUM_SAMPLES = 1
+    NUM_SAMPLES = 128
     samples = code_dataset["train"].select(range(NUM_SAMPLES))
     test_completions = [[{"content": sample["gold_standard_solution"]}] for sample in samples]
     reward_kwargs = {"verification_info": [sample["verification_info"] for sample in samples]}
-    rewards = code_reward(test_completions, e2b_router_url="0.0.0.0:8000", **reward_kwargs)
+    rewards = code_reward(test_completions, e2b_router_url="ip-10-53-85-124:8000", **reward_kwargs)
     print(rewards)
     assert rewards == [1.0] * NUM_SAMPLES
