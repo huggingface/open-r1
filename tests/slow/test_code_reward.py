@@ -32,6 +32,17 @@ class TestCodeRewards(unittest.TestCase):
         print(rewards)
         assert rewards == [1.0] * NUM_SAMPLES
 
+    def test_e2b_router(self):
+        # run router locally: python scripts/e2b_router.py
+        code_dataset = load_dataset("open-r1/verifiable-coding-problems-python_decontaminated-tested")
+        NUM_SAMPLES = 20
+        samples = code_dataset["train"].select(range(NUM_SAMPLES))
+        test_completions = [[{"content": sample["gold_standard_solution"]}] for sample in samples]
+        reward_kwargs = {"verification_info": [sample["verification_info"] for sample in samples]}
+        rewards = code_reward(test_completions,e2b_router_url="0.0.0.0:8000", **reward_kwargs)
+        print(rewards)
+        assert rewards == [1.0] * NUM_SAMPLES
+
     def test_ioi_code_reward(self):
         # This slow test case requires spinning up a bunch (I tested with ~64) of piston workers, see docs here
         # slurm/piston/README.md
@@ -46,5 +57,16 @@ class TestCodeRewards(unittest.TestCase):
         assert rewards == [1.0] * NUM_SAMPLES
 
 
+
+
 if __name__ == "__main__":
-    unittest.main()
+    # requires E2B, see the README.md file
+        # requires E2B, see the README.md file
+    code_dataset = load_dataset("open-r1/verifiable-coding-problems-python_decontaminated-tested")
+    NUM_SAMPLES = 1
+    samples = code_dataset["train"].select(range(NUM_SAMPLES))
+    test_completions = [[{"content": sample["gold_standard_solution"]}] for sample in samples]
+    reward_kwargs = {"verification_info": [sample["verification_info"] for sample in samples]}
+    rewards = code_reward(test_completions,e2b_router_url="0.0.0.0:8000", **reward_kwargs)
+    print(rewards)
+    assert rewards == [1.0] * NUM_SAMPLES

@@ -21,7 +21,7 @@ import math
 import re
 from functools import partial, update_wrapper
 from typing import Callable, Dict
-
+import requests
 from latex2sympy2_extended import NormalizationConfig
 from math_verify import LatexExtractionConfig, parse, verify
 
@@ -383,13 +383,13 @@ def extract_code(completion: str, language: str = "python") -> str:
     return extracted_answer
 
 
-def binary_code_reward(completions, num_parallel: int = 2, **kwargs) -> list[float]:
-    rewards = code_reward(completions, num_parallel=num_parallel, **kwargs)
+def binary_code_reward(completions, num_parallel: int = 2, e2b_router_url=None, **kwargs) -> list[float]:
+    rewards = code_reward(completions, num_parallel=num_parallel, e2b_router_url=e2b_router_url, **kwargs)
     BINARY_THRESHOLD = 0.99
     return [1.0 if reward > BINARY_THRESHOLD else 0.0 for reward in rewards]
 
 
-def code_reward(completions, num_parallel: int = 2, **kwargs) -> list[float]:
+def code_reward(completions, num_parallel: int = 2, e2b_router_url=None, **kwargs) -> list[float]:
     """Reward function that evaluates code snippets using the E2B code interpreter.
 
     Assumes the dataset contains a `verification_info` column with test cases.
@@ -449,6 +449,26 @@ def code_reward(completions, num_parallel: int = 2, **kwargs) -> list[float]:
     ]
 
     language = verification_info[0]["language"]
+
+    # if e2b_router_url is not None:
+    #     payload = {"scripts": scripts, "language": language}
+    #     response = requests.post(f"http://{e2b_router_url}/execute_batch", json=payload)
+    #     results = response.json()
+    #     print(payload)
+    #     if not response.ok:
+    #         print(f"Request failed: {response.status_code}")
+    #         results = [0.0] * len(completions)
+            
+    #         return results
+        
+    #     rewards = []
+    #     for result in results:
+    #         print(result)
+    #         if result["error"] is not None:
+    #             rewards.append(0.0)
+    #         else:
+    #             rewards.append(result["result"])
+    #     return rewards
 
     if not all(v["language"] == language for v in verification_info):
         raise ValueError("All verification_info must have the same language", verification_info)
@@ -554,10 +574,10 @@ def get_reward_funcs(script_args) -> list[Callable]:
         ),
         "length": len_reward,
         "code": update_wrapper(
-            partial(code_reward, num_parallel=script_args.parallel_code_exec_per_proc), code_reward
+            partial(code_reward, num_parallel=script_args.parallel_code_exec_per_proc, e2b_router_url=script_args.e2b_router_url), code_reward
         ),
         "binary_code": update_wrapper(
-            partial(binary_code_reward, num_parallel=script_args.parallel_code_exec_per_proc), binary_code_reward
+            partial(binary_code_reward, num_parallel=script_args.parallel_code_exec_per_proc, e2b_router_url=script_args.e2b_router_url), binary_code_reward
         ),
         "ioi_code": update_wrapper(
             partial(ioi_code_reward, test_batch_size=script_args.code_eval_test_batch_size), ioi_code_reward
