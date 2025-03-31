@@ -22,7 +22,11 @@ import re
 from functools import partial, update_wrapper
 from typing import Callable, Dict
 import importlib
-from pip._internal import main as pipmain
+
+try:
+    from pip._internal import main as pipmain
+except Exception as e:
+    print(f"@@@ ecs got exception {e} importing pipmain, a {type(e)}; ignoring")
 
 from latex2sympy2_extended import NormalizationConfig
 from math_verify import LatexExtractionConfig, parse, verify
