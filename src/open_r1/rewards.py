@@ -287,6 +287,12 @@ def get_python_package_reward(
     module_name: str = "missing",
     python_function: str = "missing",
 ):
+   def unknown_custom_reward(completions, solution, **kwargs):
+       raise ValueError(f"Unknown reward function {package_name}.{module_name}.{python_function}()")
+
+   # @@@ ecs TODO remove
+   return unknown_custom_reward
+
    print(f"@@@ ecs REACHED get_python_package_reward, package_name={package_name}, module_name={module_name}, python_function={python_function}")
    if package_name:
       pipmain(['install', package_name]) # TODO pip_args
@@ -582,9 +588,9 @@ def get_reward_funcs(script_args) -> list[Callable]:
         "code_format": get_code_format_reward(language=script_args.code_language),
         "tag_count": tag_count_reward,
         "python_package": get_python_package_reward(
-            min_value_wrong=script_args.python_package,
-            max_value_wrong=script_args.python_module,
-            min_value_correct=script_args.python_function,
+            package_name=script_args.python_package,
+            module_name=script_args.python_module,
+            python_function=script_args.python_function,
         ),
     }
     reward_funcs = [REWARD_FUNCS_REGISTRY[func] for func in script_args.reward_funcs]
