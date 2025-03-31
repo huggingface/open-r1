@@ -289,7 +289,7 @@ def get_repetition_penalty_reward(ngram_size: int, max_penalty: float, language:
             seg_list = list(jieba.cut(text))
             return zip(*[seg_list[i:] for i in range(ngram_size)]), seg_list
     else:
-        raise ValueError(f"Language {language} word split is not yet implemented, please implement your own zipngram function.")
+        raise ValueError(f"Word splitting for language `{language}` is not yet implemented. Please implement your own zip-ngram function.")
 
     def repetition_penalty_reward(completions, **kwargs) -> float:
         """
