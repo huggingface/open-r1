@@ -271,7 +271,7 @@ def get_repetition_penalty_reward(ngram_size: int, max_penalty: float, language:
     Args:
     ngram_size: size of the n-grams
     max_penalty: Maximum (negative) penalty for wrong answers
-    language: Language of the text (default: en), used to choose the way to split the text into n-grams
+    language: Language of the text, defaults to `en`. Used to choose the way to split the text into n-grams.
     """
     if max_penalty > 0:
         raise ValueError(f"max_penalty {max_penalty} should not be positive")
