@@ -296,11 +296,11 @@ def get_python_package_reward(
        raise ValueError(f"Unknown reward function {package_name}.{module_name}.{python_function}()")
 
    # @@@ ecs TODO remove
-   return unknown_custom_reward
+   # return unknown_custom_reward
 
    print(f"@@@ ecs REACHED get_python_package_reward, package_name={package_name}, module_name={module_name}, python_function={python_function}")
-   if package_name:
-      pipmain(['install', package_name]) # TODO pip_args
+   # if package_name:
+   #    pipmain(['install', package_name]) # TODO pip_args
 
    print("@@@ ecs about to import")
    mod = importlib.import_module(module_name)
