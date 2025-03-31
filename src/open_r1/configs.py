@@ -162,6 +162,27 @@ class GRPOScriptArguments(trl.ScriptArguments):
     )
 
     dataset_prompt_column: str = field(
-        default="prompt",
+        default="problem",
         metadata={"help": "Column to use as prompts for training."},
+    )
+
+    python_package: str = field(
+        default="", # e.g. git+https://github.com/esnible/test-reward-repo.git, 
+        metadata={
+            "help": "Optional Python package",
+        },
+    )
+
+    python_module: str = field(
+        default="", # e.g. haiku.haiku, 
+        metadata={
+            "help": "Python module",
+        },
+    )
+
+    python_function: str = field(
+        default="", # e.g. haiku_reward
+        metadata={
+            "help": "Python reward function name",
+        },
     )
