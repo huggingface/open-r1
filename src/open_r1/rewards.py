@@ -25,7 +25,8 @@ import importlib
 
 try:
     from pip._internal import main as pipmain
-except Exception as e:
+except BaseException as e:
+    print(f"@@@ ecs got exception importing pipmain...")
     print(f"@@@ ecs got exception {e} importing pipmain, a {type(e)}; ignoring")
 
 from latex2sympy2_extended import NormalizationConfig
