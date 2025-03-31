@@ -13,8 +13,6 @@ system_prompt: "You are a helpful AI Assistant that provides well-reasoned and d
 # GRPO trainer config
 bf16: true
 use_vllm: true
-vllm_device: auto
-vllm_gpu_memory_utilization: 0.7
 do_eval: false
 gradient_accumulation_steps: 4
 gradient_checkpointing: true

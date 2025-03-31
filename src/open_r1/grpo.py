@@ -15,7 +15,6 @@
 import logging
 import os
 import sys
-from dataclasses import dataclass, field
 
 import datasets
 import torch
@@ -24,90 +23,15 @@ from datasets import load_dataset
 from transformers import set_seed
 from transformers.trainer_utils import get_last_checkpoint
 
-from open_r1.configs import GRPOConfig
-from open_r1.rewards import (
-    accuracy_reward,
-    code_reward,
-    format_reward,
-    get_code_format_reward,
-    get_cosine_scaled_reward,
-    get_repetition_penalty_reward,
-    len_reward,
-    reasoning_steps_reward,
-    tag_count_reward,
-)
+from open_r1.configs import GRPOConfig, GRPOScriptArguments
+from open_r1.rewards import get_reward_funcs
 from open_r1.utils import get_tokenizer
 from open_r1.utils.callbacks import get_callbacks
 from open_r1.utils.wandb_logging import init_wandb_training
-from trl import GRPOTrainer, ModelConfig, ScriptArguments, TrlParser, get_peft_config
+from trl import GRPOTrainer, ModelConfig, TrlParser, get_peft_config
 
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class GRPOScriptArguments(ScriptArguments):
-    """
-    Script arguments for the GRPO training script.
-
-    Args:
-        reward_funcs (`list[str]`):
-            List of reward functions. Possible values: 'accuracy', 'format', 'reasoning_steps', 'cosine', 'repetition_penalty', 'length', 'tag_count', 'code', 'code_format'.
-        cosine_min_value_wrong (`float`):
-            Minimum reward for cosine scaling for wrong answers.
-        cosine_max_value_wrong (`float`):
-            Maximum reward for cosine scaling for wrong answers.
-        cosine_min_value_correct (`float`):
-            Minimum reward for cosine scaling for correct answers.
-        cosine_max_value_correct (`float`):
-            Maximum reward for cosine scaling for correct answers.
-        cosine_max_len (`int`):
-            Maximum length for cosine scaling.
-        code_language (`str`):
-            Language for code format reward.
-    """
-
-    reward_funcs: list[str] = field(
-        default_factory=lambda: ["accuracy", "format", "tag_count"],
-        metadata={
-            "help": "List of reward functions. Possible values: 'accuracy', 'format', 'reasoning_steps', 'cosine', 'repetition_penalty', 'length', tag_count', 'code', 'code_format'"
-        },
-    )
-    cosine_min_value_wrong: float = field(
-        default=0.0,
-        metadata={"help": "Minimum reward for wrong answers"},
-    )
-    cosine_max_value_wrong: float = field(
-        default=-0.5,
-        metadata={"help": "Maximum reward for wrong answers"},
-    )
-    cosine_min_value_correct: float = field(
-        default=0.5,
-        metadata={"help": "Minimum reward for correct answers"},
-    )
-    cosine_max_value_correct: float = field(
-        default=1.0,
-        metadata={"help": "Maximum reward for correct answers"},
-    )
-    cosine_max_len: int = field(
-        default=1000,
-        metadata={"help": "Maximum length for scaling"},
-    )
-    repetition_n_grams: int = field(
-        default=3,
-        metadata={"help": "Number of n-grams for repetition penalty reward"},
-    )
-    repetition_max_penalty: float = field(
-        default=-1.0,
-        metadata={"help": "Maximum (negative) penalty for for repetition penalty reward"},
-    )
-    code_language: str = field(
-        default="python",
-        metadata={
-            "help": "Language for code format reward. Based on E2B supported languages https://e2b.dev/docs/code-interpreting/supported-languages",
-            "choices": ["python", "javascript", "r", "java", "bash"],
-        },
-    )
 
 
 def main(script_args, training_args, model_args):
@@ -156,37 +80,20 @@ def main(script_args, training_args, model_args):
     ################
     tokenizer = get_tokenizer(model_args, training_args)
 
-    # Get reward functions
-    REWARD_FUNCS_REGISTRY = {
-        "accuracy": accuracy_reward,
-        "format": format_reward,
-        "reasoning_steps": reasoning_steps_reward,
-        "cosine": get_cosine_scaled_reward(
-            min_value_wrong=script_args.cosine_min_value_wrong,
-            max_value_wrong=script_args.cosine_max_value_wrong,
-            min_value_correct=script_args.cosine_min_value_correct,
-            max_value_correct=script_args.cosine_max_value_correct,
-            max_len=script_args.cosine_max_len,
-        ),
-        "repetition_penalty": get_repetition_penalty_reward(
-            ngram_size=script_args.repetition_n_grams,
-            max_penalty=script_args.repetition_max_penalty,
-        ),
-        "length": len_reward,
-        "code": code_reward,
-        "code_format": get_code_format_reward(language=script_args.code_language),
-        "tag_count": tag_count_reward,
-    }
-    reward_funcs = [REWARD_FUNCS_REGISTRY[func] for func in script_args.reward_funcs]
+    # Get reward functions from the registry
+    reward_funcs = get_reward_funcs(script_args)
 
     # Format into conversation
-    def make_conversation(example):
+    def make_conversation(example, prompt_column: str = script_args.dataset_prompt_column):
         prompt = []
 
         if training_args.system_prompt is not None:
             prompt.append({"role": "system", "content": training_args.system_prompt})
 
-        prompt.append({"role": "user", "content": example["problem"]})
+        if prompt_column not in example:
+            raise ValueError(f"Dataset Question Field Error: {prompt_column} is not supported.")
+
+        prompt.append({"role": "user", "content": example[prompt_column]})
         return {"prompt": prompt}
 
     dataset = dataset.map(make_conversation)

@@ -15,16 +15,59 @@
 
 import unittest
 
+from open_r1.configs import GRPOScriptArguments
 from open_r1.rewards import (
     accuracy_reward,
     format_reward,
     get_code_format_reward,
     get_cosine_scaled_reward,
     get_repetition_penalty_reward,
+    get_reward_funcs,
     len_reward,
     reasoning_steps_reward,
     tag_count_reward,
 )
+
+
+class TestGetRewardFuncs(unittest.TestCase):
+    def test_get_reward_funcs(self):
+        """Test get_reward_funcs with various reward functions."""
+        reward_names = [
+            "accuracy",
+            "format",
+            "reasoning_steps",
+            "cosine",
+            "repetition_penalty",
+            "length",
+            "tag_count",
+            "code",
+            "ioi_code",
+            "code_format",
+            "binary_code",
+        ]
+        reward_func_names = [
+            "accuracy_reward",
+            "format_reward",
+            "reasoning_steps_reward",
+            "cosine_scaled_reward",
+            "repetition_penalty_reward",
+            "len_reward",
+            "tag_count_reward",
+            "code_reward",
+            "ioi_code_reward",
+            "code_format_reward",
+            "binary_code_reward",
+        ]
+
+        args = GRPOScriptArguments(
+            dataset_name="dummy",
+            reward_funcs=reward_names,
+        )
+
+        reward_funcs = get_reward_funcs(args)
+        self.assertEqual(len(reward_funcs), 11)
+        for func_name, func in zip(reward_func_names, reward_funcs):
+            self.assertEqual(func_name, func.__name__)
 
 
 class TestRewards(unittest.TestCase):
@@ -32,7 +75,6 @@ class TestRewards(unittest.TestCase):
         """Test accuracy_reward with a correct answer."""
         completion = [[{"content": r"\boxed{\frac{63}{400}}"}]]
         solution = [r"\frac{63}{400}"]
-
         rewards = accuracy_reward(completion, solution)
         self.assertEqual(rewards[0], 1.0)
 

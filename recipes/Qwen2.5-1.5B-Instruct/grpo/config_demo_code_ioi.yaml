@@ -5,10 +5,11 @@ torch_dtype: bfloat16
 attn_implementation: flash_attention_2
 
 # Data training arguments
-dataset_name: open-r1/OpenR1-Math-220k
+dataset_name: open-r1/ioi
 system_prompt: "You are a helpful AI Assistant that provides well-reasoned and detailed responses. You first think about the reasoning process as an internal monologue and then provide the user with the answer. Respond in the following format: <think>\n...\n</think>\n<answer>\n...\n</answer>"
 
 # GRPO trainer config
+beta: 0.01
 bf16: true
 use_vllm: true
 do_eval: false
@@ -16,36 +17,44 @@ gradient_accumulation_steps: 4
 gradient_checkpointing: true
 gradient_checkpointing_kwargs:
   use_reentrant: false
-hub_model_id: Qwen2.5-1.5B-Open-R1-GRPO
+hub_model_id: Qwen2.5-1.5B-Open-R1-Code-GRPO
 hub_strategy: every_save
-learning_rate: 2.0e-05
+learning_rate: 5.0e-06
 log_completions: true
 log_level: info
 logging_first_step: true
 logging_steps: 1
 logging_strategy: steps
-lr_scheduler_type: cosine
-max_prompt_length: 512
-max_completion_length: 1024
-max_steps: -1
-num_generations: 16
+lr_scheduler_type: cosine_with_min_lr
+lr_scheduler_kwargs:
+  min_lr_rate: 0.1
+max_prompt_length: 1024
+max_completion_length: 2048
+max_steps: 500
+num_generations: 14
 num_train_epochs: 1
-output_dir: data/Qwen2.5-1.5B-Open-R1-GRPO
+output_dir: data/Qwen2.5-1.5B-Open-R1-Code-GRPO
 overwrite_output_dir: true
-per_device_eval_batch_size: 16
 per_device_train_batch_size: 16
 push_to_hub: true
 report_to:
 - wandb
-reward_funcs:
-- accuracy
-- format
-- tag_count
-reward_weights:
-- 1.0
-- 1.0
-- 1.0
-save_strategy: "epoch"
+save_strategy: "steps"
+save_steps: 50
 save_total_limit: 1
 seed: 42
-warmup_ratio: 0.1
+temperature: 1.0
+warmup_ratio: 0.03
+# ioi specific config
+code_language: cpp
+reward_funcs:
+- ioi_code
+- code_format
+- format
+reward_weights:
+- 1.0
+- 0.1
+- 0.1
+# for each generation, evaluate these many test cases in parallel, then check if any of them failed (0 score): if so stop evaluating
+# otherwise continue with the next batch of test cases. Useful to avoid overloading the eval server + save time on wrong solutions
+code_eval_test_batch_size: 3

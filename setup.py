@@ -66,8 +66,8 @@ _deps = [
     "safetensors>=0.3.3",
     "sentencepiece>=0.1.99",
     "torch==2.5.1",
-    "transformers==4.49.0",
-    "trl @ git+https://github.com/huggingface/trl.git@69ad852e5654a77f1695eb4c608906fe0c7e8624",
+    "transformers==4.50.0",
+    "trl==0.16.0",
     "vllm==0.7.2",
     "wandb>=0.19.1",
 ]
@@ -91,7 +91,7 @@ extras["torch"] = deps_list("torch")
 extras["quality"] = deps_list("ruff", "isort", "flake8")
 extras["code"] = deps_list("e2b-code-interpreter", "python-dotenv")
 extras["eval"] = deps_list("lighteval", "math-verify")
-extras["dev"] = extras["quality"] + extras["tests"] + extras["eval"]
+extras["dev"] = extras["quality"] + extras["tests"] + extras["eval"] + extras["code"]
 
 # core dependencies shared across the whole project - keep this to a bare minimum :)
 install_requires = [
