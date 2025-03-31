@@ -304,9 +304,13 @@ def get_python_package_reward(
 
    print("@@@ ecs about to import")
    mod = importlib.import_module(module_name)
+   print(f"@@@ ecs mod={mod}")
 
-   print("@@@ ecs about to lookup and return function")
-   return getattr(mod, python_function)
+   print("@@@ ecs about to lookup function")
+   retval = getattr(mod, python_function)
+
+   print(f"@@@ ecs returning function {retval}")
+   return retval
 
 def get_repetition_penalty_reward(ngram_size: int, max_penalty: float):
     """
