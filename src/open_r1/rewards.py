@@ -46,7 +46,6 @@ def accuracy_reward(completions, solution, **kwargs):
         gold_parsed = parse(
             sol,
             extraction_mode="first_match",
-            extraction_config=[LatexExtractionConfig()],
         )
         if len(gold_parsed) != 0:
             # We require the answer to be provided in correct latex (no malformed operators)
@@ -76,8 +75,8 @@ def accuracy_reward(completions, solution, **kwargs):
                 print(f"verify failed: {e}, answer: {answer_parsed}, gold: {gold_parsed}")
                 reward = 0.0
         else:
-            # If the gold solution is not parseable, we reward 1 to skip this example
-            reward = 1.0
+            # If the gold solution is not parseable, we reward 0 to skip this example
+            reward = 0.0
             print("Failed to parse gold solution: ", sol)
         rewards.append(reward)
 
