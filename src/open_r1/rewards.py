@@ -22,7 +22,7 @@ import re
 from functools import partial, update_wrapper
 from typing import Callable, Dict
 import importlib
-# from pip._internal import main as pipmain
+from pip._internal import main as pipmain
 
 from latex2sympy2_extended import NormalizationConfig
 from math_verify import LatexExtractionConfig, parse, verify
