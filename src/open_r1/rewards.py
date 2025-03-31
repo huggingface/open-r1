@@ -75,8 +75,8 @@ def accuracy_reward(completions: list[list[dict[str, str]]], solution: list[str]
                 print(f"verify failed: {e}, answer: {answer_parsed}, gold: {gold_parsed}")
                 reward = 0.0
         else:
-            # If the gold solution is not parseable, we reward 0 to skip this example
-            reward = 0.0
+            # If the gold solution is not parseable, we return `None` to skip this example
+            reward = None
             print("Failed to parse gold solution: ", sol)
         rewards.append(reward)
 
