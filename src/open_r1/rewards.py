@@ -70,7 +70,7 @@ def accuracy_reward(completions: list[list[dict[str, str]]], solution: list[str]
             )
             # Reward 1 if the content is the same as the ground truth, 0 otherwise
             try:
-                reward = float(verify(answer_parsed, gold_parsed))
+                reward = float(verify(gold_parsed, answer_parsed))
             except Exception as e:
                 print(f"verify failed: {e}, answer: {answer_parsed}, gold: {gold_parsed}")
                 reward = 0.0
