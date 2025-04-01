@@ -20,7 +20,7 @@ import json
 import math
 import re
 from functools import partial, update_wrapper
-from typing import Callable, Dict
+from typing import Callable, Dict, Optional
 
 from latex2sympy2_extended import NormalizationConfig
 from math_verify import LatexExtractionConfig, parse, verify
@@ -38,7 +38,7 @@ else:
     AsyncSandbox = None
 
 
-def accuracy_reward(completions, solution, **kwargs):
+def accuracy_reward(completions: list[list[dict[str, str]]], solution: list[str], **kwargs) -> list[Optional[float]]:
     """Reward function that checks if the completion is the same as the ground truth."""
     contents = [completion[0]["content"] for completion in completions]
     rewards = []
@@ -46,7 +46,6 @@ def accuracy_reward(completions, solution, **kwargs):
         gold_parsed = parse(
             sol,
             extraction_mode="first_match",
-            extraction_config=[LatexExtractionConfig()],
         )
         if len(gold_parsed) != 0:
             # We require the answer to be provided in correct latex (no malformed operators)
@@ -69,15 +68,15 @@ def accuracy_reward(completions, solution, **kwargs):
                 ],
                 extraction_mode="first_match",
             )
-            # Reward 1 if the content is the same as the ground truth, 0 otherwise
+            # Compute binary rewards if verifiable, `None` otherwise to skip this example
             try:
-                reward = float(verify(answer_parsed, gold_parsed))
+                reward = float(verify(gold_parsed, answer_parsed))
             except Exception as e:
                 print(f"verify failed: {e}, answer: {answer_parsed}, gold: {gold_parsed}")
-                reward = 0.0
+                reward = None
         else:
-            # If the gold solution is not parseable, we reward 1 to skip this example
-            reward = 1.0
+            # If the gold solution is not parseable, we assign `None` to skip this example
+            reward = None
             print("Failed to parse gold solution: ", sol)
         rewards.append(reward)
 
