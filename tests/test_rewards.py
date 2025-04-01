@@ -23,10 +23,10 @@ from open_r1.rewards import (
     get_cosine_scaled_reward,
     get_repetition_penalty_reward,
     get_reward_funcs,
+    get_soft_overlong_punishment,
     len_reward,
     reasoning_steps_reward,
     tag_count_reward,
-    get_soft_overlong_punishment,
 )
 
 
@@ -407,7 +407,7 @@ class TestRepetitionPenaltyReward(unittest.TestCase):
         completion = [[{"content": "Some reasoning\nThe answer"}]]
         rewards = tag_count_reward(completion)
         self.assertEqual(rewards[0], 0.0)
-    
+
     def test_soft_overlong_punishment(self):
         """Test soft overlong punishment reward function with a short completion."""
         # length 50, with max=100 and soft cache=20, reward should be 0.
@@ -415,7 +415,7 @@ class TestRepetitionPenaltyReward(unittest.TestCase):
         completions = ["a" * 50]  # 50 <= 80
         rewards = reward_fn(completions)
         self.assertEqual(rewards, [0])
-    
+
     def test_soft_overlong_punishment(self):
         """Test soft overlong punishment reward function with a longer than max completion."""
         # 110 > 100, reward should be -1.
@@ -423,7 +423,7 @@ class TestRepetitionPenaltyReward(unittest.TestCase):
         completions = ["a" * 110]
         rewards = reward_fn(completions)
         self.assertEqual(rewards, [-1])
-        
+
 
 class TestCodeFormat(unittest.TestCase):
     def test_correct_python_format(self):
