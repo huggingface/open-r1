@@ -20,7 +20,7 @@ import json
 import math
 import re
 from functools import partial, update_wrapper
-from typing import Callable, Dict
+from typing import Callable, Dict, Optional
 
 from latex2sympy2_extended import NormalizationConfig
 from math_verify import LatexExtractionConfig, parse, verify
@@ -38,7 +38,7 @@ else:
     AsyncSandbox = None
 
 
-def accuracy_reward(completions: list[list[dict[str, str]]], solution: list[str], **kwargs) -> list[float]:
+def accuracy_reward(completions: list[list[dict[str, str]]], solution: list[str], **kwargs) -> list[Optional[float]]:
     """Reward function that checks if the completion is the same as the ground truth."""
     contents = [completion[0]["content"] for completion in completions]
     rewards = []
