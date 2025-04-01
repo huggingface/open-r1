@@ -68,14 +68,14 @@ def accuracy_reward(completions: list[list[dict[str, str]]], solution: list[str]
                 ],
                 extraction_mode="first_match",
             )
-            # Reward 1 if the content is the same as the ground truth, 0 otherwise
+            # Compute binary rewards if verifiable, `None` otherwise to skip this example
             try:
                 reward = float(verify(gold_parsed, answer_parsed))
             except Exception as e:
                 print(f"verify failed: {e}, answer: {answer_parsed}, gold: {gold_parsed}")
-                reward = 0.0
+                reward = None
         else:
-            # If the gold solution is not parseable, we return `None` to skip this example
+            # If the gold solution is not parseable, we assign `None` to skip this example
             reward = None
             print("Failed to parse gold solution: ", sol)
         rewards.append(reward)
