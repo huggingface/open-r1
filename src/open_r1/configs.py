@@ -165,3 +165,16 @@ class GRPOScriptArguments(trl.ScriptArguments):
         default="prompt",
         metadata={"help": "Column to use as prompts for training."},
     )
+    
+    max_completion_len: int = field(
+        default=0,
+        metadata={
+            "help": "Maximum length of the completion."
+        },
+    )
+    soft_punish_cache: int = field(
+        default=0,
+        metadata={
+            "help": "Minimum length of the completion."
+        },
+    )

@@ -27,7 +27,7 @@ from math_verify import LatexExtractionConfig, parse, verify
 
 from .utils import is_e2b_available
 from .utils.ioi import SubtaskResult, add_includes, get_piston_client_from_env, score_subtask
-
+from .configs import max_completion_len, soft_punish_cache
 
 if is_e2b_available():
     from dotenv import load_dotenv
@@ -535,6 +535,31 @@ async def run_script(script: str, language: str, semaphore: asyncio.Semaphore) -
             except Exception as e:
                 print(f"Error from E2B executor kill with sandbox ID {sandbox.sandbox_id} : {e}")
 
+def get_soft_overlong_punishment(max_completion_len, soft_punish_cache):
+    """
+    Reward function that penalizes overlong completions. It is used to penalize overlong completions,
+    but not to reward shorter completions. Reference: DAPO paper:https://huggingface.co/papers/2503.14476 
+    Note: This function is response-level, not token-level.
+    exp: completions = ["hello world", "TRL is fire!"], completion = "TRL is fire!", len(completion) 
+    
+    Args:
+        max_completion_len: Maximum length of the completion
+        soft_punish_cache: Minimum length of the completion. If set to 0, no minimum length is applied.
+    
+    """
+    def soft_overlong_punishment_reward(completions, **kwargs):
+        """Reward function that penalizes overlong completions."""
+        rewards = []
+        for completion in completions:
+            completion_length = len(completion)
+            if completion_length <= max_completion_len - soft_punish_cache:
+                rewards.append(0)
+            elif max_completion_len - soft_punish_cache < completion_length <= max_completion_len:
+                rewards.append((max_completion_len - soft_punish_cache - completion_length) / soft_punish_cache)
+            else:
+                rewards.append(-1)
+        return rewards
+    return soft_overlong_punishment_reward
 
 def get_reward_funcs(script_args) -> list[Callable]:
     REWARD_FUNCS_REGISTRY = {
@@ -564,6 +589,10 @@ def get_reward_funcs(script_args) -> list[Callable]:
         ),
         "code_format": get_code_format_reward(language=script_args.code_language),
         "tag_count": tag_count_reward,
+        "soft_overlong_punishment": get_soft_overlong_punishment(
+            max_completion_len=script_args.max_completion_len,
+            soft_punish_cache=script_args.soft_punish_cache,
+        ),
     }
     reward_funcs = [REWARD_FUNCS_REGISTRY[func] for func in script_args.reward_funcs]
 
