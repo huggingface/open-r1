@@ -25,7 +25,6 @@ from typing import Callable, Dict
 from latex2sympy2_extended import NormalizationConfig
 from math_verify import LatexExtractionConfig, parse, verify
 
-from .configs import max_completion_len, soft_punish_cache
 from .utils import is_e2b_available
 from .utils.ioi import SubtaskResult, add_includes, get_piston_client_from_env, score_subtask
 
