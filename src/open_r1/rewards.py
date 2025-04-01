@@ -545,7 +545,6 @@ def get_soft_overlong_punishment(max_completion_len, soft_punish_cache):
     Args:
         max_completion_len: Maximum length of the completion
         soft_punish_cache: Minimum length of the completion. If set to 0, no minimum length is applied.
-    
     """
     def soft_overlong_punishment_reward(completions, **kwargs):
         """Reward function that penalizes overlong completions."""
