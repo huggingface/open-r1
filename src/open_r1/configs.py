@@ -50,6 +50,10 @@ class GRPOConfig(trl.GRPOConfig):
         default=None,
         metadata={"help": ("The project to store runs under.")},
     )
+    wandb_run_group: Optional[str] = field(
+        default=None,
+        metadata={"help": ("The group to store runs under.")},
+    )
 
 
 @dataclass
@@ -82,6 +86,10 @@ class SFTConfig(trl.SFTConfig):
     wandb_project: Optional[str] = field(
         default=None,
         metadata={"help": ("The project to store runs under.")},
+    )
+    wandb_run_group: Optional[str] = field(
+        default=None,
+        metadata={"help": ("The group to store runs under.")},
     )
 
 
