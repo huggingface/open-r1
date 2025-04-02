@@ -540,8 +540,8 @@ def get_soft_overlong_punishment(max_completion_len, soft_punish_cache):
     """
     Reward function that penalizes overlong completions. It is used to penalize overlong completions,
     but not to reward shorter completions. Reference: Eq. (13) from the DAPO paper (https://huggingface.co/papers/2503.14476)
-    Note: In the DAPO paper, completion length is measured in token space, 
-    whereas here it is measured in character space. While these units differ, 
+    Note: In the DAPO paper, completion length is measured in token space,
+    whereas here it is measured in character space. While these units differ,
     they are roughly proportional, meaning this function should yield a similar effect.
     exp: completions = ["hello world", "TRL is fire!"], completion = "TRL is fire!", len(completion)
 
