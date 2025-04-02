@@ -7,6 +7,7 @@ attn_implementation: flash_attention_2
 # Data training arguments
 dataset_name: DigitalLearningGmbH/MATH-lighteval
 dataset_config: default
+dataset_prompt_column: problem
 system_prompt: "You are a helpful AI Assistant, designed to provided well-reasoned and detailed responses. You FIRST think about the reasoning process as an internal monologue and then provide the user with the answer. The reasoning process MUST BE enclosed within <think> and </think> tags."
 
 # GRPO trainer config
