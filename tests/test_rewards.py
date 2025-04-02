@@ -423,7 +423,13 @@ class TestRepetitionPenaltyReward(unittest.TestCase):
         completions = ["a" * 110]
         rewards = reward_fn(completions)
         self.assertEqual(rewards, [-1])
-
+    
+    def test_soft_overlong_punishment_intermediate_completion(self):
+        """Test soft overlong punishment reward function for intermediate length completion."""
+        reward_fn = get_soft_overlong_punishment(max_completion_len=100, soft_punish_cache=20)
+        completions = ["a" * 90]  # 90 is between 80 and 100
+        rewards = reward_fn(completions)
+        self.assertAlmostEqual(rewards[0], -0.5, places=4)
 
 class TestCodeFormat(unittest.TestCase):
     def test_correct_python_format(self):
