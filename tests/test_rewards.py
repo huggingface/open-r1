@@ -408,7 +408,7 @@ class TestRepetitionPenaltyReward(unittest.TestCase):
         rewards = tag_count_reward(completion)
         self.assertEqual(rewards[0], 0.0)
 
-    def test_soft_overlong_punishment(self):
+    def test_soft_overlong_punishment_short_completion(self):
         """Test soft overlong punishment reward function with a short completion."""
         # length 50, with max=100 and soft cache=20, reward should be 0.
         reward_fn = get_soft_overlong_punishment(max_completion_len=100, soft_punish_cache=20)
@@ -416,7 +416,7 @@ class TestRepetitionPenaltyReward(unittest.TestCase):
         rewards = reward_fn(completions)
         self.assertEqual(rewards, [0])
 
-    def test_soft_overlong_punishment(self):
+    def test_soft_overlong_punishment_long_completion(self):
         """Test soft overlong punishment reward function with a longer than max completion."""
         # 110 > 100, reward should be -1.
         reward_fn = get_soft_overlong_punishment(max_completion_len=100, soft_punish_cache=20)
