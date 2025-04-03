@@ -166,11 +166,11 @@ class GRPOScriptArguments(trl.ScriptArguments):
         metadata={"help": "Column to use as prompts for training."},
     )
 
-    max_completion_len: float = field(
-        default=3.6,
-        metadata={"help": "Maximum length of the completion."},
+    max_completion_len: int = field(
+        default=73728,
+        metadata={"help": "Maximum number of characters in completion."},
     )
     soft_punish_cache: int = field(
-        default=0,
-        metadata={"help": "Minimum length of the completion."},
+        default=14746,
+        metadata={"help": "Minimum number of characters in completion."},
     )
