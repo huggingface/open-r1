@@ -16,6 +16,7 @@
 """Reward functions for GRPO training."""
 
 import asyncio
+from asyncio import exceptions
 import json
 import math
 import re
@@ -26,8 +27,10 @@ import requests
 from latex2sympy2_extended import NormalizationConfig
 from math_verify import LatexExtractionConfig, parse, verify
 
+from .utils.router_sandbox import BatchedRoutedSandbox
 from .utils import is_e2b_available
 from .utils.ioi import SubtaskResult, add_includes, get_piston_client_from_env, score_subtask
+from open_r1.utils import router_sandbox
 
 
 if is_e2b_available():
@@ -450,28 +453,30 @@ def code_reward(completions, num_parallel: int = 2, e2b_router_url=None, **kwarg
     ]
 
     language = verification_info[0]["language"]
-
-    if e2b_router_url is not None:
-        scripts = [{"code": script} for script in scripts]
-        payload = {"scripts": scripts, "language": language}
-        response = requests.post(f"http://{e2b_router_url}/execute_batch", json=payload)
-        results = response.json()
-        if not response.ok:
-            print(f"Request failed: {response.status_code}")
-            results = [0.0] * len(completions)
-
-            return results
-
-        rewards = []
-        for result in results:
-            if result["error"] is not None:
-                rewards.append(0.0)
-            else:
-                rewards.append(result["result"])
-        return rewards
-
     if not all(v["language"] == language for v in verification_info):
         raise ValueError("All verification_info must have the same language", verification_info)
+    
+    if e2b_router_url is not None:
+        router_sandbox = BatchedRoutedSandbox(router_url=e2b_router_url)
+       
+        executions = router_sandbox.run_code(
+            scripts=scripts,
+            language=language,
+            timeout=30,
+            request_timeout=15,
+        )
+
+        rewards = []
+        for execution in executions:
+            try:
+                reward = float(execution.text)
+                rewards.append(reward)
+            except Exception as e:
+                rewards.append(0.0) # could this be None?
+                return 0.0
+        return rewards
+
+
     try:
         rewards = run_async_from_sync(scripts, language, num_parallel)
 
