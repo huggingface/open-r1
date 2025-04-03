@@ -32,6 +32,7 @@ from .utils.ioi import SubtaskResult, add_includes, get_piston_client_from_env, 
 if is_e2b_available():
     from dotenv import load_dotenv
     from e2b_code_interpreter import AsyncSandbox
+
     from .utils.router_sandbox import BatchedRoutedSandbox
 
     load_dotenv()
