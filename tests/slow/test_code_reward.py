@@ -19,7 +19,7 @@ from datasets import load_dataset
 
 from e2b_code_interpreter.models import Execution, ExecutionError
 from open_r1.rewards import code_reward, ioi_code_reward
-from open_r1.utils.router_sandbox import BatchedRoutedSandbox
+from open_r1.utils.routed_sandbox import BatchedRoutedSandbox
 
 
 class TestCodeRewards(unittest.TestCase):

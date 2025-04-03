@@ -33,7 +33,7 @@ if is_e2b_available():
     from dotenv import load_dotenv
     from e2b_code_interpreter import AsyncSandbox
 
-    from .utils.router_sandbox import BatchedRoutedSandbox
+    from .utils.routed_sandbox import BatchedRoutedSandbox
 
     load_dotenv()
 else:
