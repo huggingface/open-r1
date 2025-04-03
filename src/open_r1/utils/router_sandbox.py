@@ -14,8 +14,10 @@
 # limitations under the License.
 
 from typing import Optional
-from e2b_code_interpreter.models import Execution, ExecutionError, Result
+
 import requests
+from e2b_code_interpreter.models import Execution, ExecutionError, Result
+
 
 class BatchedRoutedSandbox:
     """
@@ -26,6 +28,7 @@ class BatchedRoutedSandbox:
     Attributes:
         router_url (str): The URL of the E2B Router to which code execution requests are sent.
     """
+
     def __init__(self, router_url: str):
         """
         Initializes the BatchedRoutedSandbox with the specified router URL.
@@ -34,7 +37,7 @@ class BatchedRoutedSandbox:
             router_url (str): The URL of the E2B Router.
         """
         self.router_url = router_url
-        
+
     def run_code(
         self,
         scripts: list[str],
@@ -59,20 +62,20 @@ class BatchedRoutedSandbox:
             timeout = 300  # Default to 5 minutes
         if request_timeout is None:
             request_timeout = 30  # Default to 30 seconds
-            
+
         # Prepare the payload for the HTTP POST request
         payload = {
-            "scripts": scripts, 
+            "scripts": scripts,
             "language": language,
             "timeout": timeout,
-            "request_timeout": request_timeout,      
+            "request_timeout": request_timeout,
         }
-        
+
         # Send the request to the E2B Router
         response = requests.post(f"http://{self.router_url}/execute_batch", json=payload)
         if not response.ok:
             print(f"Request failed with status code: {response.status_code}")
-        
+
         # Parse the response and construct Execution objects
         results = response.json()
         output = []
@@ -84,10 +87,10 @@ class BatchedRoutedSandbox:
                 execution_count=result["execution"]["execution_count"],
             )
             output.append(execution)
-            
+
         return output
-            
-        
+
+
 if __name__ == "__main__":
     # for local testing launch an E2B router with: python scripts/e2b_router.py
     sbx = BatchedRoutedSandbox(router_url="0.0.0.0:8000")

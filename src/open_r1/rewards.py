@@ -22,14 +22,12 @@ import re
 from functools import partial, update_wrapper
 from typing import Callable, Dict
 
-import requests
 from latex2sympy2_extended import NormalizationConfig
 from math_verify import LatexExtractionConfig, parse, verify
 
-from .utils.router_sandbox import BatchedRoutedSandbox
 from .utils import is_e2b_available
 from .utils.ioi import SubtaskResult, add_includes, get_piston_client_from_env, score_subtask
-from open_r1.utils import router_sandbox
+from .utils.router_sandbox import BatchedRoutedSandbox
 
 
 if is_e2b_available():
@@ -454,10 +452,10 @@ def code_reward(completions, num_parallel: int = 2, e2b_router_url=None, **kwarg
     language = verification_info[0]["language"]
     if not all(v["language"] == language for v in verification_info):
         raise ValueError("All verification_info must have the same language", verification_info)
-    
+
     if e2b_router_url is not None:
         router_sandbox = BatchedRoutedSandbox(router_url=e2b_router_url)
-       
+
         executions = router_sandbox.run_code(
             scripts=scripts,
             language=language,
@@ -470,10 +468,9 @@ def code_reward(completions, num_parallel: int = 2, e2b_router_url=None, **kwarg
             try:
                 reward = float(execution.text)
                 rewards.append(reward)
-            except Exception as e:
-                rewards.append(0.0) # could this be None?
+            except Exception:
+                rewards.append(0.0)  # could this be None?
         return rewards
-
 
     try:
         rewards = run_async_from_sync(scripts, language, num_parallel)

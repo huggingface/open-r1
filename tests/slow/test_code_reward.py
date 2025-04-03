@@ -17,9 +17,10 @@ import unittest
 
 from datasets import load_dataset
 
+from e2b_code_interpreter.models import Execution, ExecutionError
 from open_r1.rewards import code_reward, ioi_code_reward
 from open_r1.utils.router_sandbox import BatchedRoutedSandbox
-from e2b_code_interpreter.models import Execution, ExecutionError
+
 
 class TestCodeRewards(unittest.TestCase):
     def test_python_code_reward(self):
@@ -43,19 +44,21 @@ class TestCodeRewards(unittest.TestCase):
         rewards = code_reward(test_completions, e2b_router_url="0.0.0.0:8000", **reward_kwargs)
         print(rewards)
         assert rewards == [1.0] * NUM_SAMPLES
-        
+
     def test_e2b_router_parallel(self):
         # run router locally: python scripts/e2b_router.py
         code_dataset = load_dataset("open-r1/verifiable-coding-problems-python_decontaminated-tested")
 
-        BATCH_SIZE = 32 
+        BATCH_SIZE = 32
         NUM_SAMPLES = 256
-        
+
         def batch_code_reward(examples):
             test_completions = [[{"content": solution}] for solution in examples["gold_standard_solution"]]
-            reward_kwargs = {"verification_info": [verification_info for verification_info in examples["verification_info"]]}
+            reward_kwargs = {
+                "verification_info": [verification_info for verification_info in examples["verification_info"]]
+            }
             rewards = code_reward(test_completions, e2b_router_url="0.0.0.0:8000", **reward_kwargs)
-            assert rewards == [1.0] * BATCH_SIZE 
+            assert rewards == [1.0] * BATCH_SIZE
             return examples
 
         code_dataset = code_dataset["train"].select(range(NUM_SAMPLES))
@@ -73,14 +76,11 @@ class TestCodeRewards(unittest.TestCase):
         rewards = ioi_code_reward(test_completions, **reward_kwargs)
         print(rewards)
         assert rewards == [1.0] * NUM_SAMPLES
-        
+
     def test_e2b_router_run_code_success():
         # run router locally: python scripts/e2b_router.py
         routed_sandbox = BatchedRoutedSandbox(router_url="localhost:8000")
-        scripts = [
-            "print('hello from integration test')",
-            "result = 2 + 2\nprint(result)"
-        ]
+        scripts = ["print('hello from integration test')", "result = 2 + 2\nprint(result)"]
 
         results = routed_sandbox.run_code(scripts)
 
@@ -91,15 +91,12 @@ class TestCodeRewards(unittest.TestCase):
             assert result.exit_code == 0
             assert result.error is None
             assert "hello" in result.stdout or "4" in result.stdout
-    
+
     def test_e2b_router_run_code_with_error(sandbox):
         # run router locally: python scripts/e2b_router.py
-        
+
         routed_sandbox = BatchedRoutedSandbox(router_url="localhost:8000")
-        scripts = [
-            "print('this is fine')",
-            "print('unterminated string"
-        ]
+        scripts = ["print('this is fine')", "print('unterminated string"]
 
         results = routed_sandbox.run_code(scripts)
 
@@ -116,3 +113,6 @@ class TestCodeRewards(unittest.TestCase):
         assert isinstance(results[1].error, ExecutionError)
         assert "SyntaxError" in results[1].error.type
 
+
+if __name__ == "__main__":
+    unittest.main()
