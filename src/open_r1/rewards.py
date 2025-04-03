@@ -33,7 +33,7 @@ if is_e2b_available():
     from dotenv import load_dotenv
     from e2b_code_interpreter import AsyncSandbox
 
-    from .utils.routed_sandbox import BatchedRoutedSandbox
+    from .utils.routed_sandbox import RoutedSandbox
 
     load_dotenv()
 else:
@@ -455,7 +455,7 @@ def code_reward(completions, num_parallel: int = 2, e2b_router_url=None, **kwarg
         raise ValueError("All verification_info must have the same language", verification_info)
 
     if e2b_router_url is not None:
-        router_sandbox = BatchedRoutedSandbox(router_url=e2b_router_url)
+        router_sandbox = RoutedSandbox(router_url=e2b_router_url)
 
         executions = router_sandbox.run_code(
             scripts=scripts,

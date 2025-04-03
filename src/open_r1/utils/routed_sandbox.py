@@ -19,7 +19,7 @@ import requests
 from e2b_code_interpreter.models import Execution, ExecutionError, Result
 
 
-class BatchedRoutedSandbox:
+class RoutedSandbox:
     """
     A sandbox environment that routes code execution requests to the E2B Router.
     This class is designed for batched execution of scripts, primarily for Python code.
@@ -31,7 +31,7 @@ class BatchedRoutedSandbox:
 
     def __init__(self, router_url: str):
         """
-        Initializes the BatchedRoutedSandbox with the specified router URL.
+        Initializes the RoutedSandbox with the specified router URL.
 
         Args:
             router_url (str): The URL of the E2B Router.
@@ -93,7 +93,7 @@ class BatchedRoutedSandbox:
 
 if __name__ == "__main__":
     # for local testing launch an E2B router with: python scripts/e2b_router.py
-    sbx = BatchedRoutedSandbox(router_url="0.0.0.0:8000")
+    sbx = RoutedSandbox(router_url="0.0.0.0:8000")
     codes = ["print('hello world')", "print('hello world)"]
     executions = sbx.run_code(codes)  # Execute Python inside the sandbox
 

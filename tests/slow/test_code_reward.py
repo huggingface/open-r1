@@ -19,7 +19,7 @@ from datasets import load_dataset
 
 from e2b_code_interpreter.models import Execution, ExecutionError
 from open_r1.rewards import code_reward, ioi_code_reward
-from open_r1.utils.routed_sandbox import BatchedRoutedSandbox
+from open_r1.utils.routed_sandbox import RoutedSandbox
 
 
 class TestCodeRewards(unittest.TestCase):
@@ -79,7 +79,7 @@ class TestCodeRewards(unittest.TestCase):
 
     def test_e2b_router_run_code_success():
         # run router locally: python scripts/e2b_router.py
-        routed_sandbox = BatchedRoutedSandbox(router_url="localhost:8000")
+        routed_sandbox = RoutedSandbox(router_url="localhost:8000")
         scripts = ["print('hello from integration test')", "result = 2 + 2\nprint(result)"]
 
         results = routed_sandbox.run_code(scripts)
@@ -95,7 +95,7 @@ class TestCodeRewards(unittest.TestCase):
     def test_e2b_router_run_code_with_error(sandbox):
         # run router locally: python scripts/e2b_router.py
 
-        routed_sandbox = BatchedRoutedSandbox(router_url="localhost:8000")
+        routed_sandbox = RoutedSandbox(router_url="localhost:8000")
         scripts = ["print('this is fine')", "print('unterminated string"]
 
         results = routed_sandbox.run_code(scripts)
