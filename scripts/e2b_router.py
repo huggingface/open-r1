@@ -30,15 +30,34 @@ from e2b_code_interpreter import AsyncSandbox
 
 load_dotenv()
 
-# Request/response models
-    
 class BatchRequest(BaseModel):
+    """
+    BatchRequest is a data model representing a batch processing request.
+
+    Attributes:
+        scripts (List[str]): A list of script names or paths to be executed.
+        language (str): The programming language in which the scripts are written.
+        timeout (int): The maximum allowed execution time for each script in seconds.
+        request_timeout (int): The maximum allowed time for the entire batch request in seconds.
+    """
     scripts: List[str]
     language: str
     timeout: int
     request_timeout: int
 
 class ScriptResult(BaseModel):
+    """
+    ScriptResult is a Pydantic model that represents the result of a script execution.
+    Attributes:
+        execution (Optional[Execution]): An optional instance of the `Execution` class 
+            that contains details about the script's execution, such as status, output, 
+            or any other relevant metadata.
+        exception_str (Optional[str]): An optional string that captures the exception 
+            message or details if an error occurred during the script's execution.
+        model_config (ConfigDict): A configuration dictionary that allows arbitrary 
+            types to be used within the Pydantic model. This is necessary to support 
+            custom types like `Execution` within the model.
+    """
     execution: Optional[Execution]
     exception_str: Optional[str]
     
@@ -46,10 +65,36 @@ class ScriptResult(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     
 def create_app(args):
+    """
+    Creates and configures a FastAPI application instance.
+    Args:
+        args: An object containing configuration parameters for the application.
+              - num_sandboxes (int): The maximum number of concurrent sandboxes allowed.
+    Returns:
+        FastAPI: A configured FastAPI application instance.
+    The application includes the following endpoints:
+        1. GET /health:
+            - Returns the health status of the application.
+            - Response: {"status": "ok"}
+        2. POST /execute_batch:
+            - Executes a batch of scripts in an isolated sandbox environment.
+            - Request Body: BatchRequest object containing:
+                - language (str): The programming language of the scripts (python or javascript).
+                - timeout (int): The maximum execution time for each script.
+                - request_timeout (int): The timeout for the request itself.
+                - scripts (List[str]): A list of scripts to execute.
+            - Response: A list of ScriptResult objects for each script, containing:
+                - execution: The result of the script execution.
+                - exception_str: Any exception encountered during execution.
+    Notes:
+        - A semaphore is used to limit the number of concurrent sandboxes.
+        - Each script execution is wrapped in a timeout to prevent hanging.
+        - Sandboxes are cleaned up after execution, even in case of errors.
+    """
     app = FastAPI()
 
     # Instantiate semaphore and attach it to app state
-    app.state.sandbox_semaphore = asyncio.Semaphore(args.num_sandboxes)
+    app.state.sandbox_semaphore = asyncio.Semaphore(args.max_num_sandboxes)
 
     @app.get("/health")
     async def health():
@@ -93,10 +138,21 @@ def create_app(args):
 
 
 def parse_args():
+    """
+    Parse command-line arguments for the e2b_router script.
+
+    Arguments:
+        --host (str): The hostname or IP address to bind the server to. Defaults to "0.0.0.0" (binds to all interfaces).
+        --port (int): The port number on which the server will listen. Defaults to 8000.
+        --max_num_sandboxes (int): The maximum number of sandboxes that can be created or managed simultaneously. Defaults to 20.
+
+    Returns:
+        argparse.Namespace: Parsed command-line arguments as an object.
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", default="0.0.0.0")
     parser.add_argument("--port", type=int, default=8000)
-    parser.add_argument("--num_sandboxes", type=int, default=20)
+    parser.add_argument("--max_num_sandboxes", type=int, default=20)
     return parser.parse_args()
 
 if __name__ == "__main__":
