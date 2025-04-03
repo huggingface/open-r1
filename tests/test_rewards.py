@@ -23,6 +23,7 @@ from open_r1.rewards import (
     get_cosine_scaled_reward,
     get_repetition_penalty_reward,
     get_reward_funcs,
+    get_soft_overlong_punishment,
     len_reward,
     reasoning_steps_reward,
     tag_count_reward,
@@ -412,6 +413,29 @@ class TestRepetitionPenaltyReward(unittest.TestCase):
         completion = [[{"content": "Some reasoning\nThe answer"}]]
         rewards = tag_count_reward(completion)
         self.assertEqual(rewards[0], 0.0)
+
+    def test_soft_overlong_punishment_short_completion(self):
+        """Test soft overlong punishment reward function with a short completion."""
+        # length 50, with max=100 and soft cache=20, reward should be 0.
+        reward_fn = get_soft_overlong_punishment(max_completion_len=100, soft_punish_cache=20)
+        completions = ["a" * 50]  # 50 <= 80
+        rewards = reward_fn(completions)
+        self.assertEqual(rewards, [0])
+
+    def test_soft_overlong_punishment_long_completion(self):
+        """Test soft overlong punishment reward function with a longer than max completion."""
+        # 110 > 100, reward should be -1.
+        reward_fn = get_soft_overlong_punishment(max_completion_len=100, soft_punish_cache=20)
+        completions = ["a" * 110]
+        rewards = reward_fn(completions)
+        self.assertEqual(rewards, [-1])
+
+    def test_soft_overlong_punishment_intermediate_completion(self):
+        """Test soft overlong punishment reward function for intermediate length completion."""
+        reward_fn = get_soft_overlong_punishment(max_completion_len=100, soft_punish_cache=20)
+        completions = ["a" * 90]  # 90 is between 80 and 100
+        rewards = reward_fn(completions)
+        self.assertAlmostEqual(rewards[0], -0.5, places=4)
 
 
 class TestCodeFormat(unittest.TestCase):
