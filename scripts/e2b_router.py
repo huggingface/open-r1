@@ -1,41 +1,39 @@
 import argparse
 import asyncio
 from fastapi import FastAPI
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import List, Optional
 from fastapi import FastAPI, Request
 import argparse
 import asyncio
 from fastapi import FastAPI
 import uvicorn
-from open_r1.utils import is_e2b_available
+from e2b_code_interpreter.models import Execution
 
-if is_e2b_available():
-    from dotenv import load_dotenv
-    from e2b_code_interpreter import AsyncSandbox
+from dotenv import load_dotenv
+from e2b_code_interpreter import AsyncSandbox
 
-    load_dotenv()
-else:
-    AsyncSandbox = None
-
+load_dotenv()
 
 # Request/response models
-class ScriptInput(BaseModel):
-    code: str
     
 class BatchRequest(BaseModel):
-    scripts: List[ScriptInput]
+    scripts: List[str]
     language: str
+    timeout: int
+    request_timeout: int
 
 class ScriptResult(BaseModel):
-    result: Optional[float]
-    error: Optional[str]
+    result: Optional[Execution]
+    exception_str: Optional[str]
+    
+    # required to allow arbitrary types in pydantic models such as Execution
+    model_config = ConfigDict(arbitrary_types_allowed=True)
     
 def create_app(args):
     app = FastAPI()
 
     # Instantiate semaphore and attach it to app state
-    app.state.args = args
     app.state.sandbox_semaphore = asyncio.Semaphore(args.num_sandboxes)
 
     @app.get("/health")
@@ -45,23 +43,25 @@ def create_app(args):
     @app.post("/execute_batch")
     async def execute_batch(batch: BatchRequest, request: Request):
         semaphore = request.app.state.sandbox_semaphore
-        args = request.app.state.args
         language = batch.language
+        timeout = batch.timeout
+        request_timeout = batch.request_timeout
+        asyncio_timeout = batch.timeout + 1
 
-        async def run_script(script: ScriptInput) -> ScriptResult:
+        async def run_script(script: str) -> ScriptResult:
             try:
                 async with semaphore:
                     sandbox = await AsyncSandbox.create(
-                        timeout=args.sandbox_timeout,
-                        request_timeout=args.request_timeout,
+                        timeout=timeout,
+                        request_timeout=request_timeout,
                     )
                     execution = await asyncio.wait_for(
-                        sandbox.run_code(script.code, language=language),
-                        timeout=args.asyncio_timeout,
+                        sandbox.run_code(script, language=language),
+                        timeout=asyncio_timeout,
                     )
-                    return ScriptResult(result=float(execution.text), error=None)
+                    return ScriptResult(result=execution, exception_str=None)
             except Exception as e:
-                return ScriptResult(result=None, error=str(e))
+                return ScriptResult(result=None, exception_str=str(e))
         
             finally:
                 try:
@@ -79,21 +79,12 @@ def create_app(args):
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", default="0.0.0.0")
-    parser.add_argument("--port", type=int, default=8000)
+    parser.add_argument("--port", type=int, default=8001)
     parser.add_argument("--num_sandboxes", type=int, default=20)
-    parser.add_argument("--sandbox_timeout", type=int, default=10)
-    parser.add_argument("--request_timeout", type=int, default=10)
-    parser.add_argument("--asyncio_timeout", type=int, default=15)
     return parser.parse_args()
 
 if __name__ == "__main__":
     args = parse_args()
-    config = {
-        "num_sandboxes": args.num_sandboxes,
-        "sandbox_timeout": args.sandbox_timeout,
-        "request_timeout": args.request_timeout,
-        "asyncio_timeout": args.asyncio_timeout
-    }
     app = create_app(args)
 
     uvicorn.run(app, host=args.host, port=args.port)
