@@ -23,12 +23,6 @@ from functools import partial, update_wrapper
 from typing import Callable, Dict
 import importlib
 
-# try:
-#     from pip._internal import main as pipmain
-# except BaseException as e:
-#     print(f"@@@ ecs got exception importing pipmain...")
-#     print(f"@@@ ecs got exception {e} importing pipmain, a {type(e)}; ignoring")
-
 from latex2sympy2_extended import NormalizationConfig
 from math_verify import LatexExtractionConfig, parse, verify
 
@@ -288,29 +282,29 @@ def get_cosine_scaled_reward(
 
 
 def get_python_package_reward(
-    package_name: str = "missing",
     module_name: str = "missing",
     python_function: str = "missing",
 ):
    def unknown_custom_reward(completions, solution, **kwargs):
-       raise ValueError(f"Unknown reward function {package_name}.{module_name}.{python_function}()")
+       raise ValueError(f"Unknown custom reward function {module_name}.{python_function}()")
 
-   # @@@ ecs TODO remove
-   # return unknown_custom_reward
+   if not module_name or not python_function:
+       return unknown_custom_reward
 
-   print(f"@@@ ecs REACHED get_python_package_reward, package_name={package_name}, module_name={module_name}, python_function={python_function}")
-   # if package_name:
-   #    pipmain(['install', package_name]) # TODO pip_args
+   try:
+      mod = importlib.import_module(module_name)
+   except ModuleNotFoundError:
+       print(f"Custom reward function module {module_name} not found")
+       return unknown_custom_reward
 
-   print("@@@ ecs about to import")
-   mod = importlib.import_module(module_name)
-   print(f"@@@ ecs mod={mod}")
+   try:
+       retval = getattr(mod, python_function)
+   except AttributeError:
+       print(f"Custom reward function {python_function} in {module_name} not found")
+       return unknown_custom_reward
 
-   print("@@@ ecs about to lookup function")
-   retval = getattr(mod, python_function)
-
-   print(f"@@@ ecs returning function {retval}")
    return retval
+
 
 def get_repetition_penalty_reward(ngram_size: int, max_penalty: float):
     """
@@ -597,7 +591,6 @@ def get_reward_funcs(script_args) -> list[Callable]:
         "code_format": get_code_format_reward(language=script_args.code_language),
         "tag_count": tag_count_reward,
         "python_package": get_python_package_reward(
-            package_name=script_args.python_package,
             module_name=script_args.python_module,
             python_function=script_args.python_function,
         ),
