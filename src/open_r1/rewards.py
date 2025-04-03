@@ -16,7 +16,6 @@
 """Reward functions for GRPO training."""
 
 import asyncio
-from asyncio import exceptions
 import json
 import math
 import re
@@ -463,7 +462,7 @@ def code_reward(completions, num_parallel: int = 2, e2b_router_url=None, **kwarg
             scripts=scripts,
             language=language,
             timeout=30,
-            request_timeout=15,
+            request_timeout=28,
         )
 
         rewards = []
@@ -473,13 +472,11 @@ def code_reward(completions, num_parallel: int = 2, e2b_router_url=None, **kwarg
                 rewards.append(reward)
             except Exception as e:
                 rewards.append(0.0) # could this be None?
-                return 0.0
         return rewards
 
 
     try:
         rewards = run_async_from_sync(scripts, language, num_parallel)
-
     except Exception as e:
         print(f"Error from E2B executor: {e}")
         rewards = [0.0] * len(completions)

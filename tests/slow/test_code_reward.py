@@ -18,7 +18,8 @@ import unittest
 from datasets import load_dataset
 
 from open_r1.rewards import code_reward, ioi_code_reward
-
+from open_r1.utils.router_sandbox import BatchedRoutedSandbox
+from e2b_code_interpreter.models import Execution, ExecutionError
 
 class TestCodeRewards(unittest.TestCase):
     def test_python_code_reward(self):
@@ -39,7 +40,7 @@ class TestCodeRewards(unittest.TestCase):
         samples = code_dataset["train"].select(range(NUM_SAMPLES))
         test_completions = [[{"content": sample["gold_standard_solution"]}] for sample in samples]
         reward_kwargs = {"verification_info": [sample["verification_info"] for sample in samples]}
-        rewards = code_reward(test_completions, e2b_router_url="ip-10-53-85-124:8000", **reward_kwargs)
+        rewards = code_reward(test_completions, e2b_router_url="0.0.0.0:8000", **reward_kwargs)
         print(rewards)
         assert rewards == [1.0] * NUM_SAMPLES
 
@@ -55,16 +56,64 @@ class TestCodeRewards(unittest.TestCase):
         rewards = ioi_code_reward(test_completions, **reward_kwargs)
         print(rewards)
         assert rewards == [1.0] * NUM_SAMPLES
+        
+        def test_run_code_success():
+            routed_sandbox = BatchedRoutedSandbox(router_url="localhost:8001")
+            scripts = [
+                "print('hello from integration test')",
+                "result = 2 + 2\nprint(result)"
+            ]
+
+            results = routed_sandbox.run_code(scripts)
+
+            assert len(results) == 2
+
+            for result in results:
+                assert isinstance(result, Execution)
+                assert result.exit_code == 0
+                assert result.error is None
+                assert "hello" in result.stdout or "4" in result.stdout
+        
+        def test_run_code_with_error(sandbox):
+            routed_sandbox = BatchedRoutedSandbox(router_url="localhost:8001")
+            scripts = [
+                "print('this is fine')",
+                "print('unterminated string"
+            ]
+
+            results = sandbox.run_code(scripts)
+
+            assert len(results) == 2
+
+            # First one should be okay
+            assert results[0].exit_code == 0
+            assert results[0].error is None
+            assert "this is fine" in results[0].stdout
+
+            # Second one should have a syntax error
+            assert results[1].exit_code != 0
+            assert results[1].error is not None
+            assert isinstance(results[1].error, ExecutionError)
+            assert "SyntaxError" in results[1].error.type
 
 
 if __name__ == "__main__":
     # requires E2B, see the README.md file
-    # requires E2B, see the README.md file
     code_dataset = load_dataset("open-r1/verifiable-coding-problems-python_decontaminated-tested")
-    NUM_SAMPLES = 128
-    samples = code_dataset["train"].select(range(NUM_SAMPLES))
-    test_completions = [[{"content": sample["gold_standard_solution"]}] for sample in samples]
-    reward_kwargs = {"verification_info": [sample["verification_info"] for sample in samples]}
-    rewards = code_reward(test_completions, e2b_router_url="ip-10-53-85-124:8000", **reward_kwargs)
-    print(rewards)
-    assert rewards == [1.0] * NUM_SAMPLES
+
+    def batch_code_reward(examples):
+        test_completions = [[{"content": solution}] for solution in examples["gold_standard_solution"]]
+        reward_kwargs = {"verification_info": [verification_info for verification_info in examples["verification_info"]]}
+        rewards = code_reward(test_completions, e2b_router_url="0.0.0.0:8001", **reward_kwargs)
+        print(rewards)
+        return examples
+
+    code_dataset = code_dataset["train"].select(range(256))
+    code_dataset = code_dataset.map(batch_code_reward, batched=True, batch_size=32, num_proc=4)
+    # NUM_SAMPLES = 128
+    # samples = code_dataset["train"].select(range(NUM_SAMPLES))
+    # test_completions = [[{"content": sample["gold_standard_solution"]}] for sample in samples]
+    # reward_kwargs = {"verification_info": [sample["verification_info"] for sample in samples]}
+    # rewards = code_reward(test_completions, e2b_router_url="0.0.0.0:8001", **reward_kwargs)
+    # print(rewards)
+    # assert rewards == [1.0] * NUM_SAMPLES

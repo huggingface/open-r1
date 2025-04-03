@@ -1,3 +1,18 @@
+# coding=utf-8
+# Copyright 2025 The HuggingFace Team. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import argparse
 import asyncio
 from fastapi import FastAPI
@@ -24,7 +39,7 @@ class BatchRequest(BaseModel):
     request_timeout: int
 
 class ScriptResult(BaseModel):
-    result: Optional[Execution]
+    execution: Optional[Execution]
     exception_str: Optional[str]
     
     # required to allow arbitrary types in pydantic models such as Execution
@@ -59,9 +74,10 @@ def create_app(args):
                         sandbox.run_code(script, language=language),
                         timeout=asyncio_timeout,
                     )
-                    return ScriptResult(result=execution, exception_str=None)
+                    # note that execution.to_json() exists but does not serialize Result.is_main_result
+                    return ScriptResult(execution=execution, exception_str=None)
             except Exception as e:
-                return ScriptResult(result=None, exception_str=str(e))
+                return ScriptResult(execution=None, exception_str=str(e))
         
             finally:
                 try:
@@ -79,7 +95,7 @@ def create_app(args):
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", default="0.0.0.0")
-    parser.add_argument("--port", type=int, default=8001)
+    parser.add_argument("--port", type=int, default=8000)
     parser.add_argument("--num_sandboxes", type=int, default=20)
     return parser.parse_args()
 
