@@ -67,7 +67,7 @@ _deps = [
     "sentencepiece>=0.1.99",
     "torch==2.5.1",
     "transformers==4.50.0",
-    "trl==0.16.0",
+    "trl @ git+https://github.com/huggingface/trl.git@e70a0efecae2e0dedd561c6fb7f32038966da2c9",
     "vllm==0.7.2",
     "wandb>=0.19.1",
 ]
