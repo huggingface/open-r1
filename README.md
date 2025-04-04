@@ -229,6 +229,22 @@ CUDA_VISIBLE_DEVICES=1,2,3,4,5,6,7 ACCELERATE_LOG_LEVEL=info \
     src/open_r1/grpo.py --config recipes/Qwen2.5-1.5B-Instruct/grpo/config_demo_code.yaml
 ```
 
+It is possible to be rate limited when too many scripts are executed on E2B Sandboxes, so we provide an E2B router script that can be launched on a CPU node on your cluster:
+
+For GRPO training:
+First start the router and get its IP
+
+```shell
+sbatch slurm/e2b_router.slurm
+```
+
+Then add this line in your training YAML config: (for example)
+```
+e2b_router_url: 1.2.3.4:8000
+```
+The port here should match the one used when launching the router.
+All training jobs can share the same router IP which will ensure there are at most 20 parallel executions.
+
 #### IOI problems
 
 We provide a `ioi_code_reward` reward function for executing problems from [IOI](https://hf.co/datasets/open-r1/ioi) using [piston](https://github.com/engineer-man/piston).
