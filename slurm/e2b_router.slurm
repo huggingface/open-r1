@@ -2,7 +2,6 @@
 
 #SBATCH --partition=hopper-cpu
 #SBATCH --mem=16g
-#SBATCH --time=72:00:00
 #SBATCH --cpus-per-task=16
 #SBATCH --output=./logs/%x-%j.out
 #SBATCH --err=./logs/%x-%j.err
