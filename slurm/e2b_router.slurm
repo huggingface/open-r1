@@ -9,7 +9,6 @@
 #SBATCH --requeue
 
 echo "Starting job"
-module load cuda/12.4
 set -x -e
 
 source ~/.bashrc

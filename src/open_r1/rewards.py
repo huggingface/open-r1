@@ -470,7 +470,7 @@ def code_reward(completions, num_parallel: int = 2, e2b_router_url=None, **kwarg
                 reward = float(execution.text)
                 rewards.append(reward)
             except Exception:
-                rewards.append(0.0)  # could this be None?
+                rewards.append(None)
         return rewards
 
     try:

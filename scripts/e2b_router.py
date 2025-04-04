@@ -17,7 +17,7 @@ import argparse
 import asyncio
 from fastapi import FastAPI
 from pydantic import BaseModel, ConfigDict
-from typing import List, Optional
+from typing import  Optional
 from fastapi import FastAPI, Request
 import argparse
 import asyncio
@@ -35,12 +35,12 @@ class BatchRequest(BaseModel):
     BatchRequest is a data model representing a batch processing request.
 
     Attributes:
-        scripts (List[str]): A list of script names or paths to be executed.
+        scripts (list[str]): A list of script names or paths to be executed.
         language (str): The programming language in which the scripts are written.
         timeout (int): The maximum allowed execution time for each script in seconds.
         request_timeout (int): The maximum allowed time for the entire batch request in seconds.
     """
-    scripts: List[str]
+    scripts: list[str]
     language: str
     timeout: int
     request_timeout: int
