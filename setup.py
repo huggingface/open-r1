@@ -42,7 +42,7 @@ if stale_egg_info.exists():
 #   * If a dependency is fast-moving (e.g. trl), pin to the exact version
 _deps = [
     "accelerate==1.4.0",
-    "bitsandbytes>=0.43.0",
+    "bitsandbytes>=0.42.0",
     "datasets>=3.2.0",
     "deepspeed==0.15.4",
     "distilabel[vllm,ray,openai]>=1.5.2",
@@ -53,8 +53,8 @@ _deps = [
     "huggingface-hub[cli]>=0.19.2,<1.0",
     "isort>=5.12.0",
     "langdetect",  # Needed for LightEval's extended tasks
-    "latex2sympy2_extended>=1.0.6",
-    "liger_kernel==0.5.3",
+    # "latex2sympy2_extended>=1.0.6",
+    # "liger_kernel==0.5.3",
     "lighteval @ git+https://github.com/huggingface/lighteval.git@ed084813e0bd12d82a06d9f913291fdbee774905",
     "math-verify==0.5.2",  # Used for math verification in grpo
     "packaging>=23.0",
@@ -103,9 +103,9 @@ install_requires = [
     deps["hf_transfer"],
     deps["huggingface-hub"],
     deps["langdetect"],
-    deps["latex2sympy2_extended"],
+    # deps["latex2sympy2_extended"],
     deps["math-verify"],
-    deps["liger_kernel"],
+    # deps["liger_kernel"],
     deps["packaging"],  # utilities from PyPA to e.g., compare versions
     deps["safetensors"],
     deps["sentencepiece"],
