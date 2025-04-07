@@ -298,31 +298,28 @@ You can scale the number of nodes by increasing the `--nodes` flag.
 
 ## Evaluating models
 
-We use `lighteval` to evaluate models, with custom tasks defined in `src/open_r1/evaluate.py`. For models which fit on a single GPU, run:
+We use `lighteval` to evaluate models. For models which fit on a single GPU, run:
 
 ```shell
 MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B
-MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=32768,gpu_memory_utilization=0.8,generation_parameters={max_new_tokens:32768,temperature:0.6,top_p:0.95}"
+MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=32768,max_num_batched_tokens=32768,gpu_memory_utilization=0.8,generation_parameters={max_new_tokens:32768,temperature:0.6,top_p:0.95}"
 OUTPUT_DIR=data/evals/$MODEL
 
 # AIME 2024
 TASK=aime24
-lighteval vllm $MODEL_ARGS "custom|$TASK|0|0" \
-    --custom-tasks src/open_r1/evaluate.py \
+lighteval vllm $MODEL_ARGS "lighteval|$TASK|0|0" \
     --use-chat-template \
     --output-dir $OUTPUT_DIR
 
 # MATH-500
 TASK=math_500
-lighteval vllm $MODEL_ARGS "custom|$TASK|0|0" \
-    --custom-tasks src/open_r1/evaluate.py \
+lighteval vllm $MODEL_ARGS "lighteval|$TASK|0|0" \
     --use-chat-template \
     --output-dir $OUTPUT_DIR
 
 # GPQA Diamond
 TASK=gpqa:diamond
-lighteval vllm $MODEL_ARGS "custom|$TASK|0|0" \
-    --custom-tasks src/open_r1/evaluate.py \
+lighteval vllm $MODEL_ARGS "lighteval|$TASK|0|0" \
     --use-chat-template \
     --output-dir $OUTPUT_DIR
 
@@ -333,21 +330,20 @@ lighteval vllm $MODEL_ARGS "extended|lcb:codegeneration|0|0" \
 ```
 
 > [!IMPORTANT]
-> You must set `max_model_length=32768` in the `vllm` command to align with the `max_new_tokens` we define per eval. Without this, `lighteval` will throw an error.
+> You must set `max_model_length=32768` and `max_num_batched_tokens=32768` in the `vllm` command to align with the `max_new_tokens` we define per eval. Without this, `lighteval` will throw an error.
 
 To increase throughput across multiple GPUs, use _data parallel_ as follows:
 
 ```shell
 NUM_GPUS=8
 MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B
-MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,data_parallel_size=$NUM_GPUS,max_model_length=32768,gpu_memory_utilization=0.8,generation_parameters={max_new_tokens:32768,temperature:0.6,top_p:0.95}"
+MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,data_parallel_size=$NUM_GPUS,max_model_length=32768,max_num_batched_tokens=32768,gpu_memory_utilization=0.8,generation_parameters={max_new_tokens:32768,temperature:0.6,top_p:0.95}"
 TASK=aime24
 OUTPUT_DIR=data/evals/$MODEL
 
-lighteval vllm $MODEL_ARGS "custom|$TASK|0|0" \
-    --custom-tasks src/open_r1/evaluate.py \
+lighteval vllm $MODEL_ARGS "lighteval|$TASK|0|0" \
     --use-chat-template \
-    --output-dir $OUTPUT_DIR 
+    --output-dir $OUTPUT_DIR
 ```
 
 For large models which require sharding across GPUs, use _tensor parallel_ and run:
@@ -355,15 +351,14 @@ For large models which require sharding across GPUs, use _tensor parallel_ and r
 ```shell
 NUM_GPUS=8
 MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-32B
-MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,tensor_parallel_size=$NUM_GPUS,max_model_length=32768,gpu_memory_utilization=0.8,generation_parameters={max_new_tokens:32768,temperature:0.6,top_p:0.95}"
+MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,tensor_parallel_size=$NUM_GPUS,max_model_length=32768,max_num_batched_tokens=32768,gpu_memory_utilization=0.8,generation_parameters={max_new_tokens:32768,temperature:0.6,top_p:0.95}"
 TASK=aime24
 OUTPUT_DIR=data/evals/$MODEL
 
 export VLLM_WORKER_MULTIPROC_METHOD=spawn
-lighteval vllm $MODEL_ARGS "custom|$TASK|0|0" \
-    --custom-tasks src/open_r1/evaluate.py \
+lighteval vllm $MODEL_ARGS "lighteval|$TASK|0|0" \
     --use-chat-template \
-    --output-dir $OUTPUT_DIR 
+    --output-dir $OUTPUT_DIR
 ```
 
 You can also launch an evaluation with `make evaluate`, specifying the model, task, and optionally the parallelism technique and number of GPUs.
@@ -409,11 +404,10 @@ To reproduce these results use the following command:
 ```shell
 NUM_GPUS=1 # Set to 8 for 32B and 70B models
 MODEL=deepseek-ai/{model_name}
-MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=32768,gpu_memory_utilization=0.8,data_parallel_size=$NUM_GPUS,generation_parameters={max_new_tokens:32768,temperature:0.6,top_p:0.95}"
+MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=32768,max_num_batched_tokens=32768,gpu_memory_utilization=0.8,data_parallel_size=$NUM_GPUS,generation_parameters={max_new_tokens:32768,temperature:0.6,top_p:0.95}"
 OUTPUT_DIR=data/evals/$MODEL
 
-lighteval vllm $MODEL_ARGS "custom|aime24|0|0" \
-    --custom-tasks src/open_r1/evaluate.py \
+lighteval vllm $MODEL_ARGS "lighteval|aime24|0|0" \
     --use-chat-template \
     --output-dir $OUTPUT_DIR
 ```
@@ -442,11 +436,10 @@ To reproduce these results use the following command:
 ```shell
 NUM_GPUS=1 # Set to 8 for 32B and 70B models
 MODEL=deepseek-ai/{model_name}
-MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=32768,gpu_memory_utilization=0.8,data_parallel_size=$NUM_GPUS,generation_parameters={max_new_tokens:32768,temperature:0.6,top_p:0.95}"
+MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=32768,max_num_batched_tokens=32768,gpu_memory_utilization=0.8,data_parallel_size=$NUM_GPUS,generation_parameters={max_new_tokens:32768,temperature:0.6,top_p:0.95}"
 OUTPUT_DIR=data/evals/$MODEL
 
-lighteval vllm $MODEL_ARGS "custom|math_500|0|0" \
-    --custom-tasks src/open_r1/evaluate.py \
+lighteval vllm $MODEL_ARGS "lighteval|math_500|0|0" \
     --use-chat-template \
     --output-dir $OUTPUT_DIR
 ```
@@ -475,11 +468,10 @@ To reproduce these results use the following command:
 ```shell
 NUM_GPUS=1 # Set to 8 for 32B and 70B models
 MODEL=deepseek-ai/{model_name}
-MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=32768,gpu_memory_utilization=0.8,data_parallel_size=$NUM_GPUS,generation_parameters={max_new_tokens:32768,temperature:0.6,top_p:0.95}"
+MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=32768,max_num_batched_tokens=32768,gpu_memory_utilization=0.8,data_parallel_size=$NUM_GPUS,generation_parameters={max_new_tokens:32768,temperature:0.6,top_p:0.95}"
 OUTPUT_DIR=data/evals/$MODEL
 
-lighteval vllm $MODEL_ARGS "custom|gpqa:diamond|0|0" \
-    --custom-tasks src/open_r1/evaluate.py \
+lighteval vllm $MODEL_ARGS "lighteval|gpqa:diamond|0|0" \
     --use-chat-template \
     --output-dir $OUTPUT_DIR
 ```
@@ -506,7 +498,7 @@ To reproduce these results use the following command:
 ```shell
 NUM_GPUS=1 # Set to 8 for 32B and 70B models, or data_parallel_size=8 with the smaller models for speed
 MODEL=deepseek-ai/{model_name}
-MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=32768,gpu_memory_utilization=0.8,data_parallel_size=$NUM_GPUS,generation_parameters={max_new_tokens:32768,temperature:0.6,top_p:0.95}"
+MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=32768,max_num_batched_tokens=32768,gpu_memory_utilization=0.8,data_parallel_size=$NUM_GPUS,generation_parameters={max_new_tokens:32768,temperature:0.6,top_p:0.95}"
 OUTPUT_DIR=data/evals/$MODEL
 
 lighteval vllm $MODEL_ARGS "extended|lcb:codegeneration|0|0" \
