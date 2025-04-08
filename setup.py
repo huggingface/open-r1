@@ -50,12 +50,12 @@ _deps = [
     "einops>=0.8.0",
     "flake8>=6.0.0",
     "hf_transfer>=0.1.4",
-    "huggingface-hub[cli]>=0.19.2,<1.0",
+    "huggingface-hub[cli,hf_xet]>=0.19.2,<1.0",
     "isort>=5.12.0",
     "langdetect",  # Needed for LightEval's extended tasks
     "latex2sympy2_extended>=1.0.6",
     "liger_kernel==0.5.3",
-    "lighteval @ git+https://github.com/huggingface/lighteval.git@f3639c6769c6d4cb80173321e3266871421485e4",  # Proper pass@1 for math: https://github.com/huggingface/lighteval/pull/661
+    "lighteval @ git+https://github.com/huggingface/lighteval.git@bb14995c4eccab5cabd450b1e509c3c898a16921",  # pass@1 for AIME with n=32 samples per prompt
     "math-verify==0.5.2",  # Used for math verification in grpo
     "packaging>=23.0",
     "parameterized>=0.9.0",
