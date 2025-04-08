@@ -384,7 +384,7 @@ make evaluate MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-32B TASK=aime24 PARALLE
 ## Reproducing Deepseek's evaluation results
 
 > [!NOTE]
-> The DeepSeek-R1 paper uses sampling with 64 responses per query to estimate `pass@1`. Below, we report the results from sampling 1 response per query, which likely explains the small 1-3σ discrepancies between our results and theirs.
+> The DeepSeek-R1 paper uses sampling with 4-64 responses per query to estimate `pass@1` accuracy, but does not specify the specific number of responses per benchmark. For AIME 2024, we report the results from sampling 32 response per query, while for all others we report the accuracy from sampling 1 response. These choices likely explains the small 1-3σ discrepancies between our results and DeepSeek's.
 
 ### AIME 2024
 
@@ -392,12 +392,12 @@ We are able to reproduce Deepseek's reported results on the AIME 2024 benchmark 
 
 | Model                         | AIME 2024 (🤗 LightEval) | AIME 2024 (DeepSeek Reported) |
 |:------------------------------|:-----------------------:|:----------------------------:|
-| DeepSeek-R1-Distill-Qwen-1.5B |          26.7           |             28.9             |
-| DeepSeek-R1-Distill-Qwen-7B   |          56.6           |             55.5             |
-| DeepSeek-R1-Distill-Qwen-14B  |          60.0           |             69.7             |
-| DeepSeek-R1-Distill-Qwen-32B  |          73.2           |             72.6             |
-| DeepSeek-R1-Distill-Llama-8B  |          43.3           |             50.4             |
-| DeepSeek-R1-Distill-Llama-70B |          73.3           |             70.0             |
+| DeepSeek-R1-Distill-Qwen-1.5B |          31.8           |             28.9             |
+| DeepSeek-R1-Distill-Qwen-7B   |          52.2           |             55.5             |
+| DeepSeek-R1-Distill-Qwen-14B  |          66.5           |             69.7             |
+| DeepSeek-R1-Distill-Qwen-32B  |          68.0           |             72.6             |
+| DeepSeek-R1-Distill-Llama-8B  |          43.9           |             41.7             |
+| DeepSeek-R1-Distill-Llama-70B |          65.3           |             70.0             |
 
 To reproduce these results use the following command:
 
