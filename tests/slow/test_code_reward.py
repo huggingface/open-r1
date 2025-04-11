@@ -62,7 +62,9 @@ class TestCodeRewards(unittest.TestCase):
             return examples
 
         code_dataset = code_dataset["train"].select(range(NUM_SAMPLES))
-        code_dataset = code_dataset.map(batch_code_reward, batched=True, batch_size=BATCH_SIZE, num_proc=4)
+        code_dataset = code_dataset.map(
+            batch_code_reward, batched=True, batch_size=BATCH_SIZE, num_proc=4, load_from_cache_file=False
+        )
 
     def test_ioi_code_reward(self):
         # This slow test case requires spinning up a bunch (I tested with ~64) of piston workers, see docs here

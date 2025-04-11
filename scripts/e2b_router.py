@@ -24,7 +24,6 @@ import asyncio
 from fastapi import FastAPI
 import uvicorn
 from e2b_code_interpreter.models import Execution
-
 from dotenv import load_dotenv
 from e2b_code_interpreter import AsyncSandbox
 
@@ -107,10 +106,11 @@ def create_app(args):
         timeout = batch.timeout
         request_timeout = batch.request_timeout
         asyncio_timeout = batch.timeout + 1
-
+        
         async def run_script(script: str) -> ScriptResult:
-            try:
-                async with semaphore:
+
+            async with semaphore:
+                try:
                     sandbox = await AsyncSandbox.create(
                         timeout=timeout,
                         request_timeout=request_timeout,
@@ -119,17 +119,16 @@ def create_app(args):
                         sandbox.run_code(script, language=language),
                         timeout=asyncio_timeout,
                     )
-                    # note that execution.to_json() exists but does not serialize Result.is_main_result
                     return ScriptResult(execution=execution, exception_str=None)
-            except Exception as e:
-                return ScriptResult(execution=None, exception_str=str(e))
-        
-            finally:
-                try:
-                    await sandbox.kill()
+
                 except Exception as e:
-                    # do nothing
-                    pass
+                    return ScriptResult(execution=None, exception_str=str(e))
+                
+                finally:
+                    try:
+                        await sandbox.kill()
+                    except Exception:
+                        pass
 
         tasks = [run_script(script) for script in batch.scripts]
         return await asyncio.gather(*tasks)

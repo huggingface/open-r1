@@ -454,9 +454,9 @@ def code_reward(completions, num_parallel: int = 2, e2b_router_url=None, **kwarg
         raise ValueError("All verification_info must have the same language", verification_info)
 
     if e2b_router_url is not None:
-        router_sandbox = RoutedSandbox(router_url=e2b_router_url)
+        routed_sandbox = RoutedSandbox(router_url=e2b_router_url)
 
-        executions = router_sandbox.run_code(
+        executions = routed_sandbox.run_code(
             scripts=scripts,
             language=language,
             timeout=30,
