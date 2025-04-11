@@ -1,0 +1,66 @@
+# Config for 1 + 1 nodes
+# Model arguments
+model_name_or_path: open-r1/R1-Zero-Qwen-7B-Math
+model_revision: v04.00-step-000000310
+torch_dtype: bfloat16
+attn_implementation: flash_attention_2
+
+# Data training arguments
+dataset_name: open-r1/Big-Math-RL-Verified-Processed
+dataset_config: level_5
+
+# GRPO trainer config
+callbacks:
+- push_to_hub_revision
+benchmarks:
+- math_500
+- aime24
+beta: 0.0
+bf16: true
+do_eval: false
+eval_strategy: "no"
+use_vllm: true
+do_eval: false
+gradient_accumulation_steps: 16
+gradient_checkpointing: true
+gradient_checkpointing_kwargs:
+  use_reentrant: false
+hub_model_id: open-r1/R1-Zero-Qwen-7B-Math
+hub_model_revision: v04.10
+hub_strategy: every_save
+learning_rate: 1.0e-06
+log_completions: true
+log_level: info
+logging_first_step: true
+logging_steps: 1
+logging_strategy: steps
+lr_scheduler_type: constant_with_warmup
+mask_truncated_completions: true
+max_grad_norm: 0.2
+max_prompt_length: 1024
+max_completion_length: 8192
+max_steps: -1
+num_generations: 16
+num_iterations: 1
+num_train_epochs: 0.53 # 19.9k prompts
+output_dir: data/R1-Zero-Qwen-7B-Math-v04.10
+overwrite_output_dir: true
+per_device_train_batch_size: 4
+push_to_hub: true
+report_to:
+- wandb
+reward_funcs:
+- accuracy
+- format
+- soft_format
+reward_weights:
+- 1.0
+- 0.25
+- 0.25
+save_strategy: "steps"
+save_steps: 0.1
+save_total_limit: 1
+sync_ref_model: false 
+seed: 42
+temperature: 1.0
+warmup_ratio: 0.1
