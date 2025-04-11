@@ -50,7 +50,7 @@ lighteval vllm "$MODEL_ARGS" $TASKS \
     --use-chat-template \
     --output-dir $OUTPUT_DIR \
     --save-details \
-    ${7:+--system-prompt "$7"}
+    ${7:+--system-prompt "$(echo "$7" | base64 --decode)"}
 
 OUTPUT_FILEPATHS=$(find $OUTPUT_DIR/results/ -type f \( -name "*.json" \))
 for filepath in $OUTPUT_FILEPATHS; do

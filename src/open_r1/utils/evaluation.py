@@ -8,7 +8,7 @@ if TYPE_CHECKING:
     from trl import GRPOConfig, SFTConfig, ModelConfig
 
 import os
-
+import base64
 
 # We need a special environment setup to launch vLLM from within Slurm training jobs.
 # - Reference code: https://github.com/huggingface/brrr/blob/c55ba3505686d690de24c7ace6487a5c1426c0fd/brrr/lighteval/one_job_runner.py#L105
@@ -88,7 +88,10 @@ def run_lighteval_job(
         f"{model_args.trust_remote_code}",
     ]
     if training_args.system_prompt is not None:
-        cmd_args.append(f"--system_prompt={training_args.system_prompt}")
+        # encode to base64 to avoid issues with special characters
+        # we decode in the sbatch script
+        prompt_encoded = base64.b64encode(training_args.system_prompt.encode()).decode()
+        cmd_args.append(prompt_encoded)
     cmd[-1] += " " + " ".join(cmd_args)
     subprocess.run(cmd, check=True)
 
