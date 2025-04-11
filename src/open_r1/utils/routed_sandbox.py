@@ -80,12 +80,17 @@ class RoutedSandbox:
         results = response.json()
         output = []
         for result in results:
-            execution = Execution(
-                results=[Result(**r) for r in result["execution"]["results"]],
-                logs=result["execution"]["logs"],
-                error=ExecutionError(**result["execution"]["error"]) if result["execution"]["error"] else None,
-                execution_count=result["execution"]["execution_count"],
-            )
+            if result["execution"] is None:
+                # If execution is None, create an empty Execution object
+                # This can happen when a script times out or fails to execute
+                execution = Execution()
+            else:
+                execution = Execution(
+                    results=[Result(**r) for r in result["execution"]["results"]],
+                    logs=result["execution"]["logs"],
+                    error=ExecutionError(**result["execution"]["error"]) if result["execution"]["error"] else None,
+                    execution_count=result["execution"]["execution_count"],
+                )
             output.append(execution)
 
         return output
