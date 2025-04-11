@@ -281,7 +281,7 @@ def get_cosine_scaled_reward(
     return cosine_scaled_reward
 
 
-def get_repetition_penalty_reward(ngram_size: int, max_penalty: float):
+def get_repetition_penalty_reward(ngram_size: int, max_penalty: float, only_start: bool = False):
     """
     Computes N-gram repetition penalty as described in Appendix C.2 of https://arxiv.org/abs/2502.03373.
     Reference implementation from: https://github.com/eddycmu/demystify-long-cot/blob/release/openrlhf/openrlhf/reward/repetition.py
@@ -293,9 +293,8 @@ def get_repetition_penalty_reward(ngram_size: int, max_penalty: float):
     if max_penalty > 0:
         raise ValueError(f"max_penalty {max_penalty} should not be positive")
 
-    def zipngram(text: str, ngram_size: int):
-        words = text.lower().split()
-        return zip(*[words[i:] for i in range(ngram_size)])
+    def zipngram(tokens: list[str], ngram_size: int):
+        return zip(*[tokens[i:] for i in range(ngram_size)])
 
     def repetition_penalty_reward(completions, **kwargs) -> float:
         """
@@ -309,22 +308,35 @@ def get_repetition_penalty_reward(ngram_size: int, max_penalty: float):
         contents = [completion[0]["content"] for completion in completions]
         rewards = []
         for completion in contents:
-            if completion == "":
-                rewards.append(0.0)
-                continue
-            if len(completion.split()) < ngram_size:
+            if completion == "" or len(completion.split()) < ngram_size:
                 rewards.append(0.0)
                 continue
 
+            # Find repeated n-grams and their positions
+            words = completion.lower().split()
+            repeated_positions = []
             ngrams = set()
-            total = 0
-            for ng in zipngram(completion, ngram_size):
-                ngrams.add(ng)
-                total += 1
 
-            scaling = 1 - len(ngrams) / total
-            reward = scaling * max_penalty
-            rewards.append(reward)
+            for start_idx, ng in enumerate(zipngram(words, ngram_size)):
+                if ng in ngrams:
+                    repeated_positions.append(start_idx)
+                ngrams.add(ng)
+
+            # Calculate word-level penalties
+            word_penalties = [0.0] * len(words)
+            curr_end_idx = -1
+
+            for start_idx in repeated_positions:
+                if not only_start or start_idx > curr_end_idx:
+                    # Apply penalty to each token in the repeated n-gram
+                    for i in range(start_idx, start_idx + ngram_size):
+                        word_penalties[i] = max_penalty
+                curr_end_idx = start_idx + ngram_size
+
+            # Average the word-level penalties for the final reward
+            reward = sum(word_penalties) / len(word_penalties) if word_penalties else 0.0
+            rewards.append(float(reward))
+
         return rewards
 
     return repetition_penalty_reward
