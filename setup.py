@@ -65,10 +65,10 @@ _deps = [
     "ruff>=0.9.0",
     "safetensors>=0.3.3",
     "sentencepiece>=0.1.99",
-    "torch==2.5.1",
-    "transformers==4.50.0",
-    "trl==0.16.0",
-    "vllm==0.7.2",
+    "torch==2.6.0",
+    "transformers==4.51.2",
+    "trl @ git+https://github.com/huggingface/trl.git@d625c5533a6b1c84d3565c8080857f6bb81c538a", # Bump for vLLM and 2x faster throughput: https://github.com/huggingface/trl/pull/3276 
+    "vllm==0.8.3",
     "wandb>=0.19.1",
 ]
 

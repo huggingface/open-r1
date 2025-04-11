@@ -69,7 +69,7 @@ uv venv openr1 --python 3.11 && source openr1/bin/activate && uv pip install --u
 Next, install vLLM and FlashAttention:
 
 ```shell
-uv pip install vllm==0.7.2
+uv pip install vllm==0.8.3
 uv pip install setuptools && uv pip install flash-attn --no-build-isolation
 ```
 
