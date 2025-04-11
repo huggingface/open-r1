@@ -54,4 +54,5 @@ save_strategy: "epoch"
 save_total_limit: 1
 seed: 42
 temperature: 0.7
+use_liger_kernel: true
 warmup_ratio: 0.1
