@@ -54,7 +54,7 @@ _deps = [
     "isort>=5.12.0",
     "langdetect",  # Needed for LightEval's extended tasks
     "latex2sympy2_extended>=1.0.6",
-    "liger_kernel==0.5.3",
+    "liger-kernel>=0.5.6",
     "lighteval @ git+https://github.com/huggingface/lighteval.git@bb14995c4eccab5cabd450b1e509c3c898a16921",  # pass@1 for AIME with n=32 samples per prompt
     "math-verify==0.5.2",  # Used for math verification in grpo
     "packaging>=23.0",
@@ -105,7 +105,7 @@ install_requires = [
     deps["langdetect"],
     deps["latex2sympy2_extended"],
     deps["math-verify"],
-    deps["liger_kernel"],
+    deps["liger-kernel"],
     deps["packaging"],  # utilities from PyPA to e.g., compare versions
     deps["safetensors"],
     deps["sentencepiece"],
