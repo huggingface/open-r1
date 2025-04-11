@@ -70,6 +70,9 @@ _deps = [
     "trl @ git+https://github.com/huggingface/trl.git@d625c5533a6b1c84d3565c8080857f6bb81c538a",  # Bump for vLLM and 2x faster throughput: https://github.com/huggingface/trl/pull/3276
     "vllm==0.8.3",
     "wandb>=0.19.1",
+    "smolagents==1.12.0",
+    "ipykernel",
+    "ipywidgets",
 ]
 
 # this is a lookup table with items like:
@@ -92,6 +95,8 @@ extras["quality"] = deps_list("ruff", "isort", "flake8")
 extras["code"] = deps_list("e2b-code-interpreter", "python-dotenv")
 extras["eval"] = deps_list("lighteval", "math-verify")
 extras["dev"] = extras["quality"] + extras["tests"] + extras["eval"] + extras["code"]
+extras["smolagents"] = deps_list("smolagents")
+extras["jupyter"] = deps_list("ipykernel", "ipywidgets")
 
 # core dependencies shared across the whole project - keep this to a bare minimum :)
 install_requires = [
