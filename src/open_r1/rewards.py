@@ -25,19 +25,7 @@ from typing import Callable, Dict, Optional
 from latex2sympy2_extended import NormalizationConfig
 from math_verify import LatexExtractionConfig, parse, verify
 
-from .utils import is_e2b_available
 from .utils.ioi import SubtaskResult, add_includes, get_piston_client_from_env, score_subtask
-
-
-if is_e2b_available():
-    from dotenv import load_dotenv
-    from e2b_code_interpreter import AsyncSandbox
-
-    from .utils.routed_sandbox import RoutedSandbox
-
-    load_dotenv()
-else:
-    AsyncSandbox = None
 
 
 def accuracy_reward(completions: list[list[dict[str, str]]], solution: list[str], **kwargs) -> list[Optional[float]]:
@@ -331,6 +319,7 @@ def get_repetition_penalty_reward(ngram_size: int, max_penalty: float):
 
 
 def _init_event_loop():
+    """Initialize or get the current event loop."""
     try:
         loop = asyncio.get_event_loop()
     except RuntimeError:
@@ -384,8 +373,14 @@ def extract_code(completion: str, language: str = "python") -> str:
     return extracted_answer
 
 
-def binary_code_reward(completions, num_parallel: int = 2, e2b_router_url=None, **kwargs) -> list[float]:
-    rewards = code_reward(completions, num_parallel=num_parallel, e2b_router_url=e2b_router_url, **kwargs)
+def binary_code_reward(completions, num_parallel: int = 2, e2b_router_url=None, provider_type: str = None, **kwargs) -> list[float]:
+    rewards = code_reward(
+        completions, 
+        num_parallel=num_parallel, 
+        e2b_router_url=e2b_router_url, 
+        provider_type=provider_type, 
+        **kwargs
+    )
     BINARY_THRESHOLD = 0.99
 
     output = []
@@ -398,19 +393,21 @@ def binary_code_reward(completions, num_parallel: int = 2, e2b_router_url=None, 
     return output
 
 
-def code_reward(completions, num_parallel: int = 2, e2b_router_url=None, **kwargs) -> list[float]:
-    """Reward function that evaluates code snippets using the E2B code interpreter.
+def code_reward(completions, num_parallel: int = 2, e2b_router_url=None, provider_type: str = "e2b", **kwargs) -> list[float]:
+    """Reward function that evaluates code snippets using a code execution provider.
 
     Assumes the dataset contains a `verification_info` column with test cases.
+    
+    Args:
+        completions: List of model completions to evaluate
+        num_parallel: Number of parallel code executions (default: 2)
+        e2b_router_url: URL for E2B router (if using E2B provider with router mode)
+        provider_type: Which code execution provider to use (default: "e2b")
+        **kwargs: Additional arguments passed to the verification
     """
-    if not is_e2b_available():
-        raise ImportError(
-            "E2B is not available and required for this reward function. Please install E2B with "
-            "`pip install e2b-code-interpreter` and add an API key to a `.env` file."
-        )
-
-    # TODO: add support for other languages in E2B: https://e2b.dev/docs/code-interpreting/supported-languages
-    """Returns a reward function that evaluates code snippets in a sandbox."""
+    from .utils.code_providers import get_provider
+    
+    # Script template used for evaluation - all providers use this same template
     evaluation_script_template = """
     import subprocess
     import json
@@ -450,43 +447,33 @@ def code_reward(completions, num_parallel: int = 2, e2b_router_url=None, **kwarg
 
     evaluate_code(code_snippet, test_cases)
     """
+    
+    # Extract code from completions
     code_snippets = [extract_code(completion[-1]["content"]) for completion in completions]
     verification_info = kwargs["verification_info"]
+    
+    # Create scripts by populating the template with code and test cases
     scripts = [
-        evaluation_script_template.format(code=json.dumps(code), test_cases=json.dumps(json.dumps(info["test_cases"])))
+        evaluation_script_template.format(
+            code=json.dumps(code), 
+            test_cases=json.dumps(json.dumps(info["test_cases"]))
+        )
         for code, info in zip(code_snippets, verification_info)
     ]
 
+    # Verify all problems use the same language
     language = verification_info[0]["language"]
     if not all(v["language"] == language for v in verification_info):
         raise ValueError("All verification_info must have the same language", verification_info)
 
-    if e2b_router_url is not None:
-        routed_sandbox = RoutedSandbox(router_url=e2b_router_url)
-
-        executions = routed_sandbox.run_code(
-            scripts=scripts,
-            language=language,
-            timeout=30,
-            request_timeout=28,
-        )
-
-        rewards = []
-        for execution in executions:
-            try:
-                reward = float(execution.text)
-                rewards.append(reward)
-            except Exception:
-                rewards.append(None)
-        return rewards
-
-    try:
-        rewards = run_async_from_sync(scripts, language, num_parallel)
-    except Exception as e:
-        print(f"Error from E2B executor: {e}")
-        rewards = [0.0] * len(completions)
-
-    return rewards
+    # Get the appropriate provider and execute the scripts
+    execution_provider = get_provider(
+        provider_type=provider_type,
+        num_parallel=num_parallel,
+        e2b_router_url=e2b_router_url,
+    )
+    
+    return execution_provider.execute_scripts(scripts, language)
 
 
 def get_code_format_reward(language: str = "python"):
@@ -505,62 +492,6 @@ def get_code_format_reward(language: str = "python"):
     return code_format_reward
 
 
-def run_async_from_sync(scripts: list[str], language: str, num_parallel: int) -> list[float]:
-    """Function wrapping the `run_async` function."""
-    # Create a new event loop and set it
-    try:
-        # Run the async function and get the result
-        rewards = asyncio.run(run_async(scripts, language, num_parallel))
-    except Exception as e:
-        print(f"Error from E2B executor async: {e}")
-        raise e
-
-    return rewards
-
-
-async def run_async(scripts: list[str], language: str, num_parallel: int) -> list[float]:
-    # Limit the number of concurrent tasks
-    semaphore = asyncio.Semaphore(num_parallel)
-
-    # Create a list of tasks for running scripts concurrently
-    tasks = [run_script(script, language, semaphore) for script in scripts]
-
-    # Wait for all tasks to complete and gather their results as they finish
-    results = await asyncio.gather(*tasks)
-    rewards = list(results)  # collect results
-
-    return rewards
-
-
-async def run_script(script: str, language: str, semaphore: asyncio.Semaphore) -> float:
-    # We set a timeout margin, as the AsyncSandbox timeout does not seem to work
-    # These values are based on running 256 examples with the gold solution
-    # from open-r1/verifiable-coding-problems-python_decontaminated
-    # see scripts/benchmark_e2b.py
-
-    SANDBOX_TIMEOUT = 30
-    MARGIN = 2
-    REQUEST_TIMEOUT = SANDBOX_TIMEOUT - MARGIN
-    ASYNCIO_TIMEOUT = SANDBOX_TIMEOUT + MARGIN
-
-    async with semaphore:
-        try:
-            sandbox = await AsyncSandbox.create(timeout=SANDBOX_TIMEOUT, request_timeout=REQUEST_TIMEOUT)
-            execution = await asyncio.wait_for(sandbox.run_code(script, language=language), timeout=ASYNCIO_TIMEOUT)
-            return float(execution.text)
-        except (TypeError, ValueError):
-            return 0.0
-        except asyncio.TimeoutError:
-            print("Operation timed out")
-            return 0.0
-        except Exception as e:
-            print(f"Error in `run_script` from E2B sandbox ID {sandbox.sandbox_id} : {e}")
-            return 0.0
-        finally:
-            try:
-                await sandbox.kill()
-            except Exception as e:
-                print(f"Error from E2B executor kill with sandbox ID {sandbox.sandbox_id} : {e}")
 
 
 def get_reward_funcs(script_args) -> list[Callable]:
@@ -585,6 +516,7 @@ def get_reward_funcs(script_args) -> list[Callable]:
                 code_reward,
                 num_parallel=script_args.parallel_code_exec_per_proc,
                 e2b_router_url=script_args.e2b_router_url,
+                provider_type=script_args.code_provider,
             ),
             code_reward,
         ),
@@ -593,6 +525,7 @@ def get_reward_funcs(script_args) -> list[Callable]:
                 binary_code_reward,
                 num_parallel=script_args.parallel_code_exec_per_proc,
                 e2b_router_url=script_args.e2b_router_url,
+                provider_type=script_args.code_provider,
             ),
             binary_code_reward,
         ),

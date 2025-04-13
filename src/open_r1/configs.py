@@ -178,3 +178,11 @@ class GRPOScriptArguments(trl.ScriptArguments):
         default=None,
         metadata={"help": "URL for the E2B route. See scripts/e2b_router.py"},
     )
+
+    code_provider: Optional[str] = field(
+        default="e2b",
+        metadata={
+            "help": "Provider for code execution. Options: 'e2b', 'local', 'morph'.",
+            "choices": ["e2b", "local", "morph"],
+        },
+    )
