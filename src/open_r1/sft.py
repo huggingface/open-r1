@@ -23,7 +23,6 @@ accelerate launch --config_file=recipes/accelerate_configs/zero3.yaml src/open_r
     --dataset_name HuggingFaceH4/Bespoke-Stratos-17k \
     --learning_rate 2.0e-5 \
     --num_train_epochs 1 \
-    --packing \
     --max_seq_length 4096 \
     --per_device_train_batch_size 2 \
     --gradient_accumulation_steps 8 \
@@ -106,7 +105,6 @@ def main(script_args, training_args, model_args):
     # Load tokenizer
     ################
     tokenizer = get_tokenizer(model_args, training_args)
-    tokenizer.pad_token = tokenizer.eos_token
 
     ###################
     # Model init kwargs
