@@ -73,8 +73,11 @@ def run_lighteval_job(
     if get_param_count_from_repo_id(model_name) >= 30_000_000_000:
         tensor_parallel = True
     else:
-        num_gpus = 1  # FIXME: vLLM 0.8.3 hangs with lighteval and DP > 1, so we disable it for now. See https://github.com/huggingface/lighteval/issues/670
+        num_gpus = 8
         tensor_parallel = False
+
+    # FIXME: vLLM 0.8.3 hangs with lighteval and DP > 1, so we disable it for now and use TP for all evals. See https://github.com/huggingface/lighteval/issues/670
+    tensor_parallel = True
 
     cmd = VLLM_SLURM_PREFIX.copy()
     cmd_args = [
