@@ -105,6 +105,7 @@ def main(script_args, training_args, model_args):
     model = get_model(model_args, training_args)
 
     if tokenizer.chat_template is None:
+        logger.info("No chat template provided, using ChatML.")
         model, tokenizer = setup_chat_format(model, tokenizer, format="chatml")
 
     ############################
