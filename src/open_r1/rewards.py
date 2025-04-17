@@ -85,12 +85,40 @@ def accuracy_reward(completions: list[list[dict[str, str]]], solution: list[str]
     return rewards
 
 
-def format_reward(completions, **kwargs):
+def format_reward(completions, **kwargs) -> list[float]:
     """Reward function that checks if the reasoning process is enclosed within <think> and </think> tags, while the final answer is enclosed within <answer> and </answer> tags."""
     pattern = r"^<think>\n.*?\n</think>\n<answer>\n.*?\n</answer>$"
     completion_contents = [completion[0]["content"] for completion in completions]
     matches = [re.match(pattern, content, re.DOTALL | re.MULTILINE) for content in completion_contents]
     return [1.0 if match else 0.0 for match in matches]
+
+
+def soft_format_reward(completions, **kwargs) -> list[float]:
+    """
+    Reward is 1.0 only if there is exactly one <think>...</think> block
+    followed by exactly one <answer>...</answer> block, and no other occurrences.
+    """
+    think_pattern = r"<think>.*?</think>"
+    answer_pattern = r"<answer>.*?</answer>"
+
+    completion_contents = [completion[0]["content"] for completion in completions]
+    rewards = []
+
+    for content in completion_contents:
+        think_matches = re.findall(think_pattern, content, re.DOTALL)
+        answer_matches = re.findall(answer_pattern, content, re.DOTALL)
+
+        # Enforce exactly one of each
+        if len(think_matches) == 1 and len(answer_matches) == 1:
+            # Check that <think> comes before <answer>
+            think_index = content.find(think_matches[0])
+            answer_index = content.find(answer_matches[0])
+            if think_index < answer_index:
+                rewards.append(1.0)
+                continue
+        rewards.append(0.0)
+
+    return rewards
 
 
 def tag_count_reward(completions, **kwargs) -> list[float]:
@@ -567,6 +595,7 @@ def get_reward_funcs(script_args) -> list[Callable]:
     REWARD_FUNCS_REGISTRY = {
         "accuracy": accuracy_reward,
         "format": format_reward,
+        "soft_format": soft_format_reward,
         "reasoning_steps": reasoning_steps_reward,
         "cosine": get_cosine_scaled_reward(
             min_value_wrong=script_args.cosine_min_value_wrong,

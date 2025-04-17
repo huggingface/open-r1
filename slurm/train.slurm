@@ -22,6 +22,8 @@ CONFIG_SUFFIX=$3
 ACCELERATOR=$4
 OPTIONAL_ARGS=$5
 CONFIG_FILE=recipes/$MODEL/$TASK/config_$CONFIG_SUFFIX.yaml
+
+# Special parsing to align GAS on accelerate and training configs
 GRAD_ACC_STEPS=$(grep 'gradient_accumulation_steps' $CONFIG_FILE | awk '{print $2}')
 
 # Split the string into individual arguments
