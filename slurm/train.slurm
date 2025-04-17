@@ -23,6 +23,20 @@ ACCELERATOR=$4
 OPTIONAL_ARGS=$5
 CONFIG_FILE=recipes/$MODEL/$TASK/config_$CONFIG_SUFFIX.yaml
 GRAD_ACC_STEPS=$(grep 'gradient_accumulation_steps' $CONFIG_FILE | awk '{print $2}')
+
+# Split the string into individual arguments
+IFS=' ' read -ra ARGS <<< "$OPTIONAL_ARGS"
+# Loop through the arguments and find the one with "--gradient_accumulation_steps"
+for arg in "${ARGS[@]}"; do
+    if [[ "$arg" == "--gradient_accumulation_steps="* ]]; then
+        # Extract the value after the equals sign
+        GRAD_ACC_STEPS="${arg#*=}"
+        break  # Exit the loop once we find the desired argument
+    fi
+done
+
+echo "Gradient accumulation steps: $GRAD_ACC_STEPS"
+
 MODEL=$(grep 'model_name_or_path:' $CONFIG_FILE | awk '{print $2}')
 REVISION=$(grep 'model_revision:' $CONFIG_FILE | head -n 1 | awk '{print $2}')
 
