@@ -20,7 +20,7 @@ Usage:
 # One 1 node of 8 x H100s
 accelerate launch --config_file=recipes/accelerate_configs/zero3.yaml src/open_r1/sft.py \
     --model_name_or_path Qwen/Qwen2.5-1.5B-Instruct \
-    --dataset_name HuggingFaceH4/Bespoke-Stratos-17k \
+    --dataset_name open-r1/OpenR1-Math-220k \
     --learning_rate 2.0e-5 \
     --num_train_epochs 1 \
     --packing \
@@ -40,25 +40,16 @@ import os
 import sys
 
 import datasets
-import torch
 import transformers
 from datasets import load_dataset
 from transformers import set_seed
 from transformers.trainer_utils import get_last_checkpoint
 
 from open_r1.configs import SFTConfig
-from open_r1.utils import get_tokenizer
+from open_r1.utils import get_model, get_tokenizer
 from open_r1.utils.callbacks import get_callbacks
 from open_r1.utils.wandb_logging import init_wandb_training
-from trl import (
-    ModelConfig,
-    ScriptArguments,
-    SFTTrainer,
-    TrlParser,
-    get_kbit_device_map,
-    get_peft_config,
-    get_quantization_config,
-)
+from trl import ModelConfig, ScriptArguments, SFTTrainer, TrlParser, get_peft_config, setup_chat_format
 
 
 logger = logging.getLogger(__name__)
@@ -106,32 +97,22 @@ def main(script_args, training_args, model_args):
     # Load tokenizer
     ################
     tokenizer = get_tokenizer(model_args, training_args)
-    tokenizer.pad_token = tokenizer.eos_token
 
     ###################
-    # Model init kwargs
+    # Load model
     ###################
-    logger.info("*** Initializing model kwargs ***")
-    torch_dtype = (
-        model_args.torch_dtype if model_args.torch_dtype in ["auto", None] else getattr(torch, model_args.torch_dtype)
-    )
-    quantization_config = get_quantization_config(model_args)
-    model_kwargs = dict(
-        revision=model_args.model_revision,
-        trust_remote_code=model_args.trust_remote_code,
-        attn_implementation=model_args.attn_implementation,
-        torch_dtype=torch_dtype,
-        use_cache=False if training_args.gradient_checkpointing else True,
-        device_map=get_kbit_device_map() if quantization_config is not None else None,
-        quantization_config=quantization_config,
-    )
-    training_args.model_init_kwargs = model_kwargs
+    logger.info("*** Loading model ***")
+    model = get_model(model_args, training_args)
+
+    if tokenizer.chat_template is None:
+        logger.info("No chat template provided, using ChatML.")
+        model, tokenizer = setup_chat_format(model, tokenizer, format="chatml")
 
     ############################
     # Initialize the SFT Trainer
     ############################
     trainer = SFTTrainer(
-        model=model_args.model_name_or_path,
+        model=model,
         args=training_args,
         train_dataset=dataset[script_args.dataset_train_split],
         eval_dataset=dataset[script_args.dataset_test_split] if training_args.eval_strategy != "no" else None,

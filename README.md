@@ -112,7 +112,6 @@ accelerate launch --config_file=recipes/accelerate_configs/zero3.yaml src/open_r
     --dataset_name open-r1/OpenR1-Math-220k \
     --learning_rate 5.0e-5 \
     --num_train_epochs 1 \
-    --packing \
     --max_seq_length 16384 \
     --per_device_train_batch_size 16 \
     --gradient_checkpointing \
@@ -148,6 +147,45 @@ If you also wish to override the Weights and Biases default settings, you can do
 accelerate launch --config_file recipes/accelerate_configs/zero3.yaml src/open_r1/sft.py \
     --config recipes/Qwen2.5-1.5B-Instruct/sft/config_demo.yaml
     --wandb_entity huggingface --wandb_project open-r1 --run_name Qwen2.5-1.5B-GRPO
+```
+
+**🚨 WARNING 🚨**
+
+Most base models like `meta-llama/Llama-3.2-1B` do not have a chat template, so we set ChatML as the default during training. However, for Qwen base models like `Qwen/Qwen2.5-1.5B`, a chat template is pre-defined in the tokenizer, so the EOS token must be set accordingly, e.g.
+
+```diff
+# Align EOS token with chat template for Qwen base models
+accelerate launch --config_file=recipes/accelerate_configs/zero3.yaml src/open_r1/sft.py \
+    --model_name_or_path Qwen/Qwen2.5-1.5B \
++   --eos_token '<|im_end|>'
+    --dataset_name open-r1/OpenR1-Math-220k \
+    --learning_rate 5.0e-5 \
+    --num_train_epochs 1 \
+    --max_seq_length 16384 \
+    --per_device_train_batch_size 16 \
+    --gradient_checkpointing \
+    --bf16 \
+    --use_liger_kernel \
+    --output_dir data/Qwen2.5-1.5B-Open-R1-Distill
+```
+
+If you wish to use a custom chat template (e.g. Llama or Gemma), then the chat template and associated EOS token must be provided:
+
+```diff
+# Align EOS token with custom chat template
+accelerate launch --config_file=recipes/accelerate_configs/zero3.yaml src/open_r1/sft.py \
+    --model_name_or_path meta-llama/Llama-3.2-1B \
++   --chat_template "$(cat llama_chat_template.jinja)" \
++   --eos_token '<|eot_id|>' \
+    --dataset_name open-r1/OpenR1-Math-220k \
+    --learning_rate 5.0e-5 \
+    --num_train_epochs 1 \
+    --max_seq_length 16384 \
+    --per_device_train_batch_size 16 \
+    --gradient_checkpointing \
+    --bf16 \
+    --use_liger_kernel \
+    --output_dir data/Llama-3.2-1B-Open-R1-Distill
 ```
 
 ### SFT

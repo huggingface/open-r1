@@ -25,7 +25,7 @@ logging_strategy: steps
 lr_scheduler_type: cosine_with_min_lr
 lr_scheduler_kwargs:
   min_lr_rate: 0.1
-packing: true
+packing: false
 max_length: 16384
 max_steps: -1
 num_train_epochs: 1

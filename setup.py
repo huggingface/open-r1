@@ -44,7 +44,7 @@ _deps = [
     "accelerate==1.4.0",
     "bitsandbytes>=0.43.0",
     "datasets>=3.2.0",
-    "deepspeed==0.15.4",
+    "deepspeed==0.16.4",
     "distilabel[vllm,ray,openai]>=1.5.2",
     "e2b-code-interpreter>=1.0.5",
     "einops>=0.8.0",
@@ -67,7 +67,7 @@ _deps = [
     "sentencepiece>=0.1.99",
     "torch==2.6.0",
     "transformers==4.51.2",
-    "trl @ git+https://github.com/huggingface/trl.git@d625c5533a6b1c84d3565c8080857f6bb81c538a",  # Bump for vLLM and 2x faster throughput: https://github.com/huggingface/trl/pull/3276
+    "trl @ git+https://github.com/huggingface/trl.git@c04e84c4545acfaecdf7e0631ad07a86ab0fb2f6",  # Fix EOS token for SFT on base models: https://github.com/huggingface/trl/pull/3299
     "vllm==0.8.3",
     "wandb>=0.19.1",
 ]
