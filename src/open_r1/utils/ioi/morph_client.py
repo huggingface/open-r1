@@ -44,160 +44,148 @@ class MorphCloudExecutionClient:
         """
         instance = None
         
-        # Create a unique temporary directory for this execution
+        # Import here to avoid circular imports
         import tempfile
-        # TODO: context manager for tempdir?
-        temp_dir = tempfile.mkdtemp(prefix=f"morph_exec_")
         
         try:
-            # Get or create a snapshot with the necessary dependencies
-            snapshot = await self._get_or_create_base_snapshot()
-            
-            # Start an instance from the snapshot
-            instance = await self.client.instances.astart(snapshot.id)
-            
-            try:
-                await instance.await_until_ready(timeout=300)
-
-                # Create temporary directory to work with
-                await instance.aexec("mkdir -p /workspace")
-                await instance.aexec("mkdir -p /workspace/graders")
-                
-                # Extract problem ID
-                problem_id = None
-                graders_files = []
-                for file in data["files"]:
-                    if file["name"].startswith("graders/") and file["name"].endswith(".cpp"):
-                        # This might be the problem ID file (graders/<problem_id>.cpp)
-                        potential_id = os.path.basename(file["name"]).split(".")[0]
-                        if potential_id not in ["grader", "manager", "stub"]:
-                            problem_id = potential_id
+            # Use built-in context manager for temporary directory
+            with tempfile.TemporaryDirectory(prefix="morph_exec_") as temp_dir:
+                try:
+                    # Get or create a snapshot with the necessary dependencies
+                    snapshot = await self._get_or_create_base_snapshot()
                     
-                    if file["name"].startswith("graders/"):
-                        graders_files.append(file)
-                
-                if not problem_id:
-                    return "0.0", "Could not determine problem ID from files"
-                
-                # Get compile and run scripts
-                compile_script = await self._get_compile_script()
-                run_script = await self._get_run_script()
-                
-                # Upload compile and run scripts and make them executable
-                compile_path = os.path.join(temp_dir, "compile")
-                with open(compile_path, "w") as f:
-                    f.write(data.get("compile_script", compile_script))
-                await instance.aupload(compile_path, "/workspace/compile")
-                await instance.aexec("chmod +x /workspace/compile")
-                
-                run_path = os.path.join(temp_dir, "run")
-                with open(run_path, "w") as f:
-                    f.write(data.get("run_script", run_script))
-                await instance.aupload(run_path, "/workspace/run")
-                await instance.aexec("chmod +x /workspace/run")
-                
-                # Create a grader_config.json file with task information
-                grader_config = {
-                    "task_type": "Batch",  # Default to Batch, can be overridden
-                    "code": problem_id,
-                    "time_limit": data["run_timeout"] / 1000,  # Convert ms to seconds
-                    "memory_limit": data["run_memory_limit"] * 1024 * 1024  # Convert MB to bytes
-                }
-                
-                # Check if we need to handle Communication task type
-                for file in graders_files:
-                    if "manager.cpp" in file["name"]:
-                        grader_config["task_type"] = "Communication"
-                        # Set default Communication params if needed
-                        grader_config["task_type_parameters_Communication_num_processes"] = 1
-                        grader_config["task_type_parameters_Communication_user_io"] = "std_io"
-                        break
-                
-                config_path = os.path.join(temp_dir, "grader_config.json")
-                with open(config_path, "w") as f:
-                    json.dump(grader_config, f)
-                await instance.aupload(config_path, "/workspace/graders/grader_config.json")
-                
-                # Process all files to upload
-                for index, file in enumerate(data["files"]):
-                    file_path = os.path.join(temp_dir, os.path.basename(file["name"]))
-                    with open(file_path, "w") as f:
-                        f.write(file["content"])
+                    # Start an instance from the snapshot
+                    instance = await self.client.instances.astart(snapshot.id)
                     
-                    # Create directory structure if needed
-                    target_path = "/workspace/" + file["name"]
-                    dir_path = os.path.dirname(target_path)
-                    await instance.aexec(f"mkdir -p {dir_path}")
-                    
-                    # Upload the file to the instance
-                    await instance.aupload(file_path, target_path)
-                
-                # Compile the code
-                compile_result = await instance.aexec("cd /workspace && ./compile")
-                if compile_result.exit_code != 0:
-                    return "0", f"Compilation error exit code {compile_result.exit_code}\n{compile_result.stderr}"
-                
-                # Run with the specified time limit and memory limit
-                # Note: The run script already handles time limits internally
-                hard_timeout = data["run_timeout"] / 1000 + 3  # Add 3 seconds as a hard limit
-                run_command = f"cd /workspace && timeout {hard_timeout}s ./run"
-                
-                run_result = await instance.aexec(run_command)
-                
-                # Parse the result based on various conditions
-                if run_result.exit_code == 124 or run_result.exit_code == 137 or run_result.exit_code == 143:
-                    # Timeout exit codes
-                    return "0", "Time limit exceeded"
-                
-                if run_result.exit_code != 0 and "Memory limit exceeded" in run_result.stderr:
-                    return "0", "Memory limit exceeded"
-                
-                # If there's stdout, return it as the score with stderr as feedback
-                if run_result.stdout:
-                    return run_result.stdout.strip(), run_result.stderr.strip()
-                
-                # Other error cases
-                if run_result.exit_code != 0:
-                    return "0", f"Runtime error with exit code {run_result.exit_code}\n{run_result.stderr}"
-                
-                # Default fallback
-                return "0", "Unknown error"
-                
-            finally:
-                # Always clean up the instance
-                if instance:
                     try:
-                        await instance.astop()
-                    except Exception as e:
-                        if "404" in str(e) and "not found" in str(e).lower():
-                            # Instance is already gone, that's fine
-                            pass
-                        else:
-                            # Some other error occurred
-                            print(f"Error stopping instance: {str(e)}")
+                        await instance.await_until_ready(timeout=300)
+
+                        # Create temporary directory to work with
+                        await instance.aexec("mkdir -p /workspace")
+                        await instance.aexec("mkdir -p /workspace/graders")
+                        
+                        # Extract problem ID
+                        problem_id = None
+                        graders_files = []
+                        for file in data["files"]:
+                            if file["name"].startswith("graders/") and file["name"].endswith(".cpp"):
+                                # This might be the problem ID file (graders/<problem_id>.cpp)
+                                potential_id = os.path.basename(file["name"]).split(".")[0]
+                                if potential_id not in ["grader", "manager", "stub"]:
+                                    problem_id = potential_id
+                            
+                            if file["name"].startswith("graders/"):
+                                graders_files.append(file)
+                        
+                        if not problem_id:
+                            return "0.0", "Could not determine problem ID from files"
+                        
+                        # Get compile and run scripts
+                        compile_script = await self._get_compile_script()
+                        run_script = await self._get_run_script()
+                        
+                        # Upload compile and run scripts and make them executable
+                        compile_path = os.path.join(temp_dir, "compile")
+                        with open(compile_path, "w") as f:
+                            f.write(data.get("compile_script", compile_script))
+                        await instance.aupload(compile_path, "/workspace/compile")
+                        await instance.aexec("chmod +x /workspace/compile")
+                        
+                        run_path = os.path.join(temp_dir, "run")
+                        with open(run_path, "w") as f:
+                            f.write(data.get("run_script", run_script))
+                        await instance.aupload(run_path, "/workspace/run")
+                        await instance.aexec("chmod +x /workspace/run")
+                        
+                        # Create a grader_config.json file with task information
+                        grader_config = {
+                            "task_type": "Batch",  # Default to Batch, can be overridden
+                            "code": problem_id,
+                            "time_limit": data["run_timeout"] / 1000,  # Convert ms to seconds
+                            "memory_limit": data["run_memory_limit"] * 1024 * 1024  # Convert MB to bytes
+                        }
+                        
+                        # Check if we need to handle Communication task type
+                        for file in graders_files:
+                            if "manager.cpp" in file["name"]:
+                                grader_config["task_type"] = "Communication"
+                                # Set default Communication params if needed
+                                grader_config["task_type_parameters_Communication_num_processes"] = 1
+                                grader_config["task_type_parameters_Communication_user_io"] = "std_io"
+                                break
+                        
+                        config_path = os.path.join(temp_dir, "grader_config.json")
+                        with open(config_path, "w") as f:
+                            json.dump(grader_config, f)
+                        await instance.aupload(config_path, "/workspace/graders/grader_config.json")
+                        
+                        # Process all files to upload
+                        for index, file in enumerate(data["files"]):
+                            file_path = os.path.join(temp_dir, os.path.basename(file["name"]))
+                            with open(file_path, "w") as f:
+                                f.write(file["content"])
+                            
+                            # Create directory structure if needed
+                            target_path = "/workspace/" + file["name"]
+                            dir_path = os.path.dirname(target_path)
+                            await instance.aexec(f"mkdir -p {dir_path}")
+                            
+                            # Upload the file to the instance
+                            await instance.aupload(file_path, target_path)
+                        
+                        # Compile the code
+                        compile_result = await instance.aexec("cd /workspace && ./compile")
+                        if compile_result.exit_code != 0:
+                            return "0", f"Compilation error exit code {compile_result.exit_code}\n{compile_result.stderr}"
+                        
+                        # Run with the specified time limit and memory limit
+                        # Note: The run script already handles time limits internally
+                        hard_timeout = data["run_timeout"] / 1000 + 3  # Add 3 seconds as a hard limit
+                        run_command = f"cd /workspace && timeout {hard_timeout}s ./run"
+                        
+                        run_result = await instance.aexec(run_command)
+                        
+                        # Parse the result based on various conditions
+                        if run_result.exit_code == 124 or run_result.exit_code == 137 or run_result.exit_code == 143:
+                            # Timeout exit codes
+                            return "0", "Time limit exceeded"
+                        
+                        if run_result.exit_code != 0 and "Memory limit exceeded" in run_result.stderr:
+                            return "0", "Memory limit exceeded"
+                        
+                        # If there's stdout, return it as the score with stderr as feedback
+                        if run_result.stdout:
+                            return run_result.stdout.strip(), run_result.stderr.strip()
+                        
+                        # Other error cases
+                        if run_result.exit_code != 0:
+                            return "0", f"Runtime error with exit code {run_result.exit_code}\n{run_result.stderr}"
+                        
+                        # Default fallback
+                        return "0", "Unknown error"
                     
+                    finally:
+                        # Always clean up the instance
+                        if instance:
+                            try:
+                                await instance.astop()
+                            except Exception as e:
+                                if "404" in str(e) and "not found" in str(e).lower():
+                                    # Instance is already gone, that's fine
+                                    pass
+                                else:
+                                    # Some other error occurred
+                                    print(f"Error stopping instance: {str(e)}")
+                
+                except Exception as e:
+                    # Only catch exceptions from inside the tempdir context
+                    print(f"Error inside tempdir context: {type(e).__name__}: {str(e)}")
+                    raise  # Re-raise to be caught by the outer try-except
+        
         except Exception as e:
             # In case of any errors, return a failed score with the error message
             print(f"Execution error ({type(e).__name__}): {str(e)}")
             return "0", f"Execution error: {str(e)}"
-        finally:
-            # Final cleanup in case the instance wasn't properly stopped earlier
-            if instance:
-                try:
-                    await instance.astop()
-                except Exception as cleanup_error:
-                    if "404" in str(cleanup_error) and "not found" in str(cleanup_error).lower():
-                        # Instance is already gone, that's fine
-                        pass
-                    else:
-                        print(f"Error during final instance cleanup: {str(cleanup_error)}")
-
-            # Clean up the temporary directory
-            try:
-                import shutil
-                shutil.rmtree(temp_dir)
-            except Exception as e:
-                print(f"Error cleaning up temporary directory: {str(e)}")
 
     async def _get_or_create_base_snapshot(self):
         """Get or create a snapshot with the necessary dependencies for evaluation."""
