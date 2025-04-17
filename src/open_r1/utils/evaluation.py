@@ -1,7 +1,7 @@
 import subprocess
 from typing import TYPE_CHECKING, Dict, Union
 
-from .hub import get_gpu_count_for_vllm, get_param_count_from_repo_id
+from .hub import get_gpu_count_for_vllm
 
 
 if TYPE_CHECKING:
