@@ -346,7 +346,6 @@ def ioi_code_reward(completions, test_batch_size: int = 1, provider_type: str = 
     """
     # Get the appropriate client based on provider_type
     if provider_type == "morph":
-        # for info on setting up MorphCloud, see MorphCloud_IOI_Implementation_Guide.md
         print('provider: morph')
         execution_client = get_morph_client_from_env()
     else:
@@ -364,9 +363,8 @@ def ioi_code_reward(completions, test_batch_size: int = 1, provider_type: str = 
             return await task
         except Exception as e:
             print(f"Error from {provider_type} worker: {e}")
-            return SubtaskResult()  # score 0.0
+            return SubtaskResult()  
 
-    # load problem data. undo separating kwargs by column
     problems_data = [dict(zip(kwargs.keys(), values)) for values in zip(*kwargs.values())]
 
     loop = _init_event_loop()
@@ -426,11 +424,9 @@ def code_reward_morph(completions, num_parallel: int = 2, **kwargs) -> list[floa
         List of float rewards (one per completion)
     """
         
-    # Extract code from completions
     code_snippets = [extract_code(completion[-1]["content"]) for completion in completions]
     verification_info = kwargs["verification_info"]
     
-    # Get the MorphProvider
     execution_provider = get_provider(
         provider_type="morph",
         num_parallel=num_parallel,
@@ -438,27 +434,22 @@ def code_reward_morph(completions, num_parallel: int = 2, **kwargs) -> list[floa
     
     async def process_snippets(code_snippets, verification_info):
         """Process all code snippets in parallel."""
-        # Create a semaphore to limit concurrency
         semaphore = asyncio.Semaphore(num_parallel)
         
-        # Create tasks for parallel processing
         tasks = [
             process_single_snippet(code, info, semaphore, execution_provider) 
             for code, info in zip(code_snippets, verification_info)
         ]
         
-        # Execute all tasks and gather results
         rewards = await asyncio.gather(*tasks)
         return rewards
     
     async def process_single_snippet(code, info, semaphore, provider):
         """Process a single code snippet against all test cases."""
-        # Extract test cases and language
         test_cases = info["test_cases"]
         language = info.get("language", "python")
         
         async with semaphore:
-            # Create a sandbox
             try:
                 sandbox = await asyncio.to_thread(
                     provider.Sandbox.new,
@@ -469,16 +460,13 @@ def code_reward_morph(completions, num_parallel: int = 2, **kwargs) -> list[floa
                 sandbox_id = getattr(sandbox, 'id', None) or getattr(sandbox._instance, 'id', 'unknown')
                 print(f"MorphProvider: Processing {language} code in sandbox {sandbox_id[:8]}...")
                 
-                # Process each test case
                 passed = 0
                 total = len(test_cases)
                 
                 for i, case in enumerate(test_cases):
                     try:
-                        # Create code with input handling for this test case
                         test_code = prepare_code_with_input(code, case["input"], language)
                         
-                        # Run the code in the appropriate language
                         result = await asyncio.to_thread(
                             sandbox.run_code,
                             test_code,
@@ -486,12 +474,10 @@ def code_reward_morph(completions, num_parallel: int = 2, **kwargs) -> list[floa
                             timeout=10
                         )
                         
-                        # Check if execution was successful and output matches
                         if result.success:
                             output = result.stdout.strip() if result.stdout else ""
                             expected = case["output"].strip()
                             
-                            # Compare outputs (same logic as in the template)
                             all_correct = True
                             output_lines = output.split('\n')
                             expected_lines = expected.split('\n')
@@ -509,7 +495,6 @@ def code_reward_morph(completions, num_parallel: int = 2, **kwargs) -> list[floa
                     except Exception as e:
                         print(f"MorphProvider: Error in test case {i+1}/{total}: {e}")
                 
-                # Calculate success rate
                 reward = passed / total if total > 0 else 0.0
                 print(f"MorphProvider: Final reward: {reward} ({passed}/{total} tests passed)")
                 return reward
@@ -518,7 +503,6 @@ def code_reward_morph(completions, num_parallel: int = 2, **kwargs) -> list[floa
                 print(f"MorphProvider: Error in code execution: {e}")
                 return 0.0
             finally:
-                # Clean up the sandbox
                 if 'sandbox' in locals():
                     try:
                         await asyncio.to_thread(sandbox.close)
@@ -531,13 +515,11 @@ def code_reward_morph(completions, num_parallel: int = 2, **kwargs) -> list[floa
         
         Based on proven patterns from sandbox_lang_test_mock.py for more reliable input mocking.
         """
-        # Ensure input_str is a string - convert if needed
         if not isinstance(input_str, str):
             print(f"Warning: Input is not a string type, converting from {type(input_str)}")
             input_str = str(input_str)
         
         if language == "python":
-            # For Python, use array-based input mocking with a counter
             input_lines = input_str.strip().split('\n')
             input_lines_json = json.dumps(input_lines)
             indented_code = textwrap.indent(code.strip(), ' ' * 4)
@@ -569,7 +551,6 @@ except Exception as e:
     traceback.print_exc(file=sys.stderr)
 """
         elif language == "javascript" or language == "js":
-            # For JavaScript, use array-based input mocking with readLine function
             input_lines = input_str.strip().split('\n')
             input_lines_json = json.dumps(input_lines)
             clean_user_code = code.strip()
@@ -597,7 +578,6 @@ except Exception as e:
 }})();
 """
         elif language == "cpp" or language == "c++":
-            # For C++, use stringstream-based input mocking
             input_lines = input_str.strip().split('\n')
             escaped_lines = [line.replace('\\', '\\\\').replace('"', '\\"') for line in input_lines]
             input_vector_init = ", ".join([f'"{line}"' for line in escaped_lines])
@@ -638,14 +618,10 @@ except Exception as e:
                 run_user_code();
             """)
         elif language == "rust":
-            # For Rust, use BufReader around a Cursor for input mocking
             clean_user_code = code.strip()
-            # Use raw string literal r#""# for input to handle most chars easily
-            escaped_input = input_str.replace('#', "\\#") # Only need to escape # if using r#""#
+            escaped_input = input_str.replace('#', "\\#") 
             
-            # Wrap the setup and user code in a main function for better scoping
-            # Indent the user code appropriately
-            indented_user_code = textwrap.indent(clean_user_code, ' ' * 8) # Indent inside the inner block
+            indented_user_code = textwrap.indent(clean_user_code, ' ' * 8) 
             
             return textwrap.dedent(f"""
                 // --- Rust Input Mocking Setup ---
@@ -677,11 +653,9 @@ except Exception as e:
                 main()
             """)
         else:
-            # Default handling for unsupported languages
             print(f"Warning: Language '{language}' not explicitly supported. Using raw code.")
             return code
     
-    # Run async processing and return rewards
     print(f"MorphProvider: Starting code evaluation with parallelism={num_parallel}")
     start_time = time.time()
     rewards = asyncio.run(process_snippets(code_snippets, verification_info))
@@ -704,11 +678,9 @@ def code_reward(completions, num_parallel: int = 2, e2b_router_url=None, provide
         enforce_same_language: If True, verify all problems use the same language (default: False)
         **kwargs: Additional arguments passed to the verification
     """
-    # Use MorphCloud-specific implementation for more accurate language support
     if provider_type == "morph":
         return code_reward_morph(completions, num_parallel=num_parallel, **kwargs)
     
-    # Script template used for evaluation - all providers use this same template
     evaluation_script_template = """
     import subprocess
     import json
@@ -748,12 +720,8 @@ def code_reward(completions, num_parallel: int = 2, e2b_router_url=None, provide
 
     evaluate_code(code_snippet, test_cases)
     """
-    
-    # Extract code from completions
     code_snippets = [extract_code(completion[-1]["content"]) for completion in completions]
     verification_info = kwargs["verification_info"]
-    
-    # Create scripts by populating the template with code and test cases
     scripts = [
         evaluation_script_template.format(
             code=json.dumps(code), 
@@ -762,16 +730,13 @@ def code_reward(completions, num_parallel: int = 2, e2b_router_url=None, provide
         for code, info in zip(code_snippets, verification_info)
     ]
 
-    # Get language from first problem
     language = verification_info[0]["language"]
     
-    # Verify all problems use the same language if enforce_same_language is True
     if enforce_same_language:
         all_same_language = all(v["language"] == language for v in verification_info)
         if not all_same_language:
             raise ValueError("All verification_info must have the same language", verification_info)
 
-    # Get the appropriate provider and execute the scripts
     execution_provider = get_provider(
         provider_type=provider_type,
         num_parallel=num_parallel,

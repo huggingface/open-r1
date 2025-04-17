@@ -60,11 +60,11 @@ class RoutedMorphSandbox:
         Returns:
             List of execution results with text and exception_str properties.
         """
-        # Use instance variables if parameters are not provided
+        
         actual_timeout = timeout if timeout is not None else self.timeout
         actual_request_timeout = request_timeout if request_timeout is not None else self.request_timeout
         
-        # Prepare payload for the router
+        
         payload = {
             "scripts": scripts,
             "language": language,
@@ -73,16 +73,15 @@ class RoutedMorphSandbox:
         }
         
         try:
-            # Send the request to the MorphCloud Router
+            
             endpoint = f"http://{self.router_url}/execute_batch"
             response = requests.post(endpoint, json=payload, timeout=actual_request_timeout)
             
             if response.status_code != 200:
-                # Handle failed request
+                
                 error = f"Request to MorphCloud router failed with status code: {response.status_code}"
                 print(error)
                 
-                # Create error results for each script
                 results = []
                 for _ in scripts:
                     results.append(type('obj', (object,), {
@@ -91,12 +90,10 @@ class RoutedMorphSandbox:
                     }))
                 return results
             
-            # Parse the response and convert to objects with the expected properties
             response_data = response.json()
             results = []
             
             for item in response_data:
-                # Create an object with text and exception_str properties
                 result = type('obj', (object,), {
                     'text': item.get('text'),
                     'exception_str': item.get('exception_str')
@@ -109,7 +106,6 @@ class RoutedMorphSandbox:
             error = f"Error communicating with MorphCloud router: {str(e)}"
             print(error)
             
-            # Create error results for each script
             results = []
             for _ in scripts:
                 results.append(type('obj', (object,), {

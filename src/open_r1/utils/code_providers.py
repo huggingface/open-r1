@@ -103,7 +103,6 @@ class E2BProvider(CodeExecutionProvider):
     def _run_async_from_sync(self, scripts: List[str], language: str, num_parallel: int) -> List[float]:
         """Function wrapping the `_run_async` function."""
         try:
-            # Run the async function and get the result
             rewards = asyncio.run(self._run_async(scripts, language, num_parallel))
         except Exception as e:
             print(f"Error from E2B executor async: {e}")
@@ -112,15 +111,12 @@ class E2BProvider(CodeExecutionProvider):
         return rewards
     
     async def _run_async(self, scripts: List[str], language: str, num_parallel: int) -> List[float]:
-        # Limit the number of concurrent tasks
         semaphore = asyncio.Semaphore(num_parallel)
         
-        # Create a list of tasks for running scripts concurrently
         tasks = [self._run_script(script, language, semaphore) for script in scripts]
         
-        # Wait for all tasks to complete and gather their results as they finish
         results = await asyncio.gather(*tasks)
-        rewards = list(results)  # collect results
+        rewards = list(results)  
         
         return rewards
     
@@ -169,7 +165,6 @@ class LocalProvider(CodeExecutionProvider):
         """
         self.num_parallel = num_parallel
         
-        # Import here to avoid circular imports
         import multiprocessing
         self.multiprocessing = multiprocessing
     
@@ -186,9 +181,7 @@ class LocalProvider(CodeExecutionProvider):
         if language != "python":
             raise ValueError(f"LocalProvider only supports Python, got {language}")
         
-        # Create a pool with the specified number of processes
         with self.multiprocessing.Pool(processes=self.num_parallel) as pool:
-            # Execute each script in the pool and collect results
             results = pool.map(self._execute_script, scripts)
         
         return results
@@ -205,26 +198,24 @@ class LocalProvider(CodeExecutionProvider):
         import subprocess
         import tempfile
         
-        # Create a temporary file to hold the script
         with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as temp_file:
             temp_file_name = temp_file.name
             temp_file.write(script)
         
         try:
-            # Execute the script and capture the output
             process = subprocess.run(
                 ["python3", temp_file_name],
                 text=True,
                 capture_output=True,
-                timeout=30  # Same timeout as E2B
+                timeout=30  
             )
             
-            # Check if execution was successful
+            
             if process.returncode == 0:
-                # Try to parse the final line as a float
+                
                 output_lines = process.stdout.strip().split('\n')
                 try:
-                    # The evaluation script should print the reward as the last line
+                    
                     if output_lines:
                         reward = float(output_lines[-1])
                         return reward
@@ -245,7 +236,7 @@ class LocalProvider(CodeExecutionProvider):
             print(f"Error executing script: {e}")
             return 0.0
         finally:
-            # Clean up temporary file
+            
             import os
             try:
                 os.unlink(temp_file_name)
@@ -263,7 +254,7 @@ class MorphProvider(CodeExecutionProvider):
             num_parallel: Number of parallel executions to use
             morph_router_url: URL for the MorphCloud router (if using router mode)
         """
-        # Load environment variables from .env file
+        
         try:
             from dotenv import load_dotenv
             load_dotenv()
@@ -273,13 +264,13 @@ class MorphProvider(CodeExecutionProvider):
         self.num_parallel = num_parallel
         self.morph_router_url = morph_router_url
         
-        # If router URL is provided, use RoutedMorphSandbox instead of direct Sandbox
+        
         if self.morph_router_url is not None:
             from .routed_morph import RoutedMorphSandbox
             self.routed_sandbox = RoutedMorphSandbox(router_url=self.morph_router_url)
             return
         
-        # Get API key from environment variables
+        
         import os
         self.api_key = os.getenv("MORPH_API_KEY")
         if not self.api_key:
@@ -287,7 +278,7 @@ class MorphProvider(CodeExecutionProvider):
                 "MorphCloud API key not found. Please set the MORPH_API_KEY environment variable."
             )
         
-        # Import the MorphCloud client and Sandbox
+        
         try:
             from morphcloud.api import MorphCloudClient
             from morphcloud.sandbox import Sandbox
@@ -307,11 +298,11 @@ class MorphProvider(CodeExecutionProvider):
         Returns:
             List of float rewards (one per script)
         """
-        # If we have a router URL, use the routed sandbox
+        
         if hasattr(self, 'routed_sandbox'):
             print(f"MorphProvider: Using routed sandbox at {self.morph_router_url}")
             try:
-                # Execute scripts via the router
+                
                 results = self.routed_sandbox.run_code(
                     scripts=scripts,
                     language=language,
@@ -319,7 +310,7 @@ class MorphProvider(CodeExecutionProvider):
                     request_timeout=28,
                 )
                 
-                # Parse rewards from the results
+                
                 rewards = []
                 for result in results:
                     try:
@@ -332,16 +323,16 @@ class MorphProvider(CodeExecutionProvider):
                 print(f"Error from MorphCloud router: {e}")
                 return [0.0] * len(scripts)
         
-        # Otherwise, use direct sandbox execution
+        
         import asyncio
         import time
         
         print(f"MorphProvider: Starting execution of {len(scripts)} scripts with parallelism={self.num_parallel}")
         start_time = time.time()
         
-        # Create a new event loop and run the async function
+        
         try:
-            # Mirror E2B's approach using asyncio
+            
             rewards = asyncio.run(self._run_async(scripts, language, self.num_parallel))
             elapsed = time.time() - start_time
             print(f"MorphProvider: Completed {len(scripts)} scripts in {elapsed:.2f}s ({len(scripts)/elapsed:.2f} scripts/sec)")
@@ -362,13 +353,13 @@ class MorphProvider(CodeExecutionProvider):
         Returns:
             List of rewards
         """
-        # Create a semaphore to limit concurrency
+        
         semaphore = asyncio.Semaphore(num_parallel)
         
-        # Create tasks for each script
+        
         tasks = [self._run_script(script, language, semaphore) for script in scripts]
         
-        # Execute all tasks and gather results
+        
         results = await asyncio.gather(*tasks)
         
         return list(results)
@@ -384,7 +375,6 @@ class MorphProvider(CodeExecutionProvider):
         Returns:
             Float reward from script execution
         """
-        # Set timeouts similar to E2B
         SANDBOX_TIMEOUT = 30
         MARGIN = 2
         ASYNCIO_TIMEOUT = SANDBOX_TIMEOUT + MARGIN
@@ -393,7 +383,6 @@ class MorphProvider(CodeExecutionProvider):
         sandbox_id = None
         async with semaphore:
             try:
-                # Create a new sandbox (run in a thread to not block)
                 print(f"MorphProvider: Creating new sandbox for script of length {len(script)}")
                 sandbox = await asyncio.to_thread(
                     self.Sandbox.new,
@@ -403,9 +392,7 @@ class MorphProvider(CodeExecutionProvider):
                 sandbox_id = getattr(sandbox, 'id', None) or getattr(sandbox._instance, 'id', 'unknown')
                 print(f"MorphProvider: Created sandbox {sandbox_id[:8]}...")
                 
-                # Execute the script (run in a thread to not block)
                 print(f"MorphProvider: Executing {language} script in sandbox {sandbox_id[:8]}...")
-                # Display the first 150 characters of the script for debugging
                 print(f"MorphProvider: Script snippet: {script[:150]}...")
                 result = await asyncio.wait_for(
                     asyncio.to_thread(
@@ -417,15 +404,12 @@ class MorphProvider(CodeExecutionProvider):
                     timeout=ASYNCIO_TIMEOUT
                 )
                 
-                # Parse the reward from the result, using text property like E2B does
                 reward = 0.0
                 try:
                     if hasattr(result, 'text') and result.text:
-                        # Parse the text property directly (same as E2B provider)
                         reward = float(result.text)
                         print(f"MorphProvider: Sandbox {sandbox_id[:8]}... returned reward: {reward}")
                     elif result.stdout:
-                        # Fallback to stdout if text is not available
                         lines = result.stdout.strip().split('\n')
                         if lines:
                             reward = float(lines[-1])
@@ -446,7 +430,6 @@ class MorphProvider(CodeExecutionProvider):
                 print(f"MorphProvider: Error in sandbox {sandbox_id[:8] if sandbox_id else 'unknown'}: {e}")
                 return 0.0
             finally:
-                # Clean up the sandbox
                 if sandbox:
                     try:
                         print(f"MorphProvider: Cleaning up sandbox {sandbox_id[:8] if sandbox_id else 'unknown'}")

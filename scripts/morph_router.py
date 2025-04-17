@@ -53,7 +53,7 @@ class ScriptResult(BaseModel):
     text: Optional[str]
     exception_str: Optional[str]
     
-    # required to allow arbitrary types in pydantic models
+    
     model_config = ConfigDict(arbitrary_types_allowed=True)
     
 def create_app(args):
@@ -70,14 +70,12 @@ def create_app(args):
     """
     app = FastAPI()
     
-    # Initialize MorphCloud client and attach it to app state
     from morphcloud.api import MorphCloudClient
     from morphcloud.sandbox import Sandbox
     
     app.state.client = MorphCloudClient(api_key=args.api_key)
     app.state.Sandbox = Sandbox
 
-    # Instantiate semaphore and attach it to app state
     app.state.sandbox_semaphore = asyncio.Semaphore(args.max_num_sandboxes)
 
     @app.get("/health")
@@ -101,32 +99,27 @@ def create_app(args):
 
             async with semaphore:
                 try:
-                    # Create a new sandbox
                     sandbox = await asyncio.to_thread(
                         Sandbox.new,
                         client=client,
                         ttl_seconds=timeout
                     )
                     
-                    # Get sandbox ID for logging
                     sandbox_id = getattr(sandbox, 'id', None) or getattr(sandbox._instance, 'id', 'unknown')
                     
-                    # Execute the code with timeout
                     execution = await asyncio.wait_for(
                         asyncio.to_thread(
                             sandbox.run_code,
                             script,
                             language=language,
-                            timeout=timeout * 1000  # MorphCloud uses milliseconds
+                            timeout=timeout * 1000  
                         ),
                         timeout=asyncio_timeout,
                     )
                     
-                    # Process the result
                     if hasattr(execution, 'text') and execution.text:
                         return ScriptResult(text=execution.text, exception_str=None)
                     elif hasattr(execution, 'stdout') and execution.stdout:
-                        # Fallback to stdout if text property is not available
                         return ScriptResult(text=execution.stdout, exception_str=None)
                     else:
                         return ScriptResult(text="", exception_str="No output from execution")
@@ -135,7 +128,6 @@ def create_app(args):
                     return ScriptResult(text=None, exception_str=str(e))
                 
                 finally:
-                    # Clean up the sandbox
                     if sandbox:
                         try:
                             await asyncio.to_thread(sandbox.close)

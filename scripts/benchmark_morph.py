@@ -61,12 +61,10 @@ if __name__ == "__main__":
             rewards = code_reward(test_completions, num_parallel=num_parallel, provider_type="morph", **reward_kwargs)
             execution_time = time.time() - start_time
             
-            # Calculate some statistics about rewards
             mean_reward = sum(rewards) / len(rewards)
             min_reward = min(rewards)
             max_reward = max(rewards)
             
-            # Store results
             results.append({
                 "num_samples": num_samples,
                 "num_parallel": num_parallel,
