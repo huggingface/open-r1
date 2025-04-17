@@ -256,11 +256,12 @@ class LocalProvider(CodeExecutionProvider):
 class MorphProvider(CodeExecutionProvider):
     """Provider that executes code using MorphCloud's Sandbox API."""
     
-    def __init__(self, num_parallel: int = 2):
+    def __init__(self, num_parallel: int = 2, morph_router_url: Optional[str] = None):
         """Initialize the Morph provider.
         
         Args:
             num_parallel: Number of parallel executions to use
+            morph_router_url: URL for the MorphCloud router (if using router mode)
         """
         # Load environment variables from .env file
         try:
@@ -270,6 +271,13 @@ class MorphProvider(CodeExecutionProvider):
             print("Warning: python-dotenv not installed. Environment variables must be set directly.")
             
         self.num_parallel = num_parallel
+        self.morph_router_url = morph_router_url
+        
+        # If router URL is provided, use RoutedMorphSandbox instead of direct Sandbox
+        if self.morph_router_url is not None:
+            from .routed_morph import RoutedMorphSandbox
+            self.routed_sandbox = RoutedMorphSandbox(router_url=self.morph_router_url)
+            return
         
         # Get API key from environment variables
         import os
@@ -299,6 +307,32 @@ class MorphProvider(CodeExecutionProvider):
         Returns:
             List of float rewards (one per script)
         """
+        # If we have a router URL, use the routed sandbox
+        if hasattr(self, 'routed_sandbox'):
+            print(f"MorphProvider: Using routed sandbox at {self.morph_router_url}")
+            try:
+                # Execute scripts via the router
+                results = self.routed_sandbox.run_code(
+                    scripts=scripts,
+                    language=language,
+                    timeout=30,
+                    request_timeout=28,
+                )
+                
+                # Parse rewards from the results
+                rewards = []
+                for result in results:
+                    try:
+                        reward = float(result.text)
+                        rewards.append(reward)
+                    except (ValueError, AttributeError):
+                        rewards.append(0.0)
+                return rewards
+            except Exception as e:
+                print(f"Error from MorphCloud router: {e}")
+                return [0.0] * len(scripts)
+        
+        # Otherwise, use direct sandbox execution
         import asyncio
         import time
         
@@ -371,6 +405,8 @@ class MorphProvider(CodeExecutionProvider):
                 
                 # Execute the script (run in a thread to not block)
                 print(f"MorphProvider: Executing {language} script in sandbox {sandbox_id[:8]}...")
+                # Display the first 150 characters of the script for debugging
+                print(f"MorphProvider: Script snippet: {script[:150]}...")
                 result = await asyncio.wait_for(
                     asyncio.to_thread(
                         sandbox.run_code,
@@ -442,6 +478,7 @@ def get_provider(provider_type: str = "e2b", **kwargs) -> CodeExecutionProvider:
     elif provider_type == "morph":
         return MorphProvider(
             num_parallel=kwargs.get("num_parallel", 2),
+            morph_router_url=kwargs.get("morph_router_url", None)
         )
     else:
         raise ValueError(f"Unknown provider type: {provider_type}")
