@@ -22,12 +22,13 @@ Each sample is a CodeForces problem with a gold standard solution that is execut
 """
 
 from datasets import load_dataset
-from open_r1.rewards import code_reward
 import time
 from tqdm.auto import tqdm
 
 from dotenv import load_dotenv
 load_dotenv()
+
+from open_r1.rewards import code_reward
 
 def benchmark_code_reward(example):
     start_time = time.time()

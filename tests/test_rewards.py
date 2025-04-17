@@ -29,6 +29,11 @@ from open_r1.rewards import (
 )
 
 
+from dotenv import load_dotenv
+load_dotenv()
+
+
+
 class TestGetRewardFuncs(unittest.TestCase):
     def test_get_reward_funcs(self):
         """Test get_reward_funcs with various reward functions."""
