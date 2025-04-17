@@ -19,6 +19,7 @@ import asyncio
 import json
 import math
 import re
+import textwrap
 import time
 from functools import partial, update_wrapper
 from typing import Callable, Dict, Optional
@@ -703,8 +704,6 @@ def code_reward(completions, num_parallel: int = 2, e2b_router_url=None, provide
         enforce_same_language: If True, verify all problems use the same language (default: False)
         **kwargs: Additional arguments passed to the verification
     """
-    from .utils.code_providers import get_provider
-    
     # Use MorphCloud-specific implementation for more accurate language support
     if provider_type == "morph":
         return code_reward_morph(completions, num_parallel=num_parallel, **kwargs)
