@@ -407,262 +407,16 @@ def binary_code_reward(completions, num_parallel: int = 2, e2b_router_url=None, 
     return output
 
 
+# This function has been removed as we now use a unified approach in code_reward
+# The commented placeholder below is kept for documentation purposes
 def code_reward_morph(completions, num_parallel: int = 2, **kwargs) -> list[float]:
-    """Reward function that evaluates code using MorphCloud's direct language execution.
+    """This function has been deprecated in favor of the unified code_reward function.
     
-    This function executes code directly in the appropriate language kernel:
-    - The test case loop is handled locally in Python
-    - Each submission is run in the appropriate language on the MorphCloud sandbox
-    - Output is checked locally against expected values
-    
-    Args:
-        completions: List of model completions to evaluate
-        num_parallel: Number of parallel code executions
-        **kwargs: Additional arguments including verification_info with test cases
-        
-    Returns:
-        List of float rewards (one per completion)
+    All code evaluation now goes through the same code_reward function, regardless of provider.
     """
-        
-    code_snippets = [extract_code(completion[-1]["content"]) for completion in completions]
-    verification_info = kwargs["verification_info"]
-    
-    execution_provider = get_provider(
-        provider_type="morph",
-        num_parallel=num_parallel,
-    )
-    
-    async def process_snippets(code_snippets, verification_info):
-        """Process all code snippets in parallel."""
-        semaphore = asyncio.Semaphore(num_parallel)
-        
-        tasks = [
-            process_single_snippet(code, info, semaphore, execution_provider) 
-            for code, info in zip(code_snippets, verification_info)
-        ]
-        
-        rewards = await asyncio.gather(*tasks)
-        return rewards
-    
-    async def process_single_snippet(code, info, semaphore, provider):
-        """Process a single code snippet against all test cases."""
-        test_cases = info["test_cases"]
-        language = info.get("language", "python")
-        
-        async with semaphore:
-            try:
-                sandbox = await asyncio.to_thread(
-                    provider.Sandbox.new,
-                    client=provider.client,
-                    ttl_seconds=30
-                )
-                
-                sandbox_id = getattr(sandbox, 'id', None) or getattr(sandbox._instance, 'id', 'unknown')
-                print(f"MorphProvider: Processing {language} code in sandbox {sandbox_id[:8]}...")
-                
-                passed = 0
-                total = len(test_cases)
-                
-                for i, case in enumerate(test_cases):
-                    try:
-                        test_code = prepare_code_with_input(code, case["input"], language)
-                        
-                        result = await asyncio.to_thread(
-                            sandbox.run_code,
-                            test_code,
-                            language=language,
-                            timeout=10
-                        )
-                        
-                        if result.success:
-                            output = result.stdout.strip() if result.stdout else ""
-                            expected = case["output"].strip()
-                            
-                            all_correct = True
-                            output_lines = output.split('\n')
-                            expected_lines = expected.split('\n')
-                            
-                            for line1, line2 in zip(output_lines, expected_lines):
-                                all_correct = all_correct and line1.strip() == line2.strip()
-                                
-                            if all_correct:
-                                passed += 1
-                                print(f"MorphProvider: Test case {i+1}/{total} passed")
-                            else:
-                                print(f"MorphProvider: Test case {i+1}/{total} failed - output mismatch")
-                        else:
-                            print(f"MorphProvider: Test case {i+1}/{total} failed - execution error: {result.error}")
-                    except Exception as e:
-                        print(f"MorphProvider: Error in test case {i+1}/{total}: {e}")
-                
-                reward = passed / total if total > 0 else 0.0
-                print(f"MorphProvider: Final reward: {reward} ({passed}/{total} tests passed)")
-                return reward
-                
-            except Exception as e:
-                print(f"MorphProvider: Error in code execution: {e}")
-                return 0.0
-            finally:
-                if 'sandbox' in locals():
-                    try:
-                        await asyncio.to_thread(sandbox.close)
-                        await asyncio.to_thread(sandbox.shutdown)
-                    except Exception as e:
-                        print(f"MorphProvider: Error cleaning up sandbox: {e}")
-    
-    def prepare_code_with_input(code: str, input_str: str, language: str) -> str:
-        """Prepare code with input handling based on language.
-        
-        Based on proven patterns from sandbox_lang_test_mock.py for more reliable input mocking.
-        """
-        if not isinstance(input_str, str):
-            print(f"Warning: Input is not a string type, converting from {type(input_str)}")
-            input_str = str(input_str)
-        
-        if language == "python":
-            input_lines = input_str.strip().split('\n')
-            input_lines_json = json.dumps(input_lines)
-            indented_code = textwrap.indent(code.strip(), ' ' * 4)
-            
-            return f"""
-import sys
-import traceback
+    # TODO: implement support for c++/rust/javascript
 
-# Mock input function for Python
-_input_values = {input_lines_json}
-_input_index = 0
-def input(*args):
-    global _input_index
-    if _input_index >= len(_input_values):
-        raise EOFError("Attempted to read past end of input buffer.")
-    value = _input_values[_input_index]
-    _input_index += 1
-    return value
-
-# Execute user code
-try:
-    # --- User code starts ---
-{indented_code}
-    # --- User code ends ---
-except EOFError as e:
-     print(f"Execution stopped: {{e}}", file=sys.stderr)
-except Exception as e:
-    print(f"Runtime Error: {{e}}", file=sys.stderr)
-    traceback.print_exc(file=sys.stderr)
-"""
-        elif language == "javascript" or language == "js":
-            input_lines = input_str.strip().split('\n')
-            input_lines_json = json.dumps(input_lines)
-            clean_user_code = code.strip()
-            indented_code = textwrap.indent(textwrap.dedent(f"""
-                const _input_lines = {input_lines_json};
-                let _input_index = 0;
-                function readLine() {{
-                    if (_input_index < _input_lines.length) {{
-                        return _input_lines[_input_index++];
-                    }} else {{
-                        return null;
-                    }}
-                }}
-                try {{
-{textwrap.indent(clean_user_code, ' ' * 12)} // Ensure user code is indented within try
-                }} catch (e) {{
-                    console.error("Runtime Error:", e.message);
-                    // Optionally re-throw or log stack trace if needed
-                    // console.error(e.stack);
-                }}
-            """), ' ' * 4)
-            return f"""
-(function() {{
-{indented_code}
-}})();
-"""
-        elif language == "cpp" or language == "c++":
-            input_lines = input_str.strip().split('\n')
-            escaped_lines = [line.replace('\\', '\\\\').replace('"', '\\"') for line in input_lines]
-            input_vector_init = ", ".join([f'"{line}"' for line in escaped_lines])
-            clean_user_code = code.strip()
-            
-            return textwrap.dedent(f"""
-                #include <iostream>
-                #include <sstream>
-                #include <string>
-                #include <vector>
-                #include <stdexcept>
-
-                int run_user_code() {{
-                    std::stringstream _mock_input_stream;
-                    std::vector<std::string> _input_lines = {{{input_vector_init}}};
-                    for(const auto& line : _input_lines) {{
-                        _mock_input_stream << line << std::endl;
-                    }}
-                    std::streambuf* _orig_cin_buf = std::cin.rdbuf();
-                    std::cin.rdbuf(_mock_input_stream.rdbuf());
-
-                    int exit_code = 0;
-                    try {{
-                        // --- User C++ Code Execution ---
-                        {clean_user_code}
-                        // --- End User Code ---
-                    }} catch (const std::exception& e) {{
-                        std::cerr << "Runtime Error: " << e.what() << std::endl;
-                        exit_code = 1;
-                    }} catch (...) {{
-                        std::cerr << "Unknown runtime error." << std::endl;
-                        exit_code = 1;
-                    }}
-
-                    std::cin.rdbuf(_orig_cin_buf);
-                    return exit_code;
-                }}
-                run_user_code();
-            """)
-        elif language == "rust":
-            clean_user_code = code.strip()
-            escaped_input = input_str.replace('#', "\\#") 
-            
-            indented_user_code = textwrap.indent(clean_user_code, ' ' * 8) 
-            
-            return textwrap.dedent(f"""
-                // --- Rust Input Mocking Setup ---
-                use std::io::{{self, BufRead, BufReader, Read, Cursor}};
-
-                fn main() {{
-                    eprintln!("DEBUG: Rust main started."); // Debug output
-
-                    // Input data embedded as a string literal
-                    let input_data_str = r#"{escaped_input}"#;
-                    let input_data_bytes = input_data_str.as_bytes();
-
-                    // Create the in-memory reader the user code will use
-                    let mut input_reader = BufReader::new(Cursor::new(input_data_bytes));
-                    eprintln!("DEBUG: Mock input reader created with {{}} bytes.", input_data_bytes.len());
-
-                    // --- User Rust Code Execution Block ---
-                    // User code reads from `input_reader` defined above.
-                    {{
-                        eprintln!("DEBUG: Entering user code block."); // Debug output
-{indented_user_code}
-                        eprintln!("DEBUG: Exiting user code block."); // Debug output
-                    }}
-                    // --- End User Code ---
-
-                    eprintln!("DEBUG: Rust main finished."); // Debug output
-                }}
-
-                main()
-            """)
-        else:
-            print(f"Warning: Language '{language}' not explicitly supported. Using raw code.")
-            return code
-    
-    print(f"MorphProvider: Starting code evaluation with parallelism={num_parallel}")
-    start_time = time.time()
-    rewards = asyncio.run(process_snippets(code_snippets, verification_info))
-    elapsed = time.time() - start_time
-    print(f"MorphProvider: Evaluation completed in {elapsed:.2f}s ({len(code_snippets)/elapsed:.2f} snippets/sec)")
-    
-    return rewards
+    return code_reward(completions, num_parallel=num_parallel, provider_type="morph", **kwargs)
 
 
 def code_reward(completions, num_parallel: int = 2, e2b_router_url=None, provider_type: str = "e2b", enforce_same_language: bool = False, **kwargs) -> list[float]:
@@ -678,9 +432,7 @@ def code_reward(completions, num_parallel: int = 2, e2b_router_url=None, provide
         enforce_same_language: If True, verify all problems use the same language (default: False)
         **kwargs: Additional arguments passed to the verification
     """
-    if provider_type == "morph":
-        return code_reward_morph(completions, num_parallel=num_parallel, **kwargs)
-    
+    # Standard evaluation script template for Python (used by E2B and local providers)
     evaluation_script_template = """
     import subprocess
     import json
@@ -720,10 +472,15 @@ def code_reward(completions, num_parallel: int = 2, e2b_router_url=None, provide
 
     evaluate_code(code_snippet, test_cases)
     """
+
     code_snippets = [extract_code(completion[-1]["content"]) for completion in completions]
     verification_info = kwargs["verification_info"]
+    
+    # Choose the appropriate template based on provider type
+    template = evaluation_script_template
+    
     scripts = [
-        evaluation_script_template.format(
+        template.format(
             code=json.dumps(code), 
             test_cases=json.dumps(json.dumps(info["test_cases"]))
         )
@@ -743,7 +500,7 @@ def code_reward(completions, num_parallel: int = 2, e2b_router_url=None, provide
         e2b_router_url=e2b_router_url,
     )
     
-    return execution_provider.execute_scripts(scripts, language)
+    return execution_provider.execute_scripts(scripts, "python")
 
 
 def get_code_format_reward(language: str = "python"):

@@ -94,6 +94,8 @@ class RoutedMorphSandbox:
             results = []
             
             for item in response_data:
+                # Log the response data to see what we're getting
+                print(f"RoutedMorphSandbox: Got response item: {item}")
                 result = type('obj', (object,), {
                     'text': item.get('text'),
                     'exception_str': item.get('exception_str')

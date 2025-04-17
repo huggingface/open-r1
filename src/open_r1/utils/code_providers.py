@@ -151,97 +151,6 @@ class E2BProvider(CodeExecutionProvider):
                     print(f"Error from E2B executor kill with sandbox ID {sandbox.sandbox_id} : {e}")
 
 
-class LocalProvider(CodeExecutionProvider):
-    """Provider that executes code locally using Python's multiprocessing.
-    
-    This provider executes Python code in separate processes for isolation.
-    """
-    
-    def __init__(self, num_parallel: int = 2):
-        """Initialize the local provider.
-        
-        Args:
-            num_parallel: Number of parallel processes to use
-        """
-        self.num_parallel = num_parallel
-        
-        import multiprocessing
-        self.multiprocessing = multiprocessing
-    
-    def execute_scripts(self, scripts: List[str], language: str = "python") -> List[float]:
-        """Execute scripts locally using Python's multiprocessing.
-        
-        Args:
-            scripts: List of Python scripts to execute
-            language: Must be "python" for this provider
-            
-        Returns:
-            List of float rewards (one per script)
-        """
-        if language != "python":
-            raise ValueError(f"LocalProvider only supports Python, got {language}")
-        
-        with self.multiprocessing.Pool(processes=self.num_parallel) as pool:
-            results = pool.map(self._execute_script, scripts)
-        
-        return results
-    
-    def _execute_script(self, script: str) -> float:
-        """Execute a single script in a separate process.
-        
-        Args:
-            script: Python script to execute
-            
-        Returns:
-            Float reward from the script execution
-        """
-        import subprocess
-        import tempfile
-        
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as temp_file:
-            temp_file_name = temp_file.name
-            temp_file.write(script)
-        
-        try:
-            process = subprocess.run(
-                ["python3", temp_file_name],
-                text=True,
-                capture_output=True,
-                timeout=30  
-            )
-            
-            
-            if process.returncode == 0:
-                
-                output_lines = process.stdout.strip().split('\n')
-                try:
-                    
-                    if output_lines:
-                        reward = float(output_lines[-1])
-                        return reward
-                    else:
-                        print("Script execution produced no output")
-                        return 0.0
-                except ValueError:
-                    print(f"Failed to parse reward from output: {output_lines[-1] if output_lines else None}")
-                    return 0.0
-            else:
-                print(f"Script execution failed with code {process.returncode}: {process.stderr}")
-                return 0.0
-                
-        except subprocess.TimeoutExpired:
-            print("Script execution timed out")
-            return 0.0
-        except Exception as e:
-            print(f"Error executing script: {e}")
-            return 0.0
-        finally:
-            
-            import os
-            try:
-                os.unlink(temp_file_name)
-            except Exception:
-                pass
 
 
 class MorphProvider(CodeExecutionProvider):
@@ -300,7 +209,6 @@ class MorphProvider(CodeExecutionProvider):
         """
         
         if hasattr(self, 'routed_sandbox'):
-            print(f"MorphProvider: Using routed sandbox at {self.morph_router_url}")
             try:
                 
                 results = self.routed_sandbox.run_code(
@@ -327,15 +235,8 @@ class MorphProvider(CodeExecutionProvider):
         import asyncio
         import time
         
-        print(f"MorphProvider: Starting execution of {len(scripts)} scripts with parallelism={self.num_parallel}")
-        start_time = time.time()
-        
-        
         try:
-            
             rewards = asyncio.run(self._run_async(scripts, language, self.num_parallel))
-            elapsed = time.time() - start_time
-            print(f"MorphProvider: Completed {len(scripts)} scripts in {elapsed:.2f}s ({len(scripts)/elapsed:.2f} scripts/sec)")
         except Exception as e:
             print(f"Error from MorphCloud executor: {e}")
             rewards = [0.0] * len(scripts)
@@ -383,17 +284,13 @@ class MorphProvider(CodeExecutionProvider):
         sandbox_id = None
         async with semaphore:
             try:
-                print(f"MorphProvider: Creating new sandbox for script of length {len(script)}")
                 sandbox = await asyncio.to_thread(
                     self.Sandbox.new,
                     client=self.client,
                     ttl_seconds=SANDBOX_TIMEOUT
                 )
                 sandbox_id = getattr(sandbox, 'id', None) or getattr(sandbox._instance, 'id', 'unknown')
-                print(f"MorphProvider: Created sandbox {sandbox_id[:8]}...")
                 
-                print(f"MorphProvider: Executing {language} script in sandbox {sandbox_id[:8]}...")
-                print(f"MorphProvider: Script snippet: {script[:150]}...")
                 result = await asyncio.wait_for(
                     asyncio.to_thread(
                         sandbox.run_code,
@@ -407,43 +304,45 @@ class MorphProvider(CodeExecutionProvider):
                 reward = 0.0
                 try:
                     if hasattr(result, 'text') and result.text:
-                        reward = float(result.text)
-                        print(f"MorphProvider: Sandbox {sandbox_id[:8]}... returned reward: {reward}")
-                    elif result.stdout:
+                        lines = result.text.strip().split('\n')
+                        if lines:
+                            try:
+                                reward = float(lines[-1])
+                            except ValueError:
+                                try:
+                                    reward = float(result.text.strip())
+                                except ValueError:
+                                    pass
+                    elif hasattr(result, 'stdout') and result.stdout:
                         lines = result.stdout.strip().split('\n')
                         if lines:
-                            reward = float(lines[-1])
-                            print(f"MorphProvider: Sandbox {sandbox_id[:8]}... returned reward from stdout: {reward}")
-                except (ValueError, AttributeError) as e:
-                    print(f"MorphProvider: Sandbox {sandbox_id[:8]}... failed to parse reward: {e}")
-                    if hasattr(result, 'text') and result.text:
-                        print(f"MorphProvider: Text output was: {result.text}")
-                    elif result.stdout:
-                        print(f"MorphProvider: Stdout was: {result.stdout.strip()}")
+                            try:
+                                reward = float(lines[-1])
+                            except ValueError:
+                                pass
+                except (ValueError, AttributeError):
+                    pass
                 
                 return reward
                 
             except asyncio.TimeoutError:
-                print(f"MorphProvider: Sandbox {sandbox_id[:8] if sandbox_id else 'unknown'} operation timed out")
                 return 0.0
-            except Exception as e:
-                print(f"MorphProvider: Error in sandbox {sandbox_id[:8] if sandbox_id else 'unknown'}: {e}")
+            except Exception:
                 return 0.0
             finally:
                 if sandbox:
                     try:
-                        print(f"MorphProvider: Cleaning up sandbox {sandbox_id[:8] if sandbox_id else 'unknown'}")
                         await asyncio.to_thread(sandbox.close)
                         await asyncio.to_thread(sandbox.shutdown)
-                    except Exception as e:
-                        print(f"MorphProvider: Error cleaning up sandbox {sandbox_id[:8] if sandbox_id else 'unknown'}: {e}")
+                    except Exception:
+                        pass
 
 
 def get_provider(provider_type: str = "e2b", **kwargs) -> CodeExecutionProvider:
     """Factory function to get the appropriate code execution provider.
     
     Args:
-        provider_type: Type of provider to use ("e2b", "local", "morph")
+        provider_type: Type of provider to use ("e2b", "morph")
         **kwargs: Additional arguments to pass to the provider
     
     Returns:
@@ -453,10 +352,6 @@ def get_provider(provider_type: str = "e2b", **kwargs) -> CodeExecutionProvider:
         return E2BProvider(
             num_parallel=kwargs.get("num_parallel", 2),
             e2b_router_url=kwargs.get("e2b_router_url", None),
-        )
-    elif provider_type == "local":
-        return LocalProvider(
-            num_parallel=kwargs.get("num_parallel", 2),
         )
     elif provider_type == "morph":
         return MorphProvider(
