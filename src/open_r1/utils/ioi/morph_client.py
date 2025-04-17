@@ -49,7 +49,7 @@ class MorphCloudExecutionClient:
                     
                     instance = await self.client.instances.astart(snapshot.id)
                     
-                    try:
+                    async with instance:
                         await instance.await_until_ready(timeout=300)
 
                         await instance.aexec("mkdir -p /workspace")
@@ -136,16 +136,6 @@ class MorphCloudExecutionClient:
                             return "0", f"Runtime error with exit code {run_result.exit_code}\n{run_result.stderr}"
                         
                         return "0", "Unknown error"
-                    
-                    finally:
-                        if instance:
-                            try:
-                                await instance.astop()
-                            except Exception as e:
-                                if "404" in str(e) and "not found" in str(e).lower():
-                                    pass
-                                else:
-                                    print(f"Error stopping instance: {str(e)}")
                 
                 except Exception as e:
                     print(f"Error inside tempdir context: {type(e).__name__}: {str(e)}")
@@ -159,17 +149,20 @@ class MorphCloudExecutionClient:
         """Get or create a snapshot with the necessary dependencies for evaluation."""
         
         async with self._snapshot_lock:
+            base_snapshots = await self.client.snapshots.alist(digest="ioi_evaluation")
             
-            # TODO: search for existing metadata before creating this snapshot
-
-            print('Creating base snapshot with build-essential cmake and g++')
-            base_snapshot = await self.client.snapshots.acreate(
-                vcpus=2,
-                memory=4096,  
-                disk_size=10240,  
-                metadata={"purpose": "ioi_evaluation"},
-                digest="ioi_evaluation",
-            )
+            if not base_snapshots:
+                print('Creating base snapshot with build-essential cmake and g++')
+                base_snapshot = await self.client.snapshots.acreate(
+                    vcpus=2,
+                    memory=4096,  
+                    disk_size=10240,  
+                    metadata={"purpose": "ioi_evaluation"},
+                    digest="ioi_evaluation",
+                )
+            else:
+                print('Found existing base snapshot')
+                base_snapshot = base_snapshots[0]
             
             setup_snapshot = await base_snapshot.aexec(
                 "apt-get update && "
@@ -177,7 +170,6 @@ class MorphCloudExecutionClient:
             )
             
             final_snapshot = await setup_snapshot.aexec("mkdir -p /workspace && chmod 777 /workspace")
-            
             
             return final_snapshot
 
