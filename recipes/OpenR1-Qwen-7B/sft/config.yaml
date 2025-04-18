@@ -36,7 +36,7 @@ hub_strategy: every_save
 log_level: info
 logging_steps: 5
 logging_strategy: steps
-packing: true
+packing: false
 output_dir: data/OpenR1-Qwen-7B-SFT
 overwrite_output_dir: true
 push_to_hub: true

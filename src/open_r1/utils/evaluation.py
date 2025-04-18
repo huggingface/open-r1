@@ -1,12 +1,13 @@
 import subprocess
 from typing import TYPE_CHECKING, Dict, Union
 
-from .hub import get_gpu_count_for_vllm, get_param_count_from_repo_id
+from .hub import get_gpu_count_for_vllm
 
 
 if TYPE_CHECKING:
     from trl import GRPOConfig, SFTConfig, ModelConfig
 
+import base64
 import os
 
 
@@ -46,10 +47,10 @@ def register_lighteval_task(
 
 LIGHTEVAL_TASKS = {}
 
-register_lighteval_task(LIGHTEVAL_TASKS, "custom", "math_500", "math_500", 0)
-register_lighteval_task(LIGHTEVAL_TASKS, "custom", "aime24", "aime24", 0)
-register_lighteval_task(LIGHTEVAL_TASKS, "custom", "aime25", "aime25", 0)
-register_lighteval_task(LIGHTEVAL_TASKS, "custom", "gpqa", "gpqa:diamond", 0)
+register_lighteval_task(LIGHTEVAL_TASKS, "lighteval", "math_500", "math_500", 0)
+register_lighteval_task(LIGHTEVAL_TASKS, "lighteval", "aime24", "aime24", 0)
+register_lighteval_task(LIGHTEVAL_TASKS, "lighteval", "aime25", "aime25", 0)
+register_lighteval_task(LIGHTEVAL_TASKS, "lighteval", "gpqa", "gpqa:diamond", 0)
 register_lighteval_task(LIGHTEVAL_TASKS, "extended", "lcb", "lcb:codegeneration", 0)
 register_lighteval_task(LIGHTEVAL_TASKS, "extended", "lcb_v4", "lcb:codegeneration_v4", 0)
 
@@ -69,11 +70,13 @@ def run_lighteval_job(
     model_revision = training_args.hub_model_revision
     # For large models >= 30b params or those running the MATH benchmark, we need to shard them across the GPUs to avoid OOM
     num_gpus = get_gpu_count_for_vllm(model_name, model_revision)
-    if get_param_count_from_repo_id(model_name) >= 30_000_000_000:
-        tensor_parallel = True
-    else:
-        num_gpus = 8
-        tensor_parallel = False
+    # FIXME: vLLM 0.8.3 hangs with lighteval and DP > 1, so we disable it for now and use TP for all evals. See https://github.com/huggingface/lighteval/issues/670
+    # if get_param_count_from_repo_id(model_name) >= 30_000_000_000:
+    #     tensor_parallel = True
+    # else:
+    #     num_gpus = 8
+    #     tensor_parallel = False
+    tensor_parallel = True
 
     cmd = VLLM_SLURM_PREFIX.copy()
     cmd_args = [
@@ -88,7 +91,10 @@ def run_lighteval_job(
         f"{model_args.trust_remote_code}",
     ]
     if training_args.system_prompt is not None:
-        cmd_args.append(f"--system_prompt={training_args.system_prompt}")
+        # encode to base64 to avoid issues with special characters
+        # we decode in the sbatch script
+        prompt_encoded = base64.b64encode(training_args.system_prompt.encode()).decode()
+        cmd_args.append(prompt_encoded)
     cmd[-1] += " " + " ".join(cmd_args)
     subprocess.run(cmd, check=True)
 

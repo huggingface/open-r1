@@ -44,18 +44,18 @@ _deps = [
     "accelerate==1.4.0",
     "bitsandbytes>=0.43.0",
     "datasets>=3.2.0",
-    "deepspeed==0.15.4",
+    "deepspeed==0.16.4",
     "distilabel[vllm,ray,openai]>=1.5.2",
     "e2b-code-interpreter>=1.0.5",
     "einops>=0.8.0",
     "flake8>=6.0.0",
     "hf_transfer>=0.1.4",
-    "huggingface-hub[cli]>=0.19.2,<1.0",
+    "huggingface-hub[cli,hf_xet]>=0.19.2,<1.0",
     "isort>=5.12.0",
     "langdetect",  # Needed for LightEval's extended tasks
     "latex2sympy2_extended>=1.0.6",
-    "liger_kernel==0.5.3",
-    "lighteval @ git+https://github.com/huggingface/lighteval.git@ed084813e0bd12d82a06d9f913291fdbee774905",
+    "liger-kernel>=0.5.6",
+    "lighteval @ git+https://github.com/huggingface/lighteval.git@bb14995c4eccab5cabd450b1e509c3c898a16921",  # pass@1 for AIME with n=32 samples per prompt
     "math-verify==0.5.2",  # Used for math verification in grpo
     "packaging>=23.0",
     "parameterized>=0.9.0",
@@ -66,10 +66,10 @@ _deps = [
     "ruff>=0.9.0",
     "safetensors>=0.3.3",
     "sentencepiece>=0.1.99",
-    "torch==2.5.1",
-    "transformers==4.50.0",
-    "trl==0.16.0",
-    "vllm==0.7.2",
+    "torch==2.6.0",
+    "transformers==4.51.2",
+    "trl @ git+https://github.com/huggingface/trl.git@c04e84c4545acfaecdf7e0631ad07a86ab0fb2f6",  # Fix EOS token for SFT on base models: https://github.com/huggingface/trl/pull/3299
+    "vllm==0.8.3",
     "wandb>=0.19.1",
 ]
 
@@ -106,7 +106,7 @@ install_requires = [
     deps["langdetect"],
     deps["latex2sympy2_extended"],
     deps["math-verify"],
-    deps["liger_kernel"],
+    deps["liger-kernel"],
     deps["packaging"],  # utilities from PyPA to e.g., compare versions
     deps["safetensors"],
     deps["sentencepiece"],

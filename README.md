@@ -69,7 +69,7 @@ uv venv openr1 --python 3.11 && source openr1/bin/activate && uv pip install --u
 Next, install vLLM and FlashAttention:
 
 ```shell
-uv pip install vllm==0.7.2
+uv pip install vllm==0.8.3
 uv pip install setuptools && uv pip install flash-attn --no-build-isolation
 ```
 
@@ -100,6 +100,9 @@ sudo apt-get install git-lfs
 
 ## Training models
 
+> [!NOTE]
+> The training commands below are configured for a node of 8 x H100s (80GB). For different hardware and topologies, you may need to tune the batch size and number of gradient accumulation steps.
+
 We support training models with either DDP or DeepSpeed (ZeRO-2 and ZeRO-3). For example, to run SFT on a dataset distilled from DeepSeek-R1 with reasoning traces such as [open-r1/OpenR1-Math-220k](https://huggingface.co/datasets/open-r1/OpenR1-Math-220k), run:
 
 ```shell
@@ -107,13 +110,13 @@ We support training models with either DDP or DeepSpeed (ZeRO-2 and ZeRO-3). For
 accelerate launch --config_file=recipes/accelerate_configs/zero3.yaml src/open_r1/sft.py \
     --model_name_or_path Qwen/Qwen2.5-1.5B-Instruct \
     --dataset_name open-r1/OpenR1-Math-220k \
-    --learning_rate 1.0e-5 \
+    --learning_rate 5.0e-5 \
     --num_train_epochs 1 \
-    --packing \
     --max_seq_length 16384 \
     --per_device_train_batch_size 16 \
     --gradient_checkpointing \
     --bf16 \
+    --use_liger_kernel \
     --output_dir data/Qwen2.5-1.5B-Open-R1-Distill
 
 # Train via YAML config
@@ -146,8 +149,44 @@ accelerate launch --config_file recipes/accelerate_configs/zero3.yaml src/open_r
     --wandb_entity huggingface --wandb_project open-r1 --run_name Qwen2.5-1.5B-GRPO
 ```
 
-> [!NOTE]
-> The training commands below are configured for a node of 8 x H100s (80GB). For different hardware and topologies, you may need to tune the batch size and number of gradient accumulation steps.
+**🚨 WARNING 🚨**
+
+Most base models like `meta-llama/Llama-3.2-1B` do not have a chat template, so we set ChatML as the default during training. However, for Qwen base models like `Qwen/Qwen2.5-1.5B`, a chat template is pre-defined in the tokenizer, so the EOS token must be set accordingly, e.g.
+
+```diff
+# Align EOS token with chat template for Qwen base models
+accelerate launch --config_file=recipes/accelerate_configs/zero3.yaml src/open_r1/sft.py \
+    --model_name_or_path Qwen/Qwen2.5-1.5B \
++   --eos_token '<|im_end|>'
+    --dataset_name open-r1/OpenR1-Math-220k \
+    --learning_rate 5.0e-5 \
+    --num_train_epochs 1 \
+    --max_seq_length 16384 \
+    --per_device_train_batch_size 16 \
+    --gradient_checkpointing \
+    --bf16 \
+    --use_liger_kernel \
+    --output_dir data/Qwen2.5-1.5B-Open-R1-Distill
+```
+
+If you wish to use a custom chat template (e.g. Llama or Gemma), then the chat template and associated EOS token must be provided:
+
+```diff
+# Align EOS token with custom chat template
+accelerate launch --config_file=recipes/accelerate_configs/zero3.yaml src/open_r1/sft.py \
+    --model_name_or_path meta-llama/Llama-3.2-1B \
++   --chat_template "$(cat llama_chat_template.jinja)" \
++   --eos_token '<|eot_id|>' \
+    --dataset_name open-r1/OpenR1-Math-220k \
+    --learning_rate 5.0e-5 \
+    --num_train_epochs 1 \
+    --max_seq_length 16384 \
+    --per_device_train_batch_size 16 \
+    --gradient_checkpointing \
+    --bf16 \
+    --use_liger_kernel \
+    --output_dir data/Llama-3.2-1B-Open-R1-Distill
+```
 
 ### SFT
 
@@ -224,10 +263,26 @@ CUDA_VISIBLE_DEVICES=0 trl vllm-serve --model Qwen/Qwen2.5-1.5B-Instruct
 Then run training with:
 
 ```shell
-CUDA_VISIBLE_DEVICES=1,2,3,4,5,6,7 ACCELERATE_LOG_LEVEL=info \ 
-    accelerate launch --config_file recipes/accelerate_configs/zero2.yaml --num_processes=7 
+CUDA_VISIBLE_DEVICES=1,2,3,4,5,6,7 ACCELERATE_LOG_LEVEL=info \
+    accelerate launch --config_file recipes/accelerate_configs/zero2.yaml --num_processes=7 \
     src/open_r1/grpo.py --config recipes/Qwen2.5-1.5B-Instruct/grpo/config_demo_code.yaml
 ```
+
+It is possible to be rate limited when too many scripts are executed on E2B Sandboxes, so we provide an E2B router script that can be launched on a CPU node on your cluster:
+
+For GRPO training:
+First start the router and get its IP
+
+```shell
+sbatch slurm/e2b_router.slurm
+```
+
+Then add this line in your training YAML config: (for example)
+```
+e2b_router_url: 1.2.3.4:8000
+```
+The port here should match the one used when launching the router.
+All training jobs can share the same router IP which will ensure there are at most 20 parallel executions.
 
 #### IOI problems
 
@@ -298,31 +353,28 @@ You can scale the number of nodes by increasing the `--nodes` flag.
 
 ## Evaluating models
 
-We use `lighteval` to evaluate models, with custom tasks defined in `src/open_r1/evaluate.py`. For models which fit on a single GPU, run:
+We use `lighteval` to evaluate models. For models which fit on a single GPU, run:
 
 ```shell
 MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B
-MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=32768,gpu_memory_utilization=0.8,generation_parameters={max_new_tokens:32768,temperature:0.6,top_p:0.95}"
+MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=32768,max_num_batched_tokens=32768,gpu_memory_utilization=0.8,generation_parameters={max_new_tokens:32768,temperature:0.6,top_p:0.95}"
 OUTPUT_DIR=data/evals/$MODEL
 
 # AIME 2024
 TASK=aime24
-lighteval vllm $MODEL_ARGS "custom|$TASK|0|0" \
-    --custom-tasks src/open_r1/evaluate.py \
+lighteval vllm $MODEL_ARGS "lighteval|$TASK|0|0" \
     --use-chat-template \
     --output-dir $OUTPUT_DIR
 
 # MATH-500
 TASK=math_500
-lighteval vllm $MODEL_ARGS "custom|$TASK|0|0" \
-    --custom-tasks src/open_r1/evaluate.py \
+lighteval vllm $MODEL_ARGS "lighteval|$TASK|0|0" \
     --use-chat-template \
     --output-dir $OUTPUT_DIR
 
 # GPQA Diamond
 TASK=gpqa:diamond
-lighteval vllm $MODEL_ARGS "custom|$TASK|0|0" \
-    --custom-tasks src/open_r1/evaluate.py \
+lighteval vllm $MODEL_ARGS "lighteval|$TASK|0|0" \
     --use-chat-template \
     --output-dir $OUTPUT_DIR
 
@@ -333,21 +385,20 @@ lighteval vllm $MODEL_ARGS "extended|lcb:codegeneration|0|0" \
 ```
 
 > [!IMPORTANT]
-> You must set `max_model_length=32768` in the `vllm` command to align with the `max_new_tokens` we define per eval. Without this, `lighteval` will throw an error.
+> You must set `max_model_length=32768` and `max_num_batched_tokens=32768` in the `vllm` command to align with the `max_new_tokens` we define per eval. Without this, `lighteval` will throw an error.
 
 To increase throughput across multiple GPUs, use _data parallel_ as follows:
 
 ```shell
 NUM_GPUS=8
 MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B
-MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,data_parallel_size=$NUM_GPUS,max_model_length=32768,gpu_memory_utilization=0.8,generation_parameters={max_new_tokens:32768,temperature:0.6,top_p:0.95}"
+MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,data_parallel_size=$NUM_GPUS,max_model_length=32768,max_num_batched_tokens=32768,gpu_memory_utilization=0.8,generation_parameters={max_new_tokens:32768,temperature:0.6,top_p:0.95}"
 TASK=aime24
 OUTPUT_DIR=data/evals/$MODEL
 
-lighteval vllm $MODEL_ARGS "custom|$TASK|0|0" \
-    --custom-tasks src/open_r1/evaluate.py \
+lighteval vllm $MODEL_ARGS "lighteval|$TASK|0|0" \
     --use-chat-template \
-    --output-dir $OUTPUT_DIR 
+    --output-dir $OUTPUT_DIR
 ```
 
 For large models which require sharding across GPUs, use _tensor parallel_ and run:
@@ -355,15 +406,14 @@ For large models which require sharding across GPUs, use _tensor parallel_ and r
 ```shell
 NUM_GPUS=8
 MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-32B
-MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,tensor_parallel_size=$NUM_GPUS,max_model_length=32768,gpu_memory_utilization=0.8,generation_parameters={max_new_tokens:32768,temperature:0.6,top_p:0.95}"
+MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,tensor_parallel_size=$NUM_GPUS,max_model_length=32768,max_num_batched_tokens=32768,gpu_memory_utilization=0.8,generation_parameters={max_new_tokens:32768,temperature:0.6,top_p:0.95}"
 TASK=aime24
 OUTPUT_DIR=data/evals/$MODEL
 
 export VLLM_WORKER_MULTIPROC_METHOD=spawn
-lighteval vllm $MODEL_ARGS "custom|$TASK|0|0" \
-    --custom-tasks src/open_r1/evaluate.py \
+lighteval vllm $MODEL_ARGS "lighteval|$TASK|0|0" \
     --use-chat-template \
-    --output-dir $OUTPUT_DIR 
+    --output-dir $OUTPUT_DIR
 ```
 
 You can also launch an evaluation with `make evaluate`, specifying the model, task, and optionally the parallelism technique and number of GPUs.
@@ -389,7 +439,7 @@ make evaluate MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-32B TASK=aime24 PARALLE
 ## Reproducing Deepseek's evaluation results
 
 > [!NOTE]
-> The DeepSeek-R1 paper uses sampling with 64 responses per query to estimate `pass@1`. Below, we report the results from sampling 1 response per query, which likely explains the small 1-3σ discrepancies between our results and theirs.
+> The DeepSeek-R1 paper uses sampling with 4-64 responses per query to estimate `pass@1` accuracy, but does not specify the specific number of responses per benchmark. For AIME 2024, we report the results from sampling 32 response per query, while for all others we report the accuracy from sampling 1 response. These choices likely explains the small 1-3σ discrepancies between our results and DeepSeek's.
 
 ### AIME 2024
 
@@ -397,23 +447,22 @@ We are able to reproduce Deepseek's reported results on the AIME 2024 benchmark 
 
 | Model                         | AIME 2024 (🤗 LightEval) | AIME 2024 (DeepSeek Reported) |
 |:------------------------------|:-----------------------:|:----------------------------:|
-| DeepSeek-R1-Distill-Qwen-1.5B |          26.7           |             28.9             |
-| DeepSeek-R1-Distill-Qwen-7B   |          56.6           |             55.5             |
-| DeepSeek-R1-Distill-Qwen-14B  |          60.0           |             69.7             |
-| DeepSeek-R1-Distill-Qwen-32B  |          73.2           |             72.6             |
-| DeepSeek-R1-Distill-Llama-8B  |          43.3           |             50.4             |
-| DeepSeek-R1-Distill-Llama-70B |          73.3           |             70.0             |
+| DeepSeek-R1-Distill-Qwen-1.5B |          31.8           |             28.9             |
+| DeepSeek-R1-Distill-Qwen-7B   |          52.2           |             55.5             |
+| DeepSeek-R1-Distill-Qwen-14B  |          66.5           |             69.7             |
+| DeepSeek-R1-Distill-Qwen-32B  |          68.0           |             72.6             |
+| DeepSeek-R1-Distill-Llama-8B  |          43.9           |             41.7             |
+| DeepSeek-R1-Distill-Llama-70B |          65.3           |             70.0             |
 
 To reproduce these results use the following command:
 
 ```shell
 NUM_GPUS=1 # Set to 8 for 32B and 70B models
 MODEL=deepseek-ai/{model_name}
-MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=32768,gpu_memory_utilization=0.8,data_parallel_size=$NUM_GPUS,generation_parameters={max_new_tokens:32768,temperature:0.6,top_p:0.95}"
+MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=32768,max_num_batched_tokens=32768,gpu_memory_utilization=0.8,data_parallel_size=$NUM_GPUS,generation_parameters={max_new_tokens:32768,temperature:0.6,top_p:0.95}"
 OUTPUT_DIR=data/evals/$MODEL
 
-lighteval vllm $MODEL_ARGS "custom|aime24|0|0" \
-    --custom-tasks src/open_r1/evaluate.py \
+lighteval vllm $MODEL_ARGS "lighteval|aime24|0|0" \
     --use-chat-template \
     --output-dir $OUTPUT_DIR
 ```
@@ -442,11 +491,10 @@ To reproduce these results use the following command:
 ```shell
 NUM_GPUS=1 # Set to 8 for 32B and 70B models
 MODEL=deepseek-ai/{model_name}
-MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=32768,gpu_memory_utilization=0.8,data_parallel_size=$NUM_GPUS,generation_parameters={max_new_tokens:32768,temperature:0.6,top_p:0.95}"
+MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=32768,max_num_batched_tokens=32768,gpu_memory_utilization=0.8,data_parallel_size=$NUM_GPUS,generation_parameters={max_new_tokens:32768,temperature:0.6,top_p:0.95}"
 OUTPUT_DIR=data/evals/$MODEL
 
-lighteval vllm $MODEL_ARGS "custom|math_500|0|0" \
-    --custom-tasks src/open_r1/evaluate.py \
+lighteval vllm $MODEL_ARGS "lighteval|math_500|0|0" \
     --use-chat-template \
     --output-dir $OUTPUT_DIR
 ```
@@ -475,11 +523,10 @@ To reproduce these results use the following command:
 ```shell
 NUM_GPUS=1 # Set to 8 for 32B and 70B models
 MODEL=deepseek-ai/{model_name}
-MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=32768,gpu_memory_utilization=0.8,data_parallel_size=$NUM_GPUS,generation_parameters={max_new_tokens:32768,temperature:0.6,top_p:0.95}"
+MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=32768,max_num_batched_tokens=32768,gpu_memory_utilization=0.8,data_parallel_size=$NUM_GPUS,generation_parameters={max_new_tokens:32768,temperature:0.6,top_p:0.95}"
 OUTPUT_DIR=data/evals/$MODEL
 
-lighteval vllm $MODEL_ARGS "custom|gpqa:diamond|0|0" \
-    --custom-tasks src/open_r1/evaluate.py \
+lighteval vllm $MODEL_ARGS "lighteval|gpqa:diamond|0|0" \
     --use-chat-template \
     --output-dir $OUTPUT_DIR
 ```
@@ -506,7 +553,7 @@ To reproduce these results use the following command:
 ```shell
 NUM_GPUS=1 # Set to 8 for 32B and 70B models, or data_parallel_size=8 with the smaller models for speed
 MODEL=deepseek-ai/{model_name}
-MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=32768,gpu_memory_utilization=0.8,data_parallel_size=$NUM_GPUS,generation_parameters={max_new_tokens:32768,temperature:0.6,top_p:0.95}"
+MODEL_ARGS="pretrained=$MODEL,dtype=bfloat16,max_model_length=32768,max_num_batched_tokens=32768,gpu_memory_utilization=0.8,data_parallel_size=$NUM_GPUS,generation_parameters={max_new_tokens:32768,temperature:0.6,top_p:0.95}"
 OUTPUT_DIR=data/evals/$MODEL
 
 lighteval vllm $MODEL_ARGS "extended|lcb:codegeneration|0|0" \

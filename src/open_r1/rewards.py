@@ -20,7 +20,7 @@ import json
 import math
 import re
 from functools import partial, update_wrapper
-from typing import Callable, Dict
+from typing import Callable, Dict, Optional
 
 from latex2sympy2_extended import NormalizationConfig
 from math_verify import LatexExtractionConfig, parse, verify
@@ -33,12 +33,14 @@ if is_e2b_available():
     from dotenv import load_dotenv
     from e2b_code_interpreter import AsyncSandbox
 
+    from .utils.routed_sandbox import RoutedSandbox
+
     load_dotenv()
 else:
     AsyncSandbox = None
 
 
-def accuracy_reward(completions, solution, **kwargs):
+def accuracy_reward(completions: list[list[dict[str, str]]], solution: list[str], **kwargs) -> list[Optional[float]]:
     """Reward function that checks if the completion is the same as the ground truth."""
     contents = [completion[0]["content"] for completion in completions]
     rewards = []
@@ -46,7 +48,6 @@ def accuracy_reward(completions, solution, **kwargs):
         gold_parsed = parse(
             sol,
             extraction_mode="first_match",
-            extraction_config=[LatexExtractionConfig()],
         )
         if len(gold_parsed) != 0:
             # We require the answer to be provided in correct latex (no malformed operators)
@@ -69,15 +70,15 @@ def accuracy_reward(completions, solution, **kwargs):
                 ],
                 extraction_mode="first_match",
             )
-            # Reward 1 if the content is the same as the ground truth, 0 otherwise
+            # Compute binary rewards if verifiable, `None` otherwise to skip this example
             try:
-                reward = float(verify(answer_parsed, gold_parsed))
+                reward = float(verify(gold_parsed, answer_parsed))
             except Exception as e:
                 print(f"verify failed: {e}, answer: {answer_parsed}, gold: {gold_parsed}")
-                reward = 0.0
+                reward = None
         else:
-            # If the gold solution is not parseable, we reward 1 to skip this example
-            reward = 1.0
+            # If the gold solution is not parseable, we assign `None` to skip this example
+            reward = None
             print("Failed to parse gold solution: ", sol)
         rewards.append(reward)
 
@@ -383,13 +384,21 @@ def extract_code(completion: str, language: str = "python") -> str:
     return extracted_answer
 
 
-def binary_code_reward(completions, num_parallel: int = 2, **kwargs) -> list[float]:
-    rewards = code_reward(completions, num_parallel=num_parallel, **kwargs)
+def binary_code_reward(completions, num_parallel: int = 2, e2b_router_url=None, **kwargs) -> list[float]:
+    rewards = code_reward(completions, num_parallel=num_parallel, e2b_router_url=e2b_router_url, **kwargs)
     BINARY_THRESHOLD = 0.99
-    return [1.0 if reward > BINARY_THRESHOLD else 0.0 for reward in rewards]
+
+    output = []
+    for reward in rewards:
+        if reward is None:
+            output.append(None)
+        else:
+            output.append(1.0 if reward > BINARY_THRESHOLD else 0.0)
+
+    return output
 
 
-def code_reward(completions, num_parallel: int = 2, **kwargs) -> list[float]:
+def code_reward(completions, num_parallel: int = 2, e2b_router_url=None, **kwargs) -> list[float]:
     """Reward function that evaluates code snippets using the E2B code interpreter.
 
     Assumes the dataset contains a `verification_info` column with test cases.
@@ -449,12 +458,30 @@ def code_reward(completions, num_parallel: int = 2, **kwargs) -> list[float]:
     ]
 
     language = verification_info[0]["language"]
-
     if not all(v["language"] == language for v in verification_info):
         raise ValueError("All verification_info must have the same language", verification_info)
+
+    if e2b_router_url is not None:
+        routed_sandbox = RoutedSandbox(router_url=e2b_router_url)
+
+        executions = routed_sandbox.run_code(
+            scripts=scripts,
+            language=language,
+            timeout=30,
+            request_timeout=28,
+        )
+
+        rewards = []
+        for execution in executions:
+            try:
+                reward = float(execution.text)
+                rewards.append(reward)
+            except Exception:
+                rewards.append(None)
+        return rewards
+
     try:
         rewards = run_async_from_sync(scripts, language, num_parallel)
-
     except Exception as e:
         print(f"Error from E2B executor: {e}")
         rewards = [0.0] * len(completions)
@@ -554,10 +581,20 @@ def get_reward_funcs(script_args) -> list[Callable]:
         ),
         "length": len_reward,
         "code": update_wrapper(
-            partial(code_reward, num_parallel=script_args.parallel_code_exec_per_proc), code_reward
+            partial(
+                code_reward,
+                num_parallel=script_args.parallel_code_exec_per_proc,
+                e2b_router_url=script_args.e2b_router_url,
+            ),
+            code_reward,
         ),
         "binary_code": update_wrapper(
-            partial(binary_code_reward, num_parallel=script_args.parallel_code_exec_per_proc), binary_code_reward
+            partial(
+                binary_code_reward,
+                num_parallel=script_args.parallel_code_exec_per_proc,
+                e2b_router_url=script_args.e2b_router_url,
+            ),
+            binary_code_reward,
         ),
         "ioi_code": update_wrapper(
             partial(ioi_code_reward, test_batch_size=script_args.code_eval_test_batch_size), ioi_code_reward
