@@ -387,14 +387,30 @@ def extract_code(completion: str, language: str = "python") -> str:
 def binary_code_reward(completions, num_parallel: int = 2, e2b_router_url=None, **kwargs) -> list[float]:
     rewards = code_reward(completions, num_parallel=num_parallel, e2b_router_url=e2b_router_url, **kwargs)
     BINARY_THRESHOLD = 0.99
-
+    
     output = []
     for reward in rewards:
         if reward is None:
             output.append(None)
         else:
             output.append(1.0 if reward > BINARY_THRESHOLD else 0.0)
+  
+    return output
 
+def weighted_binary_code_reward(completions, num_parallel: int = 2, e2b_router_url=None, **kwargs) -> list[float]:
+    # combines binary reward with a weighted reward code reward
+    rewards = code_reward(completions, num_parallel=num_parallel, e2b_router_url=e2b_router_url, **kwargs)
+    BINARY_THRESHOLD = 0.99
+    NON_BINARY_WEIGHT = 0.1
+    
+    output = []
+    for reward in rewards:
+        if reward is None:
+            output.append(None)
+        else:
+            binary_reward = 1.0 if reward > BINARY_THRESHOLD else 0.0
+            output.append(binary_reward + NON_BINARY_WEIGHT * reward)
+  
     return output
 
 
@@ -595,6 +611,14 @@ def get_reward_funcs(script_args) -> list[Callable]:
                 e2b_router_url=script_args.e2b_router_url,
             ),
             binary_code_reward,
+        ),
+        "weighted_binary_code_reward": update_wrapper(
+            partial(
+                weighted_binary_code_reward,
+                num_parallel=script_args.parallel_code_exec_per_proc,
+                e2b_router_url=script_args.e2b_router_url,
+            ),
+            weighted_binary_code_reward,
         ),
         "ioi_code": update_wrapper(
             partial(ioi_code_reward, test_batch_size=script_args.code_eval_test_batch_size), ioi_code_reward
