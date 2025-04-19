@@ -38,6 +38,7 @@ accelerate launch --config_file=recipes/accelerate_configs/zero3.yaml src/open_r
 import logging
 import os
 import sys
+import json
 
 import datasets
 import transformers
@@ -53,6 +54,32 @@ from trl import ModelConfig, ScriptArguments, SFTTrainer, TrlParser, get_peft_co
 
 
 logger = logging.getLogger(__name__)
+
+# Dataset processing specially customized for HuggingFaceH4/Bespoke-Stratos-17k
+# Only when the dataset is in a non-standard sft format is it necessary to use it.
+def convert_format(data):
+    """
+    Convert dataset format by merging system prompt into conversations.
+    
+    Args:
+        data: Dict containing 'system' and 'messages' fields
+    Returns:
+        Dict with merged conversations
+    """
+    # Create a copy of the original data
+    converted = data.copy()
+    
+    # Create system message
+    system_message = {
+        "role": "system",
+        "content": data["system"]
+    }
+    
+    # Insert system message at the beginning of conversations
+    converted["messages"] = [system_message] + data["messages"]
+    
+    
+    return converted
 
 
 def main(script_args, training_args, model_args):
@@ -92,6 +119,13 @@ def main(script_args, training_args, model_args):
     # Load datasets
     ################
     dataset = load_dataset(script_args.dataset_name, name=script_args.dataset_config)
+    
+    # Check if it is not a standard data set and special treatment is required.
+    # Dataset processing specially customized for HuggingFaceH4/Bespoke-Stratos-17k
+    dataset_features = dataset[script_args.dataset_train_split].features
+    if "system" in dataset_features:
+        dataset =dataset.map(convert_format,remove_columns=['conversations','system'])
+    
 
     ################
     # Load tokenizer
