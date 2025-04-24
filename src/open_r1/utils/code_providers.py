@@ -163,7 +163,6 @@ class MorphProvider(CodeExecutionProvider):
             num_parallel: Number of parallel executions to use
             morph_router_url: URL for the MorphCloud router (if using router mode)
         """
-        
         try:
             from dotenv import load_dotenv
             load_dotenv()
@@ -280,7 +279,6 @@ class MorphProvider(CodeExecutionProvider):
         ASYNCIO_TIMEOUT = SANDBOX_TIMEOUT + MARGIN
         
         sandbox = None
-        sandbox_id = None
         async with semaphore:
             try:
                 sandbox = await asyncio.to_thread(
@@ -288,8 +286,6 @@ class MorphProvider(CodeExecutionProvider):
                     client=self.client,
                     ttl_seconds=SANDBOX_TIMEOUT
                 )
-                sandbox_id = getattr(sandbox, 'id', None) or getattr(sandbox._instance, 'id', 'unknown')
-                
                 result = await asyncio.wait_for(
                     asyncio.to_thread(
                         sandbox.run_code,
@@ -347,15 +343,21 @@ def get_provider(provider_type: str = "e2b", **kwargs) -> CodeExecutionProvider:
     Returns:
         An instance of CodeExecutionProvider
     """
+    num_parallel = kwargs.pop("num_parallel", 2)
+    
     if provider_type == "e2b":
+        # Extract E2B-specific arguments
+        e2b_router_url = kwargs.pop("e2b_router_url", None)
         return E2BProvider(
-            num_parallel=kwargs.get("num_parallel", 2),
-            e2b_router_url=kwargs.get("e2b_router_url", None),
+            num_parallel=num_parallel,
+            e2b_router_url=e2b_router_url,
         )
     elif provider_type == "morph":
+        # Extract Morph-specific arguments  
+        morph_router_url = kwargs.pop("morph_router_url", None)
         return MorphProvider(
-            num_parallel=kwargs.get("num_parallel", 2),
-            morph_router_url=kwargs.get("morph_router_url", None)
+            num_parallel=num_parallel,
+            morph_router_url=morph_router_url,
         )
     else:
         raise ValueError(f"Unknown provider type: {provider_type}")

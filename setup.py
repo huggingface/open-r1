@@ -89,7 +89,7 @@ extras = {}
 extras["tests"] = deps_list("pytest", "parameterized", "math-verify")
 extras["torch"] = deps_list("torch")
 extras["quality"] = deps_list("ruff", "isort", "flake8")
-extras["code"] = deps_list("e2b-code-interpreter", "python-dotenv")
+extras["code"] = deps_list("e2b-code-interpreter", "python-dotenv", "morphcloud")
 extras["eval"] = deps_list("lighteval", "math-verify")
 extras["dev"] = extras["quality"] + extras["tests"] + extras["eval"] + extras["code"]
 

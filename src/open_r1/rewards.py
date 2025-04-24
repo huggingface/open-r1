@@ -346,7 +346,6 @@ def ioi_code_reward(completions, test_batch_size: int = 1, provider_type: str = 
     """
     # Get the appropriate client based on provider_type
     if provider_type == "morph":
-        print('provider: morph')
         execution_client = get_morph_client_from_env()
     else:
         # for info on setting up piston workers, see slurm/piston/README.md
@@ -386,11 +385,10 @@ def extract_code(completion: str, language: str = "python") -> str:
     return extracted_answer
 
 
-def binary_code_reward(completions, num_parallel: int = 2, e2b_router_url=None, provider_type: str = None, enforce_same_language: bool = False, **kwargs) -> list[float]:
+def binary_code_reward(completions, num_parallel: int = 2, provider_type: str = "e2b", enforce_same_language: bool = False, **kwargs) -> list[float]:
     rewards = code_reward(
         completions, 
         num_parallel=num_parallel, 
-        e2b_router_url=e2b_router_url, 
         provider_type=provider_type,
         enforce_same_language=enforce_same_language,
         **kwargs
@@ -406,20 +404,7 @@ def binary_code_reward(completions, num_parallel: int = 2, e2b_router_url=None, 
 
     return output
 
-
-# This function has been removed as we now use a unified approach in code_reward
-# The commented placeholder below is kept for documentation purposes
-def code_reward_morph(completions, num_parallel: int = 2, **kwargs) -> list[float]:
-    """This function has been deprecated in favor of the unified code_reward function.
-    
-    All code evaluation now goes through the same code_reward function, regardless of provider.
-    """
-    # TODO: implement support for c++/rust/javascript
-
-    return code_reward(completions, num_parallel=num_parallel, provider_type="morph", **kwargs)
-
-
-def code_reward(completions, num_parallel: int = 2, e2b_router_url=None, provider_type: str = "e2b", enforce_same_language: bool = False, **kwargs) -> list[float]:
+def code_reward(completions, num_parallel: int = 2, provider_type: str = "e2b", enforce_same_language: bool = False, **kwargs) -> list[float]:
     """Reward function that evaluates code snippets using a code execution provider.
 
     Assumes the dataset contains a `verification_info` column with test cases.
@@ -427,12 +412,10 @@ def code_reward(completions, num_parallel: int = 2, e2b_router_url=None, provide
     Args:
         completions: List of model completions to evaluate
         num_parallel: Number of parallel code executions (default: 2)
-        e2b_router_url: URL for E2B router (if using E2B provider with router mode)
         provider_type: Which code execution provider to use (default: "e2b")
         enforce_same_language: If True, verify all problems use the same language (default: False)
         **kwargs: Additional arguments passed to the verification
     """
-    # Standard evaluation script template for Python (used by E2B and local providers)
     evaluation_script_template = """
     import subprocess
     import json
@@ -476,7 +459,6 @@ def code_reward(completions, num_parallel: int = 2, e2b_router_url=None, provide
     code_snippets = [extract_code(completion[-1]["content"]) for completion in completions]
     verification_info = kwargs["verification_info"]
     
-    # Choose the appropriate template based on provider type
     template = evaluation_script_template
     
     scripts = [
@@ -497,11 +479,10 @@ def code_reward(completions, num_parallel: int = 2, e2b_router_url=None, provide
     execution_provider = get_provider(
         provider_type=provider_type,
         num_parallel=num_parallel,
-        e2b_router_url=e2b_router_url,
+        **kwargs,
     )
     
     return execution_provider.execute_scripts(scripts, "python")
-
 
 def get_code_format_reward(language: str = "python"):
     """Format reward function specifically for code responses.
@@ -540,7 +521,6 @@ def get_reward_funcs(script_args) -> list[Callable]:
             partial(
                 code_reward,
                 num_parallel=script_args.parallel_code_exec_per_proc,
-                e2b_router_url=script_args.e2b_router_url,
                 provider_type=script_args.code_provider,
                 enforce_same_language=getattr(script_args, "enforce_same_language", False),
             ),
@@ -550,7 +530,6 @@ def get_reward_funcs(script_args) -> list[Callable]:
             partial(
                 binary_code_reward,
                 num_parallel=script_args.parallel_code_exec_per_proc,
-                e2b_router_url=script_args.e2b_router_url,
                 provider_type=script_args.code_provider,
                 enforce_same_language=getattr(script_args, "enforce_same_language", False),
             ),
