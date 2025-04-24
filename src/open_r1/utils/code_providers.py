@@ -210,7 +210,6 @@ class MorphProvider(CodeExecutionProvider):
         
         if hasattr(self, 'routed_sandbox'):
             try:
-                
                 results = self.routed_sandbox.run_code(
                     scripts=scripts,
                     language=language,
