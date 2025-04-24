@@ -14,7 +14,7 @@ def get_tokenizer(model_args: ModelConfig, training_args: SFTConfig | GRPOConfig
         trust_remote_code=model_args.trust_remote_code,
     )
 
-    if training_args.chat_template is not None:
+    if hasattr(training_args, 'chat_template') and training_args.chat_template is not None:
         tokenizer.chat_template = training_args.chat_template
 
     return tokenizer
