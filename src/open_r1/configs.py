@@ -271,6 +271,12 @@ class GRPOScriptArguments(ScriptArguments):
             "help": "for each generation, evaluate these many test cases in parallel, then check if any of them failed (0 score): if so stop evaluating; otherwise continue with the next batch of test cases. Useful to avoid overloading the eval server + save time on wrong solutions"
         },
     )
+    code_eval_partial_grading:bool = field(
+        default=False,
+        metadata={
+            "help": "use fraction of passed test cases as reward. If false, use 0/1 scoring."
+        },
+    )
     parallel_code_exec_per_proc: int = field(
         default=2,
         metadata={

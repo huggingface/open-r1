@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from functools import partial
 import logging
 import os
 import sys
@@ -88,23 +89,22 @@ def main(script_args, training_args, model_args):
     reward_funcs = get_reward_funcs(script_args)
 
     # Format into conversation
-    def make_conversation(example, prompt_column: str = script_args.dataset_prompt_column):
+    def make_conversation(example):
         prompt = []
 
         if training_args.system_prompt is not None:
             prompt.append({"role": "system", "content": training_args.system_prompt})
 
-        if prompt_column not in example:
-            raise ValueError(f"Dataset Question Field Error: {prompt_column} is not supported.")
+        prompt.append({"role": "user", "content": example})
+        return prompt
 
-        prompt.append({"role": "user", "content": example[prompt_column]})
-        return {"prompt": prompt}
+    # for split in dataset:
+        # if "messages" in dataset[split].column_names:
+            # dataset[split] = dataset[split].remove_columns("messages")
 
-    dataset = dataset.map(make_conversation)
-
-    for split in dataset:
-        if "messages" in dataset[split].column_names:
-            dataset[split] = dataset[split].remove_columns("messages")
+    dataset_df = dataset['train'].to_pandas()
+    dataset_df['prompt'] = dataset_df[script_args.dataset_prompt_column].map(make_conversation)
+    dataset = datasets.Dataset.from_pandas(dataset_df)
 
     #############################
     # Initialize the GRPO trainer
