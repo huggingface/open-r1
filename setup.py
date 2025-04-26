@@ -57,6 +57,7 @@ _deps = [
     "liger-kernel>=0.5.6",
     "lighteval @ git+https://github.com/huggingface/lighteval.git@bb14995c4eccab5cabd450b1e509c3c898a16921",  # pass@1 for AIME with n=32 samples per prompt
     "math-verify==0.5.2",  # Used for math verification in grpo
+    "morphcloud==0.1.67",
     "packaging>=23.0",
     "parameterized>=0.9.0",
     "peft>=0.14.0",
