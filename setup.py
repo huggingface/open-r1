@@ -66,7 +66,7 @@ _deps = [
     "safetensors>=0.3.3",
     "sentencepiece>=0.1.99",
     "torch==2.6.0",
-    "transformers @ git+https://github.com/huggingface/transformers.git@acdbe627e323dbc822f21499fead789b439cf45b", # Fix DeepSpeed x vLLM conflict: https://github.com/huggingface/transformers/pull/37755
+    "transformers @ git+https://github.com/huggingface/transformers.git@acdbe627e323dbc822f21499fead789b439cf45b",  # Fix DeepSpeed x vLLM conflict: https://github.com/huggingface/transformers/pull/37755
     "trl[vllm] @ git+https://github.com/huggingface/trl.git@1bca49515ecd5b85d16e68c42c76670e252e19f1",  # Fix DeepSpeed x vLLM conflict: https://github.com/huggingface/trl/pull/3351
     "wandb>=0.19.1",
 ]
