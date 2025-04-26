@@ -41,8 +41,6 @@ DETAILS_REPO_ID="open-r1/details-$MODEL_NAME"
 OUTPUT_DIR="eval_results/$MODEL_ID/$MODEL_REVISION/$TASK_NAME"
 # We need this flag since we run this script from training jobs that use DeepSpeed and the env vars get progated which causes errors during evaluation
 ACCELERATE_USE_DEEPSPEED=false
-# Enable fast downloads
-HF_HUB_ENABLE_HF_TRANSFER=1
 
 echo "Running lighteval script ..."
 echo "Eval results will be saved to $OUTPUT_DIR"
