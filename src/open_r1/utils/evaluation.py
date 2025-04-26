@@ -70,7 +70,7 @@ def run_lighteval_job(
     model_revision = training_args.hub_model_revision
     # For large models >= 30b params or those running the MATH benchmark, we need to shard them across the GPUs to avoid OOM
     num_gpus = get_gpu_count_for_vllm(model_name, model_revision)
-    # FIXME: vLLM 0.8.3 hangs with lighteval and DP > 1, so we disable it for now and use TP for all evals. See https://github.com/huggingface/lighteval/issues/670
+    # FIXME: vLLM 0.8.4 hangs with lighteval and DP > 1, so we disable it for now and use TP for all evals. See https://github.com/huggingface/lighteval/issues/670
     # if get_param_count_from_repo_id(model_name) >= 30_000_000_000:
     #     tensor_parallel = True
     # else:
