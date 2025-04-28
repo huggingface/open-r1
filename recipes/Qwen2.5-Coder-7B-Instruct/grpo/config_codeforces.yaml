@@ -12,10 +12,11 @@ system_prompt: "You are a helpful AI Assistant that provides well-reasoned and d
 # GRPO trainer config
 callbacks:
 - push_to_hub_revision
-# benchmarks:
-# - math_500
-# - aime24
-beta: 0.001
+benchmarks:
+- lcb_v4
+beta: 0.0
+loss_type: dr_grpo
+scale_rewards: false
 bf16: true
 do_eval: false
 eval_strategy: "no"
@@ -23,7 +24,7 @@ use_vllm: true
 vllm_device: auto
 vllm_gpu_memory_utilization: 0.7
 do_eval: false
-gradient_accumulation_steps: 32
+gradient_accumulation_steps: 16
 gradient_checkpointing: true
 gradient_checkpointing_kwargs:
   use_reentrant: false
@@ -38,14 +39,14 @@ logging_steps: 1
 logging_strategy: steps
 lr_scheduler_type: constant_with_warmup
 max_grad_norm: 0.2
-max_prompt_length: 1024
-max_completion_length: 4096
+max_prompt_length: 2000
+max_completion_length: 8192
 max_steps: -1
 num_generations: 16
 num_train_epochs: 40
 output_dir: data/Qwen2.5-Coder-7B-Instruct-Codeforces-GRPO_v01.00
 overwrite_output_dir: true
-per_device_train_batch_size: 4
+per_device_train_batch_size: 8
 push_to_hub: true
 report_to:
 - wandb
@@ -56,11 +57,11 @@ reward_weights:
 - 1.0
 - 0.1
 save_strategy: "steps"
-save_steps: 25
-save_total_limit: 1000
+save_steps: 0.05
+save_total_limit: 1
 seed: 42
 temperature: 0.7
-wandb_entity: huggingface 
+wandb_entity: huggingface
 wandb_project: open-r1
 warmup_ratio: 0.1
 
