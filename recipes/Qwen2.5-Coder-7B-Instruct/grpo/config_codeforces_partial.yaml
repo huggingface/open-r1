@@ -27,7 +27,7 @@ gradient_accumulation_steps: 32
 gradient_checkpointing: true
 gradient_checkpointing_kwargs:
   use_reentrant: false
-hub_model_id: open-r1/Qwen2.5-Coder-7B-Instruct-Codeforces-GRPO
+hub_model_id: open-r1/Qwen2.5-Coder-7B-Instruct-Codeforces-GRPO-partial
 hub_model_revision: v01.00
 hub_strategy: every_save
 learning_rate: 1.0e-06
@@ -43,7 +43,7 @@ max_completion_length: 4096
 max_steps: -1
 num_generations: 16
 num_train_epochs: 40
-output_dir: data/Qwen2.5-Coder-7B-Instruct-Codeforces-GRPO_v01.00
+output_dir: data/Qwen2.5-Coder-7B-Instruct-Codeforces-GRPO_v01.00_partial
 overwrite_output_dir: true
 per_device_train_batch_size: 4
 push_to_hub: true
@@ -68,4 +68,5 @@ mask_truncated_completions: true
 code_language: cpp
 # for each generation, evaluate these many test cases in parallel, then check if any of them failed (0 score): if so stop evaluating
 # otherwise continue with the next batch of test cases. Useful to avoid overloading the eval server + save time on wrong solutions
-code_eval_test_batch_size: 20
+code_eval_test_batch_size: -1
+code_eval_partial_grading: true
