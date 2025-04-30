@@ -438,12 +438,12 @@ We are able to reproduce Deepseek's reported results on the AIME 2024 benchmark 
 
 | Model                         | AIME 2024 (🤗 LightEval) | AIME 2024 (DeepSeek Reported) |
 |:------------------------------|:-----------------------:|:----------------------------:|
-| DeepSeek-R1-Distill-Qwen-1.5B |          31.8           |             28.9             |
-| DeepSeek-R1-Distill-Qwen-7B   |          52.2           |             55.5             |
-| DeepSeek-R1-Distill-Qwen-14B  |          66.5           |             69.7             |
-| DeepSeek-R1-Distill-Qwen-32B  |          68.0           |             72.6             |
-| DeepSeek-R1-Distill-Llama-8B  |          43.9           |             41.7             |
-| DeepSeek-R1-Distill-Llama-70B |          65.3           |             70.0             |
+| DeepSeek-R1-Distill-Qwen-1.5B |          30.6           |             28.9             |
+| DeepSeek-R1-Distill-Qwen-7B   |          52.8           |             55.5             |
+| DeepSeek-R1-Distill-Qwen-14B  |          65.6           |             69.7             |
+| DeepSeek-R1-Distill-Qwen-32B  |          71.0           |             72.6             |
+| DeepSeek-R1-Distill-Llama-8B  |          44.8           |             41.7             |
+| DeepSeek-R1-Distill-Llama-70B |          63.0           |             70.0             |
 
 To reproduce these results use the following command:
 
@@ -470,12 +470,12 @@ We are able to reproduce Deepseek's reported results on the MATH-500 benchmark w
 
 | Model                         | MATH-500 (🤗 LightEval) | MATH-500 (DeepSeek Reported) |
 |:------------------------------|:-----------------------:|:----------------------------:|
-| DeepSeek-R1-Distill-Qwen-1.5B |          84.6           |             83.9             |
-| DeepSeek-R1-Distill-Qwen-7B   |          93.0           |             92.8             |
-| DeepSeek-R1-Distill-Qwen-14B  |          95.0           |             93.9             |
-| DeepSeek-R1-Distill-Qwen-32B  |          96.6           |             94.3             |
-| DeepSeek-R1-Distill-Llama-8B  |          88.6           |             89.1             |
-| DeepSeek-R1-Distill-Llama-70B |          96.4           |             94.5             |
+| DeepSeek-R1-Distill-Qwen-1.5B |          84.4           |             83.9             |
+| DeepSeek-R1-Distill-Qwen-7B   |          94.4           |             92.8             |
+| DeepSeek-R1-Distill-Qwen-14B  |          94.2           |             93.9             |
+| DeepSeek-R1-Distill-Qwen-32B  |          95.8           |             94.3             |
+| DeepSeek-R1-Distill-Llama-8B  |          88.4           |             89.1             |
+| DeepSeek-R1-Distill-Llama-70B |          96.0           |             94.5             |
 
 To reproduce these results use the following command:
 
@@ -503,12 +503,12 @@ We are able to reproduce Deepseek's reported results on the GPQA Diamond benchma
 
 | Model                         | GPQA Diamond (🤗 LightEval) | GPQA Diamond (DeepSeek Reported) |
 |:------------------------------|:---------------------------:|:--------------------------------:|
-| DeepSeek-R1-Distill-Qwen-1.5B |            34.3             |               33.8               |
-| DeepSeek-R1-Distill-Qwen-7B   |            50.5             |               49.1               |
+| DeepSeek-R1-Distill-Qwen-1.5B |            36.9             |               33.8               |
+| DeepSeek-R1-Distill-Qwen-7B   |            51.6             |               49.1               |
 | DeepSeek-R1-Distill-Qwen-14B  |            59.6             |               59.1               |
-| DeepSeek-R1-Distill-Qwen-32B  |            63.6             |               62.1               |
-| DeepSeek-R1-Distill-Llama-8B  |            52.0             |               49.0               |
-| DeepSeek-R1-Distill-Llama-70B |            67.2             |               65.2               |
+| DeepSeek-R1-Distill-Qwen-32B  |            63.1             |               62.1               |
+| DeepSeek-R1-Distill-Llama-8B  |            54.0             |               49.0               |
+| DeepSeek-R1-Distill-Llama-70B |            68.2             |               65.2               |
 
 To reproduce these results use the following command:
 
