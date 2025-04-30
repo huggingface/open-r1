@@ -31,12 +31,12 @@ class BatchRequest(BaseModel):
 
     Attributes:
         scripts (list[str]): A list of script names or paths to be executed.
-        language (str): The programming language in which the scripts are written.
+        languages (List[str]): The programming languages for each script in the list.
         timeout (int): The maximum allowed execution time for each script in seconds.
         request_timeout (int): The maximum allowed time for the entire batch request in seconds.
     """
     scripts: List[str]
-    language: str
+    languages: List[str]
     timeout: int
     request_timeout: int
 
@@ -88,12 +88,12 @@ def create_app(args):
         client = request.app.state.client
         Sandbox = request.app.state.Sandbox
         
-        language = batch.language
+        languages = batch.languages
         timeout = batch.timeout
         request_timeout = batch.request_timeout
         asyncio_timeout = batch.timeout + 1
         
-        async def run_script(script: str) -> ScriptResult:
+        async def run_script(script: str, language: str) -> ScriptResult:
             sandbox = None
             sandbox_id = "unknown"
 
@@ -135,7 +135,7 @@ def create_app(args):
                         except Exception:
                             pass
 
-        tasks = [run_script(script) for script in batch.scripts]
+        tasks = [run_script(script, lang) for script, lang in zip(batch.scripts, batch.languages)]
         return await asyncio.gather(*tasks)
 
     return app

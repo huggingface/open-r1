@@ -1,25 +1,16 @@
 #!/bin/bash
-#SBATCH --job-name=morph_router
-#SBATCH --nodes=1
-#SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=8
-#SBATCH --mem=32G
-#SBATCH --time=24:00:00
-#SBATCH --output=logs/morph_router_%j.out
-#SBATCH --error=logs/morph_router_%j.err
 
-# Load necessary modules
-module load anaconda
+#SBATCH --partition=hopper-cpu
+#SBATCH --mem=16g
+#SBATCH --cpus-per-task=16
+#SBATCH --output=/fsx/open-r1/logs/morph_router/%x-%j.out
+#SBATCH --err=/fsx/open-r1/logs/morph_router/%x-%j.err
+#SBATCH --requeue
 
-# Activate the conda environment
-source activate openr1
+echo "Starting job"
+set -x -e
 
-# Ensure the logs directory exists
-mkdir -p logs
+source ~/.bashrc
+source openr1/bin/activate
 
-# Start the MorphCloud router service
-echo "Starting MorphCloud router service on port 8001"
-python scripts/morph_router.py --port 8001 --max_num_sandboxes 20
-
-# The router will continue running until the job is terminated
-echo "MorphCloud router service exited"
+srun python scripts/morph_router.py --port 8001 --max_num_sandboxes 20

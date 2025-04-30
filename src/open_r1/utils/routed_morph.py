@@ -14,7 +14,7 @@
 # limitations under the License.
 
 import requests
-from typing import List, Optional
+from typing import List, Optional, Union
 
 
 class RoutedMorphSandbox:
@@ -31,7 +31,7 @@ class RoutedMorphSandbox:
         request_timeout (int): HTTP request timeout in seconds.
     """
     
-    def __init__(self, router_url: str, timeout: int = 30, request_timeout: int = 60):
+    def __init__(self, router_url: str, timeout: int = 300, request_timeout: int = 60):
         """
         Initialize the routed MorphCloud sandbox client.
         
@@ -45,7 +45,7 @@ class RoutedMorphSandbox:
         self.request_timeout = request_timeout
     
     def run_code(self, scripts: List[str], 
-                language: str = "python", 
+                languages: Optional[List[str]] = None,
                 timeout: Optional[int] = None,
                 request_timeout: Optional[int] = None) -> List:
         """
@@ -53,7 +53,7 @@ class RoutedMorphSandbox:
         
         Args:
             scripts: List of code scripts to execute.
-            language: Programming language for the code.
+            languages: List of programming languages for each script. If None, defaults to Python for all scripts.
             timeout: Execution timeout in seconds. If None, uses the instance timeout.
             request_timeout: HTTP request timeout in seconds. If None, uses the instance request_timeout.
             
@@ -64,10 +64,13 @@ class RoutedMorphSandbox:
         actual_timeout = timeout if timeout is not None else self.timeout
         actual_request_timeout = request_timeout if request_timeout is not None else self.request_timeout
         
+        # Default to Python for all scripts if languages is not provided
+        if languages is None:
+            languages = ["python"] * len(scripts)
         
         payload = {
             "scripts": scripts,
-            "language": language,
+            "languages": languages,
             "timeout": actual_timeout,
             "request_timeout": actual_request_timeout,
         }
@@ -95,7 +98,7 @@ class RoutedMorphSandbox:
             
             for item in response_data:
                 # Log the response data to see what we're getting
-                print(f"RoutedMorphSandbox: Got response item: {item}")
+                # print(f"RoutedMorphSandbox: Got response item: {item}")
                 result = type('obj', (object,), {
                     'text': item.get('text'),
                     'exception_str': item.get('exception_str')

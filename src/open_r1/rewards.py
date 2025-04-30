@@ -482,7 +482,7 @@ def code_reward(completions, num_parallel: int = 2, provider_type: str = "e2b", 
         **kwargs,
     )
     
-    return execution_provider.execute_scripts(scripts, "python")
+    return execution_provider.execute_scripts(scripts, ["python"]*len(scripts))
 
 def get_code_format_reward(language: str = "python"):
     """Format reward function specifically for code responses.

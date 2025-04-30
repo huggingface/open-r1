@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
+from typing import Optional, List
 
 import requests
 from e2b_code_interpreter.models import Execution, ExecutionError, Result
@@ -41,7 +41,7 @@ class RoutedSandbox:
     def run_code(
         self,
         scripts: list[str],
-        language: str = "python",
+        languages: Optional[List[str]] = None,
         timeout: Optional[int] = None,
         request_timeout: Optional[int] = None,
     ) -> list[Execution]:
@@ -50,7 +50,7 @@ class RoutedSandbox:
 
         Args:
             scripts (list[str]): A list of code scripts to execute.
-            language (str, optional): The programming language of the scripts. Defaults to "python".
+            languages (list[str], optional): List of programming languages for each script. If None, defaults to Python for all scripts.
             timeout (Optional[int], optional): The maximum execution time for each script in seconds. Defaults to 300 seconds.
             request_timeout (Optional[int], optional): The timeout for the HTTP request in seconds. Defaults to 30 seconds.
 
@@ -62,11 +62,15 @@ class RoutedSandbox:
             timeout = 300  # Default to 5 minutes
         if request_timeout is None:
             request_timeout = 30  # Default to 30 seconds
+        
+        # Default to Python for all scripts if languages is not provided
+        if languages is None:
+            languages = ["python"] * len(scripts)
 
         # Prepare the payload for the HTTP POST request
         payload = {
             "scripts": scripts,
-            "language": language,
+            "languages": languages,
             "timeout": timeout,
             "request_timeout": request_timeout,
         }

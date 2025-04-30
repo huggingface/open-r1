@@ -35,7 +35,7 @@ class CodeExecutionProvider(abc.ABC):
     """Abstract base class for code execution providers."""
     
     @abc.abstractmethod
-    def execute_scripts(self, scripts: List[str], language: str = "python") -> List[float]:
+    def execute_scripts(self, scripts: List[str], languages: List[str]) -> List[float]:
         """Execute multiple scripts and return their reward values.
         
         Args:
@@ -67,7 +67,7 @@ class E2BProvider(CodeExecutionProvider):
         self.num_parallel = num_parallel
         self.e2b_router_url = e2b_router_url
     
-    def execute_scripts(self, scripts: List[str], language: str = "python") -> List[float]:
+    def execute_scripts(self, scripts: List[str], languages: List[str]) -> List[float]:
         """Execute scripts using E2B sandboxes.
         
         If e2b_router_url is provided, uses the RoutedSandbox for batch processing.
@@ -78,7 +78,7 @@ class E2BProvider(CodeExecutionProvider):
             
             executions = routed_sandbox.run_code(
                 scripts=scripts,
-                language=language,
+                languages=languages,
                 timeout=30,
                 request_timeout=28,
             )
@@ -93,34 +93,34 @@ class E2BProvider(CodeExecutionProvider):
             return rewards
         
         try:
-            rewards = self._run_async_from_sync(scripts, language, self.num_parallel)
+            rewards = self._run_async_from_sync(scripts, languages, self.num_parallel)
         except Exception as e:
             print(f"Error from E2B executor: {e}")
             rewards = [0.0] * len(scripts)
         
         return rewards
     
-    def _run_async_from_sync(self, scripts: List[str], language: str, num_parallel: int) -> List[float]:
+    def _run_async_from_sync(self, scripts: List[str], languages: List[str], num_parallel: int) -> List[float]:
         """Function wrapping the `_run_async` function."""
         try:
-            rewards = asyncio.run(self._run_async(scripts, language, num_parallel))
+            rewards = asyncio.run(self._run_async(scripts, languages, num_parallel))
         except Exception as e:
             print(f"Error from E2B executor async: {e}")
             raise e
         
         return rewards
     
-    async def _run_async(self, scripts: List[str], language: str, num_parallel: int) -> List[float]:
+    async def _run_async(self, scripts: List[str], languages: List[str], num_parallel: int) -> List[float]:
         semaphore = asyncio.Semaphore(num_parallel)
         
-        tasks = [self._run_script(script, language, semaphore) for script in scripts]
+        tasks = [self._run_script(script, languages, semaphore) for script in scripts]
         
         results = await asyncio.gather(*tasks)
         rewards = list(results)  
         
         return rewards
     
-    async def _run_script(self, script: str, language: str, semaphore: asyncio.Semaphore) -> float:
+    async def _run_script(self, script: str, languages: List[str], semaphore: asyncio.Semaphore) -> float:
         # We set a timeout margin, as the AsyncSandbox timeout does not seem to work
         # These values are based on running 256 examples with the gold solution
         # from open-r1/verifiable-coding-problems-python_decontaminated
@@ -134,7 +134,7 @@ class E2BProvider(CodeExecutionProvider):
         async with semaphore:
             try:
                 sandbox = await AsyncSandbox.create(timeout=SANDBOX_TIMEOUT, request_timeout=REQUEST_TIMEOUT)
-                execution = await asyncio.wait_for(sandbox.run_code(script, language=language), timeout=ASYNCIO_TIMEOUT)
+                execution = await asyncio.wait_for(sandbox.run_code(script, languages=languages), timeout=ASYNCIO_TIMEOUT)
                 return float(execution.text)
             except (TypeError, ValueError):
                 return 0.0
@@ -196,7 +196,7 @@ class MorphProvider(CodeExecutionProvider):
         except ImportError as e:
             raise ImportError(f"Required MorphCloud dependencies not installed: {e}")
     
-    def execute_scripts(self, scripts: List[str], language: str = "python") -> List[float]:
+    def execute_scripts(self, scripts: List[str], languages: List[str]) -> List[float]:
         """Execute scripts using MorphCloud Sandbox API.
         
         Args:
@@ -211,9 +211,9 @@ class MorphProvider(CodeExecutionProvider):
             try:
                 results = self.routed_sandbox.run_code(
                     scripts=scripts,
-                    language=language,
-                    timeout=30,
-                    request_timeout=28,
+                    languages=languages,
+                    timeout=90,
+                    request_timeout=96,
                 )
                 
                 
@@ -234,14 +234,14 @@ class MorphProvider(CodeExecutionProvider):
         import time
         
         try:
-            rewards = asyncio.run(self._run_async(scripts, language, self.num_parallel))
+            rewards = asyncio.run(self._run_async(scripts, languages, self.num_parallel))
         except Exception as e:
             print(f"Error from MorphCloud executor: {e}")
             rewards = [0.0] * len(scripts)
         
         return rewards
         
-    async def _run_async(self, scripts: List[str], language: str, num_parallel: int) -> List[float]:
+    async def _run_async(self, scripts: List[str], languages: List[str], num_parallel: int) -> List[float]:
         """Run multiple scripts concurrently with limited parallelism.
         
         Args:
@@ -256,14 +256,14 @@ class MorphProvider(CodeExecutionProvider):
         semaphore = asyncio.Semaphore(num_parallel)
         
         
-        tasks = [self._run_script(script, language, semaphore) for script in scripts]
+        tasks = [self._run_script(script, languages, semaphore) for script in scripts]
         
         
         results = await asyncio.gather(*tasks)
         
         return list(results)
     
-    async def _run_script(self, script: str, language: str, semaphore: asyncio.Semaphore) -> float:
+    async def _run_script(self, script: str, languages: List[str], semaphore: asyncio.Semaphore) -> float:
         """Execute a single script in a MorphCloud Sandbox.
         
         Args:
@@ -274,8 +274,8 @@ class MorphProvider(CodeExecutionProvider):
         Returns:
             Float reward from script execution
         """
-        SANDBOX_TIMEOUT = 30
-        MARGIN = 2
+        SANDBOX_TIMEOUT = 90
+        MARGIN = 6
         ASYNCIO_TIMEOUT = SANDBOX_TIMEOUT + MARGIN
         
         sandbox = None
@@ -290,7 +290,7 @@ class MorphProvider(CodeExecutionProvider):
                     asyncio.to_thread(
                         sandbox.run_code,
                         script,
-                        language=language,
+                        languages=languages,
                         timeout=SANDBOX_TIMEOUT
                     ),
                     timeout=ASYNCIO_TIMEOUT

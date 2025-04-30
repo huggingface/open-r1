@@ -35,12 +35,12 @@ class BatchRequest(BaseModel):
 
     Attributes:
         scripts (list[str]): A list of script names or paths to be executed.
-        language (str): The programming language in which the scripts are written.
+        languages (list[str]): The programming languages for each script in the list.
         timeout (int): The maximum allowed execution time for each script in seconds.
         request_timeout (int): The maximum allowed time for the entire batch request in seconds.
     """
     scripts: list[str]
-    language: str
+    languages: list[str]
     timeout: int
     request_timeout: int
 
@@ -78,7 +78,7 @@ def create_app(args):
         2. POST /execute_batch:
             - Executes a batch of scripts in an isolated sandbox environment.
             - Request Body: BatchRequest object containing:
-                - language (str): The programming language of the scripts (python or javascript).
+                - languages (list[str]): The programming languages of the scripts (python or javascript).
                 - timeout (int): The maximum execution time for each script.
                 - request_timeout (int): The timeout for the request itself.
                 - scripts (List[str]): A list of scripts to execute.
@@ -102,12 +102,12 @@ def create_app(args):
     @app.post("/execute_batch")
     async def execute_batch(batch: BatchRequest, request: Request):
         semaphore = request.app.state.sandbox_semaphore
-        language = batch.language
+        languages = batch.languages
         timeout = batch.timeout
         request_timeout = batch.request_timeout
         asyncio_timeout = batch.timeout + 1
         
-        async def run_script(script: str) -> ScriptResult:
+        async def run_script(script: str, language: str) -> ScriptResult:
 
             async with semaphore:
                 try:
@@ -130,7 +130,7 @@ def create_app(args):
                     except Exception:
                         pass
 
-        tasks = [run_script(script) for script in batch.scripts]
+        tasks = [run_script(script, lang) for script, lang in zip(batch.scripts, batch.languages)]
         return await asyncio.gather(*tasks)
 
     return app
