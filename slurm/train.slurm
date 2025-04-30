@@ -1,8 +1,10 @@
 #!/bin/bash
 #SBATCH --job-name=open_r1
 #SBATCH --ntasks-per-node=1
-#SBATCH --exclusive
+#SBATCH --qos=high
+#SBATCH --time=5:00:00
 #SBATCH --gres=gpu:8
+#SBATCH --exclusive
 #SBATCH --partition=hopper-prod  # Adjust this for your cluster
 #SBATCH --output=./logs/%x-%j.out
 #SBATCH --error=./logs/%x-%j.err
