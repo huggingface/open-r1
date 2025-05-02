@@ -1,5 +1,6 @@
 import asyncio
 from itertools import islice
+from typing import Literal
 
 from .piston_client import PistonClient
 
@@ -53,19 +54,25 @@ async def score_single_test_case(
         print(f"Error scoring submission: {e}")
         return False
 
-    return result and result['compile']['code'] == 0 and result['run']['code'] == 0 and result['run']['stdout'].strip() == "1"
+    return result
 
 async def score_submission(
     client: PistonClient,
     problem_data: dict,
     submission: str,
     test_batch_size: int = 1,
-    partial_scoring: bool = False,
+    scoring_mode: Literal["pass_fail", "partial", "weighted_sum"] = "weighted_sum",
+    no_compile_reward: float = -0.1,
+    no_submission_reward: float = -1.0,
+    submission_language: str = "cpp"
 ) -> float:
     test_cases = problem_data["official_tests"]
-    # we skip submissions where no code was extracted
-    if not submission or len(test_cases) == 0:
-        return 0.0
+    # invalid/not a coding problem
+    if test_cases is None or len(test_cases) == 0:
+        return None
+    # no code extracted
+    if not submission:
+        return no_submission_reward
 
     passed_test_cases = 0
     # run one batch, check if any of them failed (0 score): if so stop evaluating (assuming non partial score); otherwise continue with the next batch of test cases.
@@ -74,15 +81,27 @@ async def score_submission(
             *[
                 asyncio.create_task(
                     score_single_test_case(
-                        client, problem_data, test_case["input"], test_case["output"], submission
+                        client, problem_data, test_case["input"], test_case["output"], submission, submission_language
                     )
                 )
                 for test_case in test_batch_to_run
             ]
         )
-        if not partial_scoring and any(not test_passed for test_passed in results):
-            break
-        passed_test_cases += sum(1 for test_passed in results if test_passed)
+        if any(result and result['compile']['code'] != 0 for result in results):
+            return no_compile_reward
 
-    return (1.0 if passed_test_cases == len(test_cases) else 0.0) if not partial_scoring \
-        else passed_test_cases / len(test_cases)
+        tests_passed_results = [result and result['run']['code'] == 0 and result['run']['stdout'].strip() == "1" for result in results]
+        if scoring_mode == "pass_fail" and any(not test_passed for test_passed in tests_passed_results):
+            break
+        passed_test_cases += sum(1 for test_passed in tests_passed_results if test_passed)
+
+    pass_fail_score = 1.0 if passed_test_cases == len(test_cases) else 0.0
+
+    if scoring_mode == "pass_fail":
+        return pass_fail_score
+    elif scoring_mode == "partial":
+        return passed_test_cases / len(test_cases)
+    elif scoring_mode == "weighted_sum":
+        return pass_fail_score + 0.1 * (passed_test_cases / len(test_cases))
+    else:
+        raise ValueError(f"Invalid scoring mode: {scoring_mode}")
