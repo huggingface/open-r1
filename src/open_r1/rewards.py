@@ -295,19 +295,25 @@ def get_repetition_penalty_reward(ngram_size: int, max_penalty: float, language:
         raise ValueError(f"max_penalty {max_penalty} should not be positive")
 
     if language == "en":
+
         def zipngram(text: str, ngram_size: int):
             words = text.lower().split()
             return zip(*[words[i:] for i in range(ngram_size)]), words
     elif language == "zh":
         from transformers.utils.import_utils import _is_package_available
+
         if not _is_package_available("jieba"):
             raise ValueError("Please install jieba to use Chinese language")
+
         def zipngram(text: str, ngram_size: int):
             import jieba
+
             seg_list = list(jieba.cut(text))
             return zip(*[seg_list[i:] for i in range(ngram_size)]), seg_list
     else:
-        raise ValueError(f"Word splitting for language `{language}` is not yet implemented. Please implement your own zip-ngram function.")
+        raise ValueError(
+            f"Word splitting for language `{language}` is not yet implemented. Please implement your own zip-ngram function."
+        )
 
     def repetition_penalty_reward(completions, **kwargs) -> float:
         """
