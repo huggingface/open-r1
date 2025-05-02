@@ -17,7 +17,10 @@ def get_piston_client_from_env(session=None):
     piston_endpoints = os.getenv("PISTON_ENDPOINTS")
     if piston_endpoints is None:
         raise ValueError("For IOI problems Piston endpoints running our IOI package are required. Please add a list of valid Piston endpoints to a PISTON_ENDPOINTS varialbe in a `.env` file.")
-    piston_endpoints = piston_endpoints.split(",") if piston_endpoints != "slurm" else get_slurm_piston_endpoints()
+    piston_endpoints = sorted(piston_endpoints.split(",") if piston_endpoints != "slurm" else get_slurm_piston_endpoints())
+    if (gpu_nb := os.getenv("SLURM_LOCALID")) is not None:
+        print(f"Using a subset of piston endpoints for GPU#{gpu_nb}")
+        piston_endpoints = piston_endpoints[int(gpu_nb)::8]
     random.shuffle(piston_endpoints)
     max_requests_per_endpoint = os.getenv("PISTON_MAX_REQUESTS_PER_ENDPOINT", "1")
     return PistonClient(piston_endpoints, session, max_requests_per_endpoint=int(max_requests_per_endpoint))
