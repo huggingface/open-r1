@@ -167,8 +167,7 @@ class PistonClient:
 
                     await asyncio.sleep(retry_delay)
                 else:
-                    print(f"Giving up on retries. {e}")
-                    raise e
+                    await self._check_failed_endpoint(endpoint)
             except Exception as e:
                 print(f"Propagating exception {type(e)}: {e}")
                 raise e

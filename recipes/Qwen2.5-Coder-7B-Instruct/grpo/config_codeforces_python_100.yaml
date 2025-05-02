@@ -5,7 +5,7 @@ torch_dtype: bfloat16
 attn_implementation: flash_attention_2
 # Data training arguments
 dataset_name: open-r1/codeforces-verifiable
-dataset_prompt_column: prompt_c++17
+dataset_prompt_column: prompt_python3
 
 system_prompt: "You are a helpful AI Assistant that provides well-reasoned and detailed responses. You first think about the reasoning process as an internal monologue and then provide the user with the answer. Respond in the following format: <think>\n...\n</think>\n<answer>\n...\n</answer>"
 
@@ -28,7 +28,7 @@ gradient_accumulation_steps: 32
 gradient_checkpointing: true
 gradient_checkpointing_kwargs:
   use_reentrant: false
-hub_model_id: open-r1/Qwen2.5-Coder-7B-Instruct-Codeforces-GRPO
+hub_model_id: open-r1/Qwen2.5-Coder-7B-Instruct-Codeforces-GRPO-python-100
 hub_model_revision: v01.00
 hub_strategy: every_save
 learning_rate: 1.0e-06
@@ -43,8 +43,8 @@ max_prompt_length: 2000
 max_completion_length: 8192
 max_steps: -1
 num_generations: 16
-num_train_epochs: 40
-output_dir: data/Qwen2.5-Coder-7B-Instruct-Codeforces-GRPO_v01.00
+num_train_epochs: 4
+output_dir: data/Qwen2.5-Coder-7B-Instruct-Codeforces-GRPO-python-100_v01.00
 overwrite_output_dir: true
 per_device_train_batch_size: 4
 push_to_hub: true
@@ -66,7 +66,7 @@ wandb_project: open-r1
 warmup_ratio: 0.1
 
 mask_truncated_completions: true
-code_language: cpp
+code_language: python
 # for each generation, evaluate these many test cases in parallel, then check if any of them failed (0 score): if so stop evaluating
 # otherwise continue with the next batch of test cases. Useful to avoid overloading the eval server + save time on wrong solutions
 code_eval_test_batch_size: -1

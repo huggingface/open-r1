@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 import trl
 
@@ -271,8 +271,8 @@ class GRPOScriptArguments(ScriptArguments):
             "help": "for each generation, evaluate these many test cases in parallel, then check if any of them failed (0 score): if so stop evaluating; otherwise continue with the next batch of test cases. Useful to avoid overloading the eval server + save time on wrong solutions"
         },
     )
-    code_eval_partial_grading:bool = field(
-        default=False,
+    code_eval_scoring_mode: Literal["pass_fail", "partial", "weighted_sum"] = field(
+        default="weighted_sum",
         metadata={
             "help": "use fraction of passed test cases as reward. If false, use 0/1 scoring."
         },

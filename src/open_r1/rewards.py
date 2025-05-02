@@ -20,7 +20,7 @@ import json
 import math
 import re
 from functools import partial, update_wrapper
-from typing import Callable, Dict, Optional
+from typing import Callable, Dict, Literal, Optional
 
 from latex2sympy2_extended import NormalizationConfig
 from math_verify import LatexExtractionConfig, parse, verify
@@ -410,7 +410,7 @@ def ioi_code_reward(completions, test_batch_size: int = 1, provider_type: str = 
     return [result.score for result in results]
 
 
-def cf_code_reward(completions, test_batch_size: int = 1, language: str = "cpp", patch_code: bool = False, partial_scoring: bool = False, **kwargs) -> list[float]:
+def cf_code_reward(completions, test_batch_size: int = 1, language: str = "cpp", patch_code: bool = False, scoring_mode: Literal["pass_fail", "partial", "weighted_sum"] = "weighted_sum", **kwargs) -> list[float]:
     """Reward function that evaluates Codeforces problems using Piston+our CF package.
 
     Assumes the dataset has the same format as hf.co/datasets/open-r1/codeforces-verifiable
@@ -422,7 +422,7 @@ def cf_code_reward(completions, test_batch_size: int = 1, language: str = "cpp",
 
     patch_code = False
     code_snippets = [
-        # note: grading is automatically skipped if no code is extracted
+        # note: grading is automatically skipped if a problem has no tests
         cf_patch_code(extract_code(completion[-1]["content"], language), language) if patch_code else extract_code(completion[-1]["content"], language)
         for completion in completions
     ]
@@ -432,7 +432,7 @@ def cf_code_reward(completions, test_batch_size: int = 1, language: str = "cpp",
             return await task
         except Exception as e:
             print(f"Error from Piston worker: {e}")
-            return 0.0
+            return None
 
     # load problem data. undo separating kwargs by column
     problems_data = [dict(zip(kwargs.keys(), values)) for values in zip(*kwargs.values())]
@@ -440,7 +440,7 @@ def cf_code_reward(completions, test_batch_size: int = 1, language: str = "cpp",
     loop = _init_event_loop()
     evals = [
         loop.create_task(
-            run_catch_exceptions(cf_score_submission(piston_client, problem_data, code, test_batch_size=test_batch_size, partial_scoring=partial_scoring))
+            run_catch_exceptions(cf_score_submission(piston_client, problem_data, code, test_batch_size=test_batch_size, scoring_mode=scoring_mode, submission_language=language))
         )
         for problem_data, code in zip(problems_data, code_snippets)
     ]
@@ -652,7 +652,7 @@ def get_reward_funcs(script_args) -> list[Callable]:
             ioi_code_reward,
         ),
         "cf_code": update_wrapper(
-            partial(cf_code_reward, test_batch_size=script_args.code_eval_test_batch_size, language=script_args.code_language, partial_scoring=script_args.code_eval_partial_grading), cf_code_reward
+            partial(cf_code_reward, test_batch_size=script_args.code_eval_test_batch_size, language=script_args.code_language, scoring_mode=script_args.code_eval_scoring_mode), cf_code_reward
         ),
         "code_format": get_code_format_reward(language=script_args.code_language),
         "tag_count": tag_count_reward,
