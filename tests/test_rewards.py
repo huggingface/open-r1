@@ -419,10 +419,6 @@ class TestRepetitionPenaltyReward(unittest.TestCase):
         rewards = reward_fn(completions)
         self.assertEqual(rewards, [-0.75])
         # begin test for zh language
-        try:
-            pass
-        except Exception as e:
-            self.skipTest(f"jieba is not installed. {e}")
         reward_fn = get_repetition_penalty_reward(ngram_size=2, max_penalty=-1.0, language="zh")
         completions = [[{"content": "这个这个这个这个这个"}]]
         rewards = reward_fn(completions)
