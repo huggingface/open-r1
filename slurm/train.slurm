@@ -165,7 +165,7 @@ SRUN_ARGS=" \
     --ntasks=$NUM_NODES \
     --nodelist=$NODELIST
     "
-clear; srun $SRUN_ARGS bash -c "$LAUNCHER $CMD" 2>&1
+srun $SRUN_ARGS bash -c "$LAUNCHER $CMD" 2>&1
 
 END_TIME=$(date +%s)
 echo "END TIME: $(date)"
