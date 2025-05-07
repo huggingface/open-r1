@@ -27,12 +27,16 @@ class GRPOConfig(trl.GRPOConfig):
     """
 
     benchmarks: list[str] = field(
-        default_factory=lambda: [], metadata={"help": "The benchmarks to run after training."}
+        default_factory=lambda: [],
+        metadata={"help": "The benchmarks to run after training."},
     )
     callbacks: list[str] = field(
-        default_factory=lambda: [], metadata={"help": "The callbacks to run during training."}
+        default_factory=lambda: [],
+        metadata={"help": "The callbacks to run during training."},
     )
-    chat_template: Optional[str] = field(default=None, metadata={"help": "The chat template to use."})
+    chat_template: Optional[str] = field(
+        default=None, metadata={"help": "The chat template to use."}
+    )
     system_prompt: Optional[str] = field(
         default=None,
         metadata={"help": "The optional system prompt to use."},
@@ -40,8 +44,12 @@ class GRPOConfig(trl.GRPOConfig):
     hub_model_revision: Optional[str] = field(
         default="main", metadata={"help": "The Hub model branch to push the model to."}
     )
-    overwrite_hub_revision: bool = field(default=False, metadata={"help": "Whether to overwrite the Hub revision."})
-    push_to_hub_revision: bool = field(default=False, metadata={"help": "Whether to push to a Hub revision/branch."})
+    overwrite_hub_revision: bool = field(
+        default=False, metadata={"help": "Whether to overwrite the Hub revision."}
+    )
+    push_to_hub_revision: bool = field(
+        default=False, metadata={"help": "Whether to push to a Hub revision/branch."}
+    )
     wandb_entity: Optional[str] = field(
         default=None,
         metadata={"help": ("The entity to store runs under.")},
@@ -63,12 +71,16 @@ class SFTConfig(trl.SFTConfig):
     """
 
     benchmarks: list[str] = field(
-        default_factory=lambda: [], metadata={"help": "The benchmarks to run after training."}
+        default_factory=lambda: [],
+        metadata={"help": "The benchmarks to run after training."},
     )
     callbacks: list[str] = field(
-        default_factory=lambda: [], metadata={"help": "The callbacks to run during training."}
+        default_factory=lambda: [],
+        metadata={"help": "The callbacks to run during training."},
     )
-    chat_template: Optional[str] = field(default=None, metadata={"help": "The chat template to use."})
+    chat_template: Optional[str] = field(
+        default=None, metadata={"help": "The chat template to use."}
+    )
     system_prompt: Optional[str] = field(
         default=None,
         metadata={"help": "The optional system prompt to use for benchmarking."},
@@ -77,8 +89,12 @@ class SFTConfig(trl.SFTConfig):
         default="main",
         metadata={"help": "The Hub model branch to push the model to."},
     )
-    overwrite_hub_revision: bool = field(default=False, metadata={"help": "Whether to overwrite the Hub revision."})
-    push_to_hub_revision: bool = field(default=False, metadata={"help": "Whether to push to a Hub revision/branch."})
+    overwrite_hub_revision: bool = field(
+        default=False, metadata={"help": "Whether to overwrite the Hub revision."}
+    )
+    push_to_hub_revision: bool = field(
+        default=False, metadata={"help": "Whether to push to a Hub revision/branch."}
+    )
     wandb_entity: Optional[str] = field(
         default=None,
         metadata={"help": ("The entity to store runs under.")},
@@ -147,7 +163,9 @@ class GRPOScriptArguments(trl.ScriptArguments):
     )
     repetition_max_penalty: float = field(
         default=-1.0,
-        metadata={"help": "Maximum (negative) penalty for for repetition penalty reward"},
+        metadata={
+            "help": "Maximum (negative) penalty for for repetition penalty reward"
+        },
     )
     code_language: str = field(
         default="python",
@@ -191,7 +209,7 @@ class GRPOScriptArguments(trl.ScriptArguments):
             "choices": ["e2b", "local", "morph"],
         },
     )
-    
+
     ioi_provider: Optional[str] = field(
         default="piston",
         metadata={

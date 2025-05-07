@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, List
+from typing import List, Optional
 
 import requests
 from e2b_code_interpreter.models import Execution, ExecutionError, Result
@@ -62,7 +62,7 @@ class RoutedSandbox:
             timeout = 300  # Default to 5 minutes
         if request_timeout is None:
             request_timeout = 30  # Default to 30 seconds
-        
+
         # Default to Python for all scripts if languages is not provided
         if languages is None:
             languages = ["python"] * len(scripts)
@@ -76,7 +76,9 @@ class RoutedSandbox:
         }
 
         # Send the request to the E2B Router
-        response = requests.post(f"http://{self.router_url}/execute_batch", json=payload)
+        response = requests.post(
+            f"http://{self.router_url}/execute_batch", json=payload
+        )
         if not response.ok:
             print(f"Request failed with status code: {response.status_code}")
 
@@ -92,7 +94,11 @@ class RoutedSandbox:
                 execution = Execution(
                     results=[Result(**r) for r in result["execution"]["results"]],
                     logs=result["execution"]["logs"],
-                    error=ExecutionError(**result["execution"]["error"]) if result["execution"]["error"] else None,
+                    error=(
+                        ExecutionError(**result["execution"]["error"])
+                        if result["execution"]["error"]
+                        else None
+                    ),
                     execution_count=result["execution"]["execution_count"],
                 )
             output.append(execution)

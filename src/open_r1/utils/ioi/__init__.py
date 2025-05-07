@@ -1,5 +1,5 @@
-from .piston_client import get_piston_client_from_env, get_slurm_piston_endpoints
 from .morph_client import get_morph_client_from_env
+from .piston_client import get_piston_client_from_env, get_slurm_piston_endpoints
 from .scoring import SubtaskResult, score_subtask, score_subtasks
 from .utils import add_includes
 
