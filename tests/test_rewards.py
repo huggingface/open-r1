@@ -418,6 +418,17 @@ class TestRepetitionPenaltyReward(unittest.TestCase):
         rewards = tag_count_reward(completion)
         self.assertEqual(rewards[0], 0.0)
 
+    def test_full_repetition_with_language(self):
+        reward_fn = get_repetition_penalty_reward(ngram_size=2, max_penalty=-1.0, language="en")
+        completions = [[{"content": "that that that that that"}]]
+        rewards = reward_fn(completions)
+        self.assertEqual(rewards, [-0.75])
+        # begin test for zh language
+        reward_fn = get_repetition_penalty_reward(ngram_size=2, max_penalty=-1.0, language="zh")
+        completions = [[{"content": "这个这个这个这个这个"}]]
+        rewards = reward_fn(completions)
+        self.assertEqual(rewards, [-0.75])
+
 
 class TestCodeFormat(unittest.TestCase):
     def test_correct_python_format(self):

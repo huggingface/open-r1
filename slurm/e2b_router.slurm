@@ -4,7 +4,7 @@
 #SBATCH --mem=16g
 #SBATCH --cpus-per-task=16
 #SBATCH --output=/fsx/open-r1/logs/e2b_router/%x-%j.out
-#SBATCH --err=/fsx/open-r1/logs/e2b_router/%x-%j.err
+#SBATCH --error=/fsx/open-r1/logs/e2b_router/%x-%j.err
 #SBATCH --requeue
 
 echo "Starting job"

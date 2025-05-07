@@ -44,18 +44,19 @@ _deps = [
     "accelerate==1.4.0",
     "bitsandbytes>=0.43.0",
     "datasets>=3.2.0",
-    "deepspeed==0.16.4",
+    "deepspeed==0.16.7",
     "distilabel[vllm,ray,openai]>=1.5.2",
     "e2b-code-interpreter>=1.0.5",
     "einops>=0.8.0",
     "flake8>=6.0.0",
     "hf_transfer>=0.1.4",
-    "huggingface-hub[cli,hf_xet]>=0.19.2,<1.0",
+    "huggingface-hub[cli,hf_xet]>=0.30.2,<1.0",
     "isort>=5.12.0",
+    "jieba",  # Needed for Chinese language support
     "langdetect",  # Needed for LightEval's extended tasks
     "latex2sympy2_extended>=1.0.6",
     "liger-kernel>=0.5.6",
-    "lighteval @ git+https://github.com/huggingface/lighteval.git@bb14995c4eccab5cabd450b1e509c3c898a16921",  # pass@1 for AIME with n=32 samples per prompt
+    "lighteval @ git+https://github.com/huggingface/lighteval.git@989f5f5586de1ddfeceb0dfa5076bd0740d376fa",
     "math-verify==0.5.2",  # Used for math verification in grpo
     "morphcloud==0.1.67",
     "packaging>=23.0",
@@ -67,9 +68,8 @@ _deps = [
     "safetensors>=0.3.3",
     "sentencepiece>=0.1.99",
     "torch==2.6.0",
-    "transformers==4.51.2",
-    "trl @ git+https://github.com/huggingface/trl.git@c04e84c4545acfaecdf7e0631ad07a86ab0fb2f6",  # Fix EOS token for SFT on base models: https://github.com/huggingface/trl/pull/3299
-    "vllm==0.8.3",
+    "transformers @ git+https://github.com/huggingface/transformers.git@acdbe627e323dbc822f21499fead789b439cf45b",  # Fix DeepSpeed x vLLM conflict: https://github.com/huggingface/transformers/pull/37755
+    "trl[vllm] @ git+https://github.com/huggingface/trl.git@1bca49515ecd5b85d16e68c42c76670e252e19f1",  # Fix DeepSpeed x vLLM conflict: https://github.com/huggingface/trl/pull/3351
     "wandb>=0.19.1",
 ]
 
@@ -87,10 +87,10 @@ def deps_list(*pkgs):
 
 
 extras = {}
-extras["tests"] = deps_list("pytest", "parameterized", "math-verify")
+extras["tests"] = deps_list("pytest", "parameterized", "math-verify", "jieba")
 extras["torch"] = deps_list("torch")
 extras["quality"] = deps_list("ruff", "isort", "flake8")
-extras["code"] = deps_list("e2b-code-interpreter", "python-dotenv", "morphcloud")
+extras["code"] = deps_list("e2b-code-interpreter", "python-dotenv", "morphcloud", "jieba")
 extras["eval"] = deps_list("lighteval", "math-verify")
 extras["dev"] = extras["quality"] + extras["tests"] + extras["eval"] + extras["code"]
 
