@@ -429,21 +429,30 @@ make evaluate MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-32B TASK=aime24 PARALLE
 
 ## Reproducing Deepseek's evaluation results
 
-> [!NOTE]
-> The DeepSeek-R1 paper uses sampling with 4-64 responses per query to estimate `pass@1` accuracy, but does not specify the specific number of responses per benchmark. For AIME 2024, we report the results from sampling 32 response per query, while for all others we report the accuracy from sampling 1 response. These choices likely explains the small 1-3σ discrepancies between our results and DeepSeek's.
+The DeepSeek-R1 paper uses sampling with 4-64 responses per query to estimate `pass@1` accuracy, but does not specify the specific number of responses per benchmark. In the tables below, we estimate `pass@1` accuracy with the following number of responses per query:
+
+|   Benchmark   | Number of responses per query |
+|:-------------:|:-----------------------------:|
+|   AIME 2024   |              64               |
+|   MATH-500    |               4               |
+| GPQA Diamond  |               8               |
+| LiveCodeBench |              16               |
+
+
+Note that for benchmarks like AIME24, it is important to sample many responses as there are only 30 problems and this can introduce high variance across repeated runs. The choice of how many responses to sample per prompt likely explains the small differences between our evaluation results and those reported by DeepSeek.
 
 ### AIME 2024
 
 We are able to reproduce Deepseek's reported results on the AIME 2024 benchmark within ~1-3 standard deviations:
 
 | Model                         | AIME 2024 (🤗 LightEval) | AIME 2024 (DeepSeek Reported) |
-|:------------------------------|:-----------------------:|:----------------------------:|
-| DeepSeek-R1-Distill-Qwen-1.5B |          30.6           |             28.9             |
-| DeepSeek-R1-Distill-Qwen-7B   |          52.8           |             55.5             |
-| DeepSeek-R1-Distill-Qwen-14B  |          65.6           |             69.7             |
-| DeepSeek-R1-Distill-Qwen-32B  |          71.0           |             72.6             |
-| DeepSeek-R1-Distill-Llama-8B  |          44.8           |             41.7             |
-| DeepSeek-R1-Distill-Llama-70B |          63.0           |             70.0             |
+|:------------------------------|:------------------------:|:-----------------------------:|
+| DeepSeek-R1-Distill-Qwen-1.5B |           30.7           |             28.9              |
+| DeepSeek-R1-Distill-Qwen-7B   |           50.8           |             55.5              |
+| DeepSeek-R1-Distill-Qwen-14B  |           65.9           |             69.7              |
+| DeepSeek-R1-Distill-Qwen-32B  |           69.7           |             72.6              |
+| DeepSeek-R1-Distill-Llama-8B  |           43.9           |             41.7              |
+| DeepSeek-R1-Distill-Llama-70B |           63.0           |             70.0              |
 
 To reproduce these results use the following command:
 
@@ -470,12 +479,12 @@ We are able to reproduce Deepseek's reported results on the MATH-500 benchmark w
 
 | Model                         | MATH-500 (🤗 LightEval) | MATH-500 (DeepSeek Reported) |
 |:------------------------------|:-----------------------:|:----------------------------:|
-| DeepSeek-R1-Distill-Qwen-1.5B |          84.4           |             83.9             |
-| DeepSeek-R1-Distill-Qwen-7B   |          94.4           |             92.8             |
-| DeepSeek-R1-Distill-Qwen-14B  |          94.2           |             93.9             |
-| DeepSeek-R1-Distill-Qwen-32B  |          95.8           |             94.3             |
-| DeepSeek-R1-Distill-Llama-8B  |          88.4           |             89.1             |
-| DeepSeek-R1-Distill-Llama-70B |          96.0           |             94.5             |
+| DeepSeek-R1-Distill-Qwen-1.5B |          83.1           |             83.9             |
+| DeepSeek-R1-Distill-Qwen-7B   |          94.5           |             92.8             |
+| DeepSeek-R1-Distill-Qwen-14B  |          94.1           |             93.9             |
+| DeepSeek-R1-Distill-Qwen-32B  |          95.6           |             94.3             |
+| DeepSeek-R1-Distill-Llama-8B  |          88.6           |             89.1             |
+| DeepSeek-R1-Distill-Llama-70B |          95.1           |             94.5             |
 
 To reproduce these results use the following command:
 
@@ -503,12 +512,12 @@ We are able to reproduce Deepseek's reported results on the GPQA Diamond benchma
 
 | Model                         | GPQA Diamond (🤗 LightEval) | GPQA Diamond (DeepSeek Reported) |
 |:------------------------------|:---------------------------:|:--------------------------------:|
-| DeepSeek-R1-Distill-Qwen-1.5B |            36.9             |               33.8               |
-| DeepSeek-R1-Distill-Qwen-7B   |            51.6             |               49.1               |
-| DeepSeek-R1-Distill-Qwen-14B  |            59.6             |               59.1               |
+| DeepSeek-R1-Distill-Qwen-1.5B |            35.8             |               33.8               |
+| DeepSeek-R1-Distill-Qwen-7B   |            50.5             |               49.1               |
+| DeepSeek-R1-Distill-Qwen-14B  |            61.5             |               59.1               |
 | DeepSeek-R1-Distill-Qwen-32B  |            63.1             |               62.1               |
-| DeepSeek-R1-Distill-Llama-8B  |            54.0             |               49.0               |
-| DeepSeek-R1-Distill-Llama-70B |            68.2             |               65.2               |
+| DeepSeek-R1-Distill-Llama-8B  |            46.7             |               49.0               |
+| DeepSeek-R1-Distill-Llama-70B |            67.4             |               65.2               |
 
 To reproduce these results use the following command:
 
@@ -533,13 +542,13 @@ python scripts/run_benchmarks.py --model-id {model_id}  --benchmarks gpqa
 We are able to reproduce Deepseek's reported results on the LiveCodeBench code generation benchmark within ~1-3 standard deviations:
 
 | Model                         | LiveCodeBench (🤗 LightEval) | LiveCodeBench (DeepSeek Reported) |
-|:------------------------------|:----------------------------:|:--------------------------------:|
-| DeepSeek-R1-Distill-Qwen-1.5B |             16.1             |               16.9               |
-| DeepSeek-R1-Distill-Qwen-7B   |             37.4             |               37.6               |
-| DeepSeek-R1-Distill-Qwen-14B  |             51.3             |               53.1               |
-| DeepSeek-R1-Distill-Qwen-32B  |             56.0             |               57.2               |
-| DeepSeek-R1-Distill-Llama-8B  |             37.4             |               39.6               |
-| DeepSeek-R1-Distill-Llama-70B |             55.9             |               57.5               |
+|:------------------------------|:----------------------------:|:---------------------------------:|
+| DeepSeek-R1-Distill-Qwen-1.5B |             16.1             |               16.9                |
+| DeepSeek-R1-Distill-Qwen-7B   |             37.4             |               37.6                |
+| DeepSeek-R1-Distill-Qwen-14B  |             51.3             |               53.1                |
+| DeepSeek-R1-Distill-Qwen-32B  |             56.0             |               57.2                |
+| DeepSeek-R1-Distill-Llama-8B  |             37.4             |               39.6                |
+| DeepSeek-R1-Distill-Llama-70B |             55.9             |               57.5                |
 
 To reproduce these results use the following command:
 
