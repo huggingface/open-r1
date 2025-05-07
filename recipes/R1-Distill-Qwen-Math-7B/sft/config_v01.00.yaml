@@ -1,6 +1,6 @@
 # Config for 1 node
 # Model arguments
-model_name_or_path: Qwen/Qwen2.5-Math-7B
+model_name_or_path: open-r1/Qwen2.5-Math-7B-RoPE-300k
 model_revision: main
 torch_dtype: bfloat16
 attn_implementation: flash_attention_2
@@ -27,7 +27,7 @@ gradient_checkpointing: true
 gradient_checkpointing_kwargs:
   use_reentrant: false
 hub_model_id: open-r1/R1-Distill-Qwen-Math-7B
-hub_model_revision: v00.00
+hub_model_revision: v01.00
 hub_strategy: every_save
 learning_rate: 1.0e-05
 log_level: info
