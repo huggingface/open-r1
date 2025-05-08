@@ -35,7 +35,9 @@ from .utils.ioi import (
 )
 
 
-def accuracy_reward(completions: list[list[dict[str, str]]], solution: list[str], **kwargs) -> list[Optional[float]]:
+def accuracy_reward(
+    completions: list[list[dict[str, str]]], solution: list[str], **kwargs
+) -> list[Optional[float]]:
     """Reward function that checks if the completion is the same as the ground truth."""
     contents = [completion[0]["content"] for completion in completions]
     rewards = []
@@ -69,7 +71,9 @@ def accuracy_reward(completions: list[list[dict[str, str]]], solution: list[str]
             try:
                 reward = float(verify(gold_parsed, answer_parsed))
             except Exception as e:
-                print(f"verify failed: {e}, answer: {answer_parsed}, gold: {gold_parsed}")
+                print(
+                    f"verify failed: {e}, answer: {answer_parsed}, gold: {gold_parsed}"
+                )
                 reward = None
         else:
             # If the gold solution is not parseable, we assign `None` to skip this example
@@ -84,7 +88,10 @@ def format_reward(completions, **kwargs) -> list[float]:
     """Reward function that checks if the reasoning process is enclosed within <think> and </think> tags, while the final answer is enclosed within <answer> and </answer> tags."""
     pattern = r"^<think>\n.*?\n</think>\n<answer>\n.*?\n</answer>$"
     completion_contents = [completion[0]["content"] for completion in completions]
-    matches = [re.match(pattern, content, re.DOTALL | re.MULTILINE) for content in completion_contents]
+    matches = [
+        re.match(pattern, content, re.DOTALL | re.MULTILINE)
+        for content in completion_contents
+    ]
     return [1.0 if match else 0.0 for match in matches]
 
 
@@ -155,7 +162,9 @@ def reasoning_steps_reward(completions, **kwargs):
     return [min(1.0, count / 3) for count in matches]
 
 
-def len_reward(completions: list[Dict[str, str]], solution: list[str], **kwargs) -> float:
+def len_reward(
+    completions: list[Dict[str, str]], solution: list[str], **kwargs
+) -> float:
     """Compute length-based rewards to discourage overthinking and promote token efficiency.
 
     Taken from the Kimi 1.5 tech report: https://arxiv.org/abs/2501.12599
@@ -308,7 +317,9 @@ def get_cosine_scaled_reward(
     return cosine_scaled_reward
 
 
-def get_repetition_penalty_reward(ngram_size: int, max_penalty: float, language: str = "en"):
+def get_repetition_penalty_reward(
+    ngram_size: int, max_penalty: float, language: str = "en"
+):
     """
     Computes N-gram repetition penalty as described in Appendix C.2 of https://arxiv.org/abs/2502.03373.
     Reference implementation from: https://github.com/eddycmu/demystify-long-cot/blob/release/openrlhf/openrlhf/reward/repetition.py
@@ -390,7 +401,9 @@ def _init_event_loop():
     return loop
 
 
-def ioi_code_reward(completions, test_batch_size: int = 1, provider_type: str = "piston", **kwargs) -> list[float]:
+def ioi_code_reward(
+    completions, test_batch_size: int = 1, provider_type: str = "piston", **kwargs
+) -> list[float]:
     """Reward function that evaluates IOI problems using a specified execution client.
 
     Assumes the dataset has the same format as hf.co/datasets/open-r1/ioi
@@ -422,7 +435,9 @@ def ioi_code_reward(completions, test_batch_size: int = 1, provider_type: str = 
             print(f"Error from {provider_type} worker: {e}")
             return SubtaskResult()
 
-    problems_data = [dict(zip(kwargs.keys(), values)) for values in zip(*kwargs.values())]
+    problems_data = [
+        dict(zip(kwargs.keys(), values)) for values in zip(*kwargs.values())
+    ]
 
     loop = _init_event_loop()
     evals = [
@@ -551,13 +566,17 @@ def code_reward(
     evaluate_code(code_snippet, test_cases)
     """
 
-    code_snippets = [extract_code(completion[-1]["content"]) for completion in completions]
+    code_snippets = [
+        extract_code(completion[-1]["content"]) for completion in completions
+    ]
     verification_info = kwargs["verification_info"]
 
     template = evaluation_script_template
 
     scripts = [
-        template.format(code=json.dumps(code), test_cases=json.dumps(json.dumps(info["test_cases"])))
+        template.format(
+            code=json.dumps(code), test_cases=json.dumps(json.dumps(info["test_cases"]))
+        )
         for code, info in zip(code_snippets, verification_info)
     ]
 
@@ -566,7 +585,9 @@ def code_reward(
     if enforce_same_language:
         all_same_language = all(v["language"] == language for v in verification_info)
         if not all_same_language:
-            raise ValueError("All verification_info must have the same language", verification_info)
+            raise ValueError(
+                "All verification_info must have the same language", verification_info
+            )
 
     execution_provider = get_provider(
         provider_type=provider_type,
@@ -583,11 +604,16 @@ def get_code_format_reward(language: str = "python"):
     Args:
         language: Programming language supported by E2B https://e2b.dev/docs/code-interpreting/supported-languages
     """
-    pattern = rf"^<think>\n.*?\n</think>\n<answer>\n.*?```{language}.*?```.*?\n</answer>$"
+    pattern = (
+        rf"^<think>\n.*?\n</think>\n<answer>\n.*?```{language}.*?```.*?\n</answer>$"
+    )
 
     def code_format_reward(completions, **kwargs):
         completion_contents = [completion[0]["content"] for completion in completions]
-        matches = [re.match(pattern, content, re.DOTALL | re.MULTILINE) for content in completion_contents]
+        matches = [
+            re.match(pattern, content, re.DOTALL | re.MULTILINE)
+            for content in completion_contents
+        ]
         return [1.0 if match else 0.0 for match in matches]
 
     return code_format_reward
@@ -616,7 +642,9 @@ def get_reward_funcs(script_args) -> list[Callable]:
                 code_reward,
                 num_parallel=script_args.parallel_code_exec_per_proc,
                 provider_type=script_args.code_provider,
-                enforce_same_language=getattr(script_args, "enforce_same_language", False),
+                enforce_same_language=getattr(
+                    script_args, "enforce_same_language", False
+                ),
             ),
             code_reward,
         ),
@@ -625,7 +653,9 @@ def get_reward_funcs(script_args) -> list[Callable]:
                 binary_code_reward,
                 num_parallel=script_args.parallel_code_exec_per_proc,
                 provider_type=script_args.code_provider,
-                enforce_same_language=getattr(script_args, "enforce_same_language", False),
+                enforce_same_language=getattr(
+                    script_args, "enforce_same_language", False
+                ),
             ),
             binary_code_reward,
         ),

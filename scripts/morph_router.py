@@ -17,15 +17,11 @@ import argparse
 import asyncio
 from fastapi import FastAPI
 from pydantic import BaseModel, ConfigDict
-from typing import  Optional
+from typing import Optional, List
 from fastapi import FastAPI, Request
-import argparse
-import asyncio
-from fastapi import FastAPI
 import uvicorn
-from e2b_code_interpreter.models import Execution
 from dotenv import load_dotenv
-from e2b_code_interpreter import AsyncSandbox
+import os
 
 load_dotenv()
 
@@ -35,12 +31,12 @@ class BatchRequest(BaseModel):
 
     Attributes:
         scripts (list[str]): A list of script names or paths to be executed.
-        languages (list[str]): The programming languages for each script in the list.
+        languages (List[str]): The programming languages for each script in the list.
         timeout (int): The maximum allowed execution time for each script in seconds.
         request_timeout (int): The maximum allowed time for the entire batch request in seconds.
     """
-    scripts: list[str]
-    languages: list[str]
+    scripts: List[str]
+    languages: List[str]
     timeout: int
     request_timeout: int
 
@@ -48,51 +44,38 @@ class ScriptResult(BaseModel):
     """
     ScriptResult is a Pydantic model that represents the result of a script execution.
     Attributes:
-        execution (Optional[Execution]): An optional instance of the `Execution` class 
-            that contains details about the script's execution, such as status, output, 
-            or any other relevant metadata.
+        text (Optional[str]): The output text from the script execution.
         exception_str (Optional[str]): An optional string that captures the exception 
             message or details if an error occurred during the script's execution.
         model_config (ConfigDict): A configuration dictionary that allows arbitrary 
-            types to be used within the Pydantic model. This is necessary to support 
-            custom types like `Execution` within the model.
+            types to be used within the Pydantic model.
     """
-    execution: Optional[Execution]
+    text: Optional[str]
     exception_str: Optional[str]
     
-    # required to allow arbitrary types in pydantic models such as Execution
+    
     model_config = ConfigDict(arbitrary_types_allowed=True)
     
 def create_app(args):
     """
-    Creates and configures a FastAPI application instance.
+    Creates and configures a FastAPI application instance for the MorphCloud router.
+    
     Args:
         args: An object containing configuration parameters for the application.
-              - num_sandboxes (int): The maximum number of concurrent sandboxes allowed.
+              - max_num_sandboxes (int): The maximum number of concurrent sandboxes allowed.
+              - api_key (str): The MorphCloud API key to use.
+    
     Returns:
         FastAPI: A configured FastAPI application instance.
-    The application includes the following endpoints:
-        1. GET /health:
-            - Returns the health status of the application.
-            - Response: {"status": "ok"}
-        2. POST /execute_batch:
-            - Executes a batch of scripts in an isolated sandbox environment.
-            - Request Body: BatchRequest object containing:
-                - languages (list[str]): The programming languages of the scripts (python or javascript).
-                - timeout (int): The maximum execution time for each script.
-                - request_timeout (int): The timeout for the request itself.
-                - scripts (List[str]): A list of scripts to execute.
-            - Response: A list of ScriptResult objects for each script, containing:
-                - execution: The result of the script execution.
-                - exception_str: Any exception encountered during execution.
-    Notes:
-        - A semaphore is used to limit the number of concurrent sandboxes.
-        - Each script execution is wrapped in a timeout to prevent hanging.
-        - Sandboxes are cleaned up after execution, even in case of errors.
     """
     app = FastAPI()
+    
+    from morphcloud.api import MorphCloudClient
+    from morphcloud.sandbox import Sandbox
+    
+    app.state.client = MorphCloudClient(api_key=args.api_key)
+    app.state.Sandbox = Sandbox
 
-    # Instantiate semaphore and attach it to app state
     app.state.sandbox_semaphore = asyncio.Semaphore(args.max_num_sandboxes)
 
     @app.get("/health")
@@ -102,60 +85,89 @@ def create_app(args):
     @app.post("/execute_batch")
     async def execute_batch(batch: BatchRequest, request: Request):
         semaphore = request.app.state.sandbox_semaphore
+        client = request.app.state.client
+        Sandbox = request.app.state.Sandbox
+        
         languages = batch.languages
         timeout = batch.timeout
         request_timeout = batch.request_timeout
         asyncio_timeout = batch.timeout + 1
         
         async def run_script(script: str, language: str) -> ScriptResult:
+            sandbox = None
+            sandbox_id = "unknown"
 
             async with semaphore:
                 try:
-                    sandbox = await AsyncSandbox.create(
-                        timeout=timeout,
-                        request_timeout=request_timeout,
+                    sandbox = await asyncio.to_thread(
+                        Sandbox.new,
+                        client=client,
+                        ttl_seconds=timeout
                     )
+                    
+                    sandbox_id = getattr(sandbox, 'id', None) or getattr(sandbox._instance, 'id', 'unknown')
+                    
                     execution = await asyncio.wait_for(
-                        sandbox.run_code(script, language=language),
+                        asyncio.to_thread(
+                            sandbox.run_code,
+                            script,
+                            language=language,
+                            timeout=timeout * 1000  
+                        ),
                         timeout=asyncio_timeout,
                     )
-                    return ScriptResult(execution=execution, exception_str=None)
+                    
+                    if hasattr(execution, 'text') and execution.text:
+                        return ScriptResult(text=execution.text, exception_str=None)
+                    elif hasattr(execution, 'stdout') and execution.stdout:
+                        return ScriptResult(text=execution.stdout, exception_str=None)
+                    else:
+                        return ScriptResult(text="", exception_str="No output from execution")
 
                 except Exception as e:
-                    return ScriptResult(execution=None, exception_str=str(e))
+                    return ScriptResult(text=None, exception_str=str(e))
                 
                 finally:
-                    try:
-                        await sandbox.kill()
-                    except Exception:
-                        pass
+                    if sandbox:
+                        try:
+                            await asyncio.to_thread(sandbox.close)
+                            await asyncio.to_thread(sandbox.shutdown)
+                        except Exception:
+                            pass
 
         tasks = [run_script(script, lang) for script, lang in zip(batch.scripts, batch.languages)]
         return await asyncio.gather(*tasks)
 
     return app
 
-
 def parse_args():
     """
-    Parse command-line arguments for the e2b_router script.
+    Parse command-line arguments for the morph_router script.
 
     Arguments:
-        --host (str): The hostname or IP address to bind the server to. Defaults to "0.0.0.0" (binds to all interfaces).
-        --port (int): The port number on which the server will listen. Defaults to 8000.
-        --max_num_sandboxes (int): The maximum number of sandboxes that can be created or managed simultaneously. Defaults to 20.
+        --host (str): The hostname or IP address to bind the server to. Defaults to "0.0.0.0".
+        --port (int): The port number on which the server will listen. Defaults to 8001.
+        --max_num_sandboxes (int): The maximum number of sandboxes that can be created simultaneously. Defaults to 20.
+        --api_key (str): The MorphCloud API key. If not provided, it will be read from the MORPH_API_KEY environment variable.
 
     Returns:
         argparse.Namespace: Parsed command-line arguments as an object.
     """
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", default="0.0.0.0")
-    parser.add_argument("--port", type=int, default=8000)
+    parser.add_argument("--port", type=int, default=8001)
     parser.add_argument("--max_num_sandboxes", type=int, default=20)
-    return parser.parse_args()
+    parser.add_argument("--api_key", default=os.getenv("MORPH_API_KEY"))
+    args = parser.parse_args()
+    
+    if not args.api_key:
+        raise ValueError("MorphCloud API key not provided. Please set MORPH_API_KEY environment variable or use --api_key.")
+    
+    return args
 
 if __name__ == "__main__":
     args = parse_args()
     app = create_app(args)
-
+    
+    print(f"Starting MorphCloud Router on {args.host}:{args.port}")
     uvicorn.run(app, host=args.host, port=args.port)

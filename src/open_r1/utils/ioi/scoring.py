@@ -54,7 +54,16 @@ class SubtaskResult:
         Returns:
             str: The status with the highest priority (lowest value)
         """
-        status_prios = {"CE": -1, "RE": 0, "WA": 1, "MLE": 2, "TLE": 3, "PA": 4, "AC": 5, "SKIPPED": 999}
+        status_prios = {
+            "CE": -1,
+            "RE": 0,
+            "WA": 1,
+            "MLE": 2,
+            "TLE": 3,
+            "PA": 4,
+            "AC": 5,
+            "SKIPPED": 999,
+        }
         return min([x.status for x in self.test_results], key=lambda x: status_prios[x])
 
     @property
@@ -68,7 +77,10 @@ class SubtaskResult:
         return (
             0
             if not self.test_results
-            else round(min([test_result.score for test_result in self.test_results]), self.score_precision)
+            else round(
+                min([test_result.score for test_result in self.test_results]),
+                self.score_precision,
+            )
         )
 
     @property
@@ -83,7 +95,9 @@ class SubtaskResult:
             0
             if not self.test_results
             else round(
-                min([test_result.score for test_result in self.test_results]) * self.points, self.score_precision
+                min([test_result.score for test_result in self.test_results])
+                * self.points,
+                self.score_precision,
             )
         )
 
@@ -135,7 +149,12 @@ def _extract_single_status(score: float, feedback: str) -> str:
 
 
 async def score_single_test_case(
-    client: PistonClient, subtask: dict, test_name: str, test_input: str, test_output: str, submission: str
+    client: PistonClient,
+    subtask: dict,
+    test_name: str,
+    test_input: str,
+    test_output: str,
+    submission: str,
 ) -> TestResult:
     """
     Scores a single test case by running the submission against the provided input and output.
@@ -152,11 +171,16 @@ async def score_single_test_case(
         TestResult: Result of the test case execution
     """
     # Run submission for this test case
-    score, feedback = await run_submission(client, subtask, test_input, submission, test_output)
+    score, feedback = await run_submission(
+        client, subtask, test_input, submission, test_output
+    )
     score = float(score)
 
     return TestResult(
-        test_name=test_name, score=score, status=_extract_single_status(score, feedback), feedback=feedback
+        test_name=test_name,
+        score=score,
+        status=_extract_single_status(score, feedback),
+        feedback=feedback,
     )
 
 
@@ -198,23 +222,29 @@ async def score_subtask(
 
     # initialize test results with cached results or empty (SKIPPED) TestResult objects
     subtask_result.test_results = [
-        test_case_run_cache[test_name]
-        if test_case_run_cache is not None and test_name in test_case_run_cache
-        else TestResult(test_name=test_name)
+        (
+            test_case_run_cache[test_name]
+            if test_case_run_cache is not None and test_name in test_case_run_cache
+            else TestResult(test_name=test_name)
+        )
         for test_name in subtask["test_names"]
     ]
 
     # we skip submissions where no code was extracted
     # no need to do anything, as we have a failed cached result
     if not submission or any(
-        test_result.status != "SKIPPED" and test_result.score == 0.0 for test_result in subtask_result.test_results
+        test_result.status != "SKIPPED" and test_result.score == 0.0
+        for test_result in subtask_result.test_results
     ):
         return subtask_result
 
     if "test_cases" in subtask:
         test_cases = subtask["test_cases"]
         if isinstance(subtask["test_cases"], list):
-            test_cases = {test_name: test for test_name, test in zip(subtask["test_names"], subtask["test_cases"])}
+            test_cases = {
+                test_name: test
+                for test_name, test in zip(subtask["test_names"], subtask["test_cases"])
+            }
     else:
         test_cases = load_ioi_tests(subtask["year"], subtask["id"])
 
@@ -224,7 +254,12 @@ async def score_subtask(
             *[
                 asyncio.create_task(
                     score_single_test_case(
-                        client, subtask, test_name, test_cases[test_name][0], test_cases[test_name][1], submission
+                        client,
+                        subtask,
+                        test_name,
+                        test_cases[test_name][0],
+                        test_cases[test_name][1],
+                        submission,
                     )
                 )
                 for _, test_name in test_batch_to_run
@@ -260,11 +295,18 @@ async def score_subtasks(
     # avoid rerunning tests present in multiple subtasks
     test_case_run_cache = {}
 
-    return [await score_subtask(client, subtask, submission, test_case_run_cache, skip_mode) for subtask in subtasks]
+    return [
+        await score_subtask(client, subtask, submission, test_case_run_cache, skip_mode)
+        for subtask in subtasks
+    ]
 
 
 async def run_submission(
-    client: PistonClient, problem: dict, test_input: str, submission: str, test_output: str | None = None
+    client: PistonClient,
+    problem: dict,
+    test_input: str,
+    submission: str,
+    test_output: str | None = None,
 ) -> tuple[str, str]:
     """
     Executes a submission against a test case using the Piston execution environment.
@@ -286,9 +328,17 @@ async def run_submission(
             # pass the input
             {"name": "input.txt", "content": test_input},
             # pass the expected output
-            *([{"name": "correct_output.txt", "content": test_output}] if test_output else []),
+            *(
+                [{"name": "correct_output.txt", "content": test_output}]
+                if test_output
+                else []
+            ),
             # grader files
-            *({"name": name, "content": content} for name, content in problem["grader_files"] if content),
+            *(
+                {"name": name, "content": content}
+                for name, content in problem["grader_files"]
+                if content
+            ),
         ],
         "run_timeout": round(
             (problem["time_limit"] + 3) * 1000
