@@ -28,7 +28,9 @@ from .hub import push_to_hub_revision
 def is_slurm_available() -> bool:
     # returns true if a slurm queueing system is available
     try:
-        subprocess.run(["sinfo"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        subprocess.run(
+            ["sinfo"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        )
         return True
     except FileNotFoundError:
         return False
@@ -44,7 +46,13 @@ class PushToHubRevisionCallback(TrainerCallback):
     def __init__(self, model_config) -> None:
         self.model_config = model_config
 
-    def on_save(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
+    def on_save(
+        self,
+        args: TrainingArguments,
+        state: TrainerState,
+        control: TrainerControl,
+        **kwargs,
+    ):
         if state.is_world_process_zero:
             global_step = state.global_step
 

@@ -3,12 +3,15 @@
 #SBATCH --gres=gpu:8
 #SBATCH --partition=hopper-prod
 #SBATCH --output=./logs/%x-%j.out
-#SBATCH --err=./logs/%x-%j.err
+#SBATCH --error=./logs/%x-%j.err
 #SBATCH --requeue
 
 # Specific configuration optimized for the Hugging Face Compute Cluster
 # Be ye warned this may not work on other clusters!
 module load cuda/12.4
+
+# Needed for vLLM
+export VLLM_WORKER_MULTIPROC_METHOD=spawn
 
 set -x -e
 
@@ -25,14 +28,11 @@ MODEL_REVISION=$4
 # $7 is reserved for system_prompt, see line 51
 NUM_GPUS=$(nvidia-smi -L | wc -l)
 
-# Set Whether to use tensor parallelism or data parallelism
+# Use TP to shard model across GPUs
 if [ "$TENSOR_PARALLEL" = "True" ]; then
-    # use TP to shard model across NUM_GPUS
-    export VLLM_WORKER_MULTIPROC_METHOD=spawn
-    # FIXME: lighteval now requires us to manually pass the generation params
-    MODEL_ARGS="pretrained=$MODEL_ID,revision=$MODEL_REVISION,trust_remote_code=$TRUST_REMOTE_CODE,dtype=bfloat16,tensor_parallel_size=$NUM_GPUS,max_model_length=32768,max_num_batched_tokens=32768,gpu_memory_utilization=0.8,generation_parameters={max_new_tokens:32768,temperature:0.6,top_p:0.95}"
+    MODEL_ARGS="model_name=$MODEL_ID,revision=$MODEL_REVISION,trust_remote_code=$TRUST_REMOTE_CODE,dtype=bfloat16,tensor_parallel_size=$NUM_GPUS,max_model_length=32768,gpu_memory_utilization=0.8,generation_parameters={max_new_tokens:32768,temperature:0.6,top_p:0.95}"
 else
-    MODEL_ARGS="pretrained=$MODEL_ID,revision=$MODEL_REVISION,trust_remote_code=$TRUST_REMOTE_CODE,dtype=bfloat16,data_parallel_size=$NUM_GPUS,max_model_length=32768,max_num_batched_tokens=32768,gpu_memory_utilization=0.8,generation_parameters={max_new_tokens:32768,temperature:0.6,top_p:0.95}"
+    MODEL_ARGS="model_name=$MODEL_ID,revision=$MODEL_REVISION,trust_remote_code=$TRUST_REMOTE_CODE,dtype=bfloat16,data_parallel_size=$NUM_GPUS,max_model_length=32768,gpu_memory_utilization=0.8,generation_parameters={max_new_tokens:32768,temperature:0.6,top_p:0.95}"
 fi
 
 LM_EVAL_REPO_ID="open-r1/open-r1-eval-leaderboard"

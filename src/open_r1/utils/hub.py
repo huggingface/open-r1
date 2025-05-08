@@ -36,11 +36,15 @@ from trl import GRPOConfig, SFTConfig
 logger = logging.getLogger(__name__)
 
 
-def push_to_hub_revision(training_args: SFTConfig | GRPOConfig, extra_ignore_patterns=[]) -> Future:
+def push_to_hub_revision(
+    training_args: SFTConfig | GRPOConfig, extra_ignore_patterns=[]
+) -> Future:
     """Pushes the model to branch on a Hub repo."""
 
     # Create a repo if it doesn't exist yet
-    repo_url = create_repo(repo_id=training_args.hub_model_id, private=True, exist_ok=True)
+    repo_url = create_repo(
+        repo_id=training_args.hub_model_id, private=True, exist_ok=True
+    )
     # Get initial commit to branch from
     initial_commit = list_repo_commits(training_args.hub_model_id)[-1]
     # Now create the branch we'll be pushing to
@@ -62,7 +66,9 @@ def push_to_hub_revision(training_args: SFTConfig | GRPOConfig, extra_ignore_pat
         ignore_patterns=ignore_patterns,
         run_as_future=True,
     )
-    logger.info(f"Pushed to {repo_url} revision {training_args.hub_model_revision} successfully!")
+    logger.info(
+        f"Pushed to {repo_url} revision {training_args.hub_model_revision} successfully!"
+    )
 
     return future
 
@@ -72,13 +78,19 @@ def check_hub_revision_exists(training_args: SFTConfig | GRPOConfig):
     if repo_exists(training_args.hub_model_id):
         if training_args.push_to_hub_revision is True:
             # First check if the revision exists
-            revisions = [rev.name for rev in list_repo_refs(training_args.hub_model_id).branches]
+            revisions = [
+                rev.name for rev in list_repo_refs(training_args.hub_model_id).branches
+            ]
             # If the revision exists, we next check it has a README file
             if training_args.hub_model_revision in revisions:
                 repo_files = list_repo_files(
-                    repo_id=training_args.hub_model_id, revision=training_args.hub_model_revision
+                    repo_id=training_args.hub_model_id,
+                    revision=training_args.hub_model_revision,
                 )
-                if "README.md" in repo_files and training_args.overwrite_hub_revision is False:
+                if (
+                    "README.md" in repo_files
+                    and training_args.overwrite_hub_revision is False
+                ):
                     raise ValueError(
                         f"Revision {training_args.hub_model_revision} already exists. "
                         "Use --overwrite_hub_revision to overwrite it."
@@ -117,15 +129,21 @@ def get_param_count_from_repo_id(repo_id: str) -> int:
             return -1
 
 
-def get_gpu_count_for_vllm(model_name: str, revision: str = "main", num_gpus: int = 8) -> int:
+def get_gpu_count_for_vllm(
+    model_name: str, revision: str = "main", num_gpus: int = 8
+) -> int:
     """vLLM enforces a constraint that the number of attention heads must be divisible by the number of GPUs and 64 must be divisible by the number of GPUs.
     This function calculates the number of GPUs to use for decoding based on the number of attention heads in the model.
     """
-    config = AutoConfig.from_pretrained(model_name, revision=revision, trust_remote_code=True)
+    config = AutoConfig.from_pretrained(
+        model_name, revision=revision, trust_remote_code=True
+    )
     # Get number of attention heads
     num_heads = config.num_attention_heads
     # Reduce num_gpus so that num_heads is divisible by num_gpus and 64 is divisible by num_gpus
     while num_heads % num_gpus != 0 or 64 % num_gpus != 0:
-        logger.info(f"Reducing num_gpus from {num_gpus} to {num_gpus - 1} to make num_heads divisible by num_gpus")
+        logger.info(
+            f"Reducing num_gpus from {num_gpus} to {num_gpus - 1} to make num_heads divisible by num_gpus"
+        )
         num_gpus -= 1
     return num_gpus
