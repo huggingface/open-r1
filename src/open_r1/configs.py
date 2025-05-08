@@ -27,10 +27,12 @@ class GRPOConfig(trl.GRPOConfig):
     """
 
     benchmarks: list[str] = field(
-        default_factory=lambda: [], metadata={"help": "The benchmarks to run after training."}
+        default_factory=lambda: [],
+        metadata={"help": "The benchmarks to run after training."},
     )
     callbacks: list[str] = field(
-        default_factory=lambda: [], metadata={"help": "The callbacks to run during training."}
+        default_factory=lambda: [],
+        metadata={"help": "The callbacks to run during training."},
     )
     chat_template: Optional[str] = field(default=None, metadata={"help": "The chat template to use."})
     system_prompt: Optional[str] = field(
@@ -40,6 +42,7 @@ class GRPOConfig(trl.GRPOConfig):
     hub_model_revision: Optional[str] = field(
         default="main", metadata={"help": "The Hub model branch to push the model to."}
     )
+    num_completions_to_print: int = field(default=0, metadata={"help": "Number of completions to print."})
     overwrite_hub_revision: bool = field(default=False, metadata={"help": "Whether to overwrite the Hub revision."})
     push_to_hub_revision: bool = field(default=False, metadata={"help": "Whether to push to a Hub revision/branch."})
     wandb_entity: Optional[str] = field(
@@ -54,6 +57,12 @@ class GRPOConfig(trl.GRPOConfig):
         default=None,
         metadata={"help": ("The group to store runs under.")},
     )
+    wandb_log_unique_prompts: bool = field(
+        default=True,
+        metadata={
+            "help": ("Whether to log the unique prompts to wandb. This will create a new run for each unique prompt.")
+        },
+    )
 
 
 @dataclass
@@ -63,10 +72,12 @@ class SFTConfig(trl.SFTConfig):
     """
 
     benchmarks: list[str] = field(
-        default_factory=lambda: [], metadata={"help": "The benchmarks to run after training."}
+        default_factory=lambda: [],
+        metadata={"help": "The benchmarks to run after training."},
     )
     callbacks: list[str] = field(
-        default_factory=lambda: [], metadata={"help": "The callbacks to run during training."}
+        default_factory=lambda: [],
+        metadata={"help": "The callbacks to run during training."},
     )
     chat_template: Optional[str] = field(default=None, metadata={"help": "The chat template to use."})
     system_prompt: Optional[str] = field(
@@ -176,5 +187,26 @@ class GRPOScriptArguments(trl.ScriptArguments):
 
     e2b_router_url: Optional[str] = field(
         default=None,
-        metadata={"help": "URL for the E2B route. See scripts/e2b_router.py"},
+        metadata={"help": "URL for the E2B router. See scripts/e2b_router.py"},
+    )
+
+    morph_router_url: Optional[str] = field(
+        default=None,
+        metadata={"help": "URL for the MorphCloud router. See scripts/morph_router.py"},
+    )
+
+    code_provider: Optional[str] = field(
+        default="e2b",
+        metadata={
+            "help": "Provider for code execution. Options: 'e2b', 'local', 'morph'.",
+            "choices": ["e2b", "local", "morph"],
+        },
+    )
+
+    ioi_provider: Optional[str] = field(
+        default="piston",
+        metadata={
+            "help": "Provider for IOI code execution. Options: 'piston', 'morph'.",
+            "choices": ["piston", "morph"],
+        },
     )
