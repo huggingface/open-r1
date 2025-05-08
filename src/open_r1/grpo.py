@@ -89,18 +89,14 @@ def main(script_args, training_args, model_args):
     reward_funcs = get_reward_funcs(script_args)
 
     # Format into conversation
-    def make_conversation(
-        example, prompt_column: str = script_args.dataset_prompt_column
-    ):
+    def make_conversation(example, prompt_column: str = script_args.dataset_prompt_column):
         prompt = []
 
         if training_args.system_prompt is not None:
             prompt.append({"role": "system", "content": training_args.system_prompt})
 
         if prompt_column not in example:
-            raise ValueError(
-                f"Dataset Question Field Error: {prompt_column} is not supported."
-            )
+            raise ValueError(f"Dataset Question Field Error: {prompt_column} is not supported.")
 
         prompt.append({"role": "user", "content": example[prompt_column]})
         return {"prompt": prompt}
@@ -119,11 +115,7 @@ def main(script_args, training_args, model_args):
         reward_funcs=reward_funcs,
         args=training_args,
         train_dataset=dataset[script_args.dataset_train_split],
-        eval_dataset=(
-            dataset[script_args.dataset_test_split]
-            if training_args.eval_strategy != "no"
-            else None
-        ),
+        eval_dataset=(dataset[script_args.dataset_test_split] if training_args.eval_strategy != "no" else None),
         peft_config=get_peft_config(model_args),
         callbacks=get_callbacks(training_args, model_args),
         processing_class=tokenizer,

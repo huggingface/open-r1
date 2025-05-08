@@ -20,16 +20,10 @@ def get_piston_client_from_env():
         raise ValueError(
             "For IOI problems Piston endpoints running our IOI package are required. Please add a list of valid Piston endpoints to a PISTON_ENDPOINTS varialbe in a `.env` file."
         )
-    piston_endpoints = (
-        piston_endpoints.split(",")
-        if piston_endpoints != "slurm"
-        else get_slurm_piston_endpoints()
-    )
+    piston_endpoints = piston_endpoints.split(",") if piston_endpoints != "slurm" else get_slurm_piston_endpoints()
     random.shuffle(piston_endpoints)
     max_requests_per_endpoint = os.getenv("PISTON_MAX_REQUESTS_PER_ENDPOINT", "1")
-    return PistonClient(
-        piston_endpoints, max_requests_per_endpoint=int(max_requests_per_endpoint)
-    )
+    return PistonClient(piston_endpoints, max_requests_per_endpoint=int(max_requests_per_endpoint))
 
 
 class PistonClient:
@@ -62,17 +56,11 @@ class PistonClient:
         max_requests_per_endpoint=1,
     ):
         self.max_requests_per_endpoint = max_requests_per_endpoint
-        self.base_endpoints = (
-            [base_endpoint] if isinstance(base_endpoint, str) else base_endpoint
-        )
-        self.endpoint_ids = {
-            endpoint: i for i, endpoint in enumerate(self.base_endpoints)
-        }
+        self.base_endpoints = [base_endpoint] if isinstance(base_endpoint, str) else base_endpoint
+        self.endpoint_ids = {endpoint: i for i, endpoint in enumerate(self.base_endpoints)}
 
         self._session = session
-        self.endpoint_tokens = asyncio.Queue(
-            maxsize=max_requests_per_endpoint * len(self.base_endpoints)
-        )
+        self.endpoint_tokens = asyncio.Queue(maxsize=max_requests_per_endpoint * len(self.base_endpoints))
 
         for _ in range(max_requests_per_endpoint):
             for base_endpoint in self.base_endpoints:
@@ -112,24 +100,17 @@ class PistonClient:
 
     async def _send_to_all(self, route, data=None, method="post"):
         return await asyncio.gather(
-            *[
-                self._send_request(endpoint, route, data, method)
-                for endpoint in self.base_endpoints
-            ]
+            *[self._send_request(endpoint, route, data, method) for endpoint in self.base_endpoints]
         )
 
     async def _send_to_one(self, endpoint, route, data=None, method="post"):
         return await self._send_request(endpoint, route, data, method)
 
     async def install_package(self, language, version):
-        return await self._send_to_all(
-            "packages", {"language": language, "version": version}, method="post"
-        )
+        return await self._send_to_all("packages", {"language": language, "version": version}, method="post")
 
     async def uninstall_package(self, language, version):
-        return await self._send_to_all(
-            "packages", {"language": language, "version": version}, method="delete"
-        )
+        return await self._send_to_all("packages", {"language": language, "version": version}, method="delete")
 
     async def get_supported_runtimes(self):
         return await self._send_to_all("runtimes", method="get")
@@ -214,14 +195,8 @@ class PistonClient:
                     if res_json is None:
                         raise PistonError(f"Empty response. status={status}")
                     # piston overloaded
-                    if (
-                        "run" in res_json
-                        and "Resource temporarily unavailable"
-                        in res_json["run"].get("stderr", "")
-                    ):
-                        raise PistonError(
-                            f"Piston overloaded: {res_json['run']['stderr']}"
-                        )
+                    if "run" in res_json and "Resource temporarily unavailable" in res_json["run"].get("stderr", ""):
+                        raise PistonError(f"Piston overloaded: {res_json['run']['stderr']}")
                     return res_json
 
             except (
@@ -233,21 +208,13 @@ class PistonClient:
                 # Only retry if we haven't reached max retries yet
                 if attempt < max_retries:
                     # Calculate backoff with jitter
-                    delay = min(
-                        base_delay * (2**attempt), 10
-                    )  # Exponential backoff, capped at 10 seconds
-                    jitter = (
-                        delay * 0.2 * (2 * asyncio.get_event_loop().time() % 1 - 0.5)
-                    )  # Add ±10% jitter
+                    delay = min(base_delay * (2**attempt), 10)  # Exponential backoff, capped at 10 seconds
+                    jitter = delay * 0.2 * (2 * asyncio.get_event_loop().time() % 1 - 0.5)  # Add ±10% jitter
                     retry_delay = delay + jitter
-                    print(
-                        f"Retrying in {retry_delay} seconds [{self.endpoint_ids[endpoint]}] {endpoint}"
-                    )
+                    print(f"Retrying in {retry_delay} seconds [{self.endpoint_ids[endpoint]}] {endpoint}")
 
                     # special case: worker died
-                    if isinstance(
-                        e, aiohttp.ClientConnectionError
-                    ) and "Connect call failed" in str(e):
+                    if isinstance(e, aiohttp.ClientConnectionError) and "Connect call failed" in str(e):
                         await self._check_failed_endpoint(endpoint)
                     else:
                         # hopefully we won't get this one again

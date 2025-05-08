@@ -66,9 +66,7 @@ class RoutedMorphSandbox:
         """
 
         actual_timeout = timeout if timeout is not None else self.timeout
-        actual_request_timeout = (
-            request_timeout if request_timeout is not None else self.request_timeout
-        )
+        actual_request_timeout = request_timeout if request_timeout is not None else self.request_timeout
 
         # Default to Python for all scripts if languages is not provided
         if languages is None:
@@ -82,22 +80,16 @@ class RoutedMorphSandbox:
         }
 
         try:
-
             endpoint = f"http://{self.router_url}/execute_batch"
-            response = requests.post(
-                endpoint, json=payload, timeout=actual_request_timeout
-            )
+            response = requests.post(endpoint, json=payload, timeout=actual_request_timeout)
 
             if response.status_code != 200:
-
                 error = f"Request to MorphCloud router failed with status code: {response.status_code}"
                 print(error)
 
                 results = []
                 for _ in scripts:
-                    results.append(
-                        type("obj", (object,), {"text": None, "exception_str": error})
-                    )
+                    results.append(type("obj", (object,), {"text": None, "exception_str": error}))
                 return results
 
             response_data = response.json()
@@ -124,7 +116,5 @@ class RoutedMorphSandbox:
 
             results = []
             for _ in scripts:
-                results.append(
-                    type("obj", (object,), {"text": None, "exception_str": error})
-                )
+                results.append(type("obj", (object,), {"text": None, "exception_str": error}))
             return results

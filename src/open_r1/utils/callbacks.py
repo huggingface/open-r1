@@ -28,9 +28,7 @@ from .hub import push_to_hub_revision
 def is_slurm_available() -> bool:
     # returns true if a slurm queueing system is available
     try:
-        subprocess.run(
-            ["sinfo"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
-        )
+        subprocess.run(["sinfo"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         return True
     except FileNotFoundError:
         return False

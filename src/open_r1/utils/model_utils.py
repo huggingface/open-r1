@@ -6,9 +6,7 @@ from trl import ModelConfig, get_kbit_device_map, get_quantization_config
 from ..configs import GRPOConfig, SFTConfig
 
 
-def get_tokenizer(
-    model_args: ModelConfig, training_args: SFTConfig | GRPOConfig
-) -> PreTrainedTokenizer:
+def get_tokenizer(model_args: ModelConfig, training_args: SFTConfig | GRPOConfig) -> PreTrainedTokenizer:
     """Get the tokenizer for the model."""
     tokenizer = AutoTokenizer.from_pretrained(
         model_args.model_name_or_path,
@@ -22,14 +20,10 @@ def get_tokenizer(
     return tokenizer
 
 
-def get_model(
-    model_args: ModelConfig, training_args: SFTConfig | GRPOConfig
-) -> AutoModelForCausalLM:
+def get_model(model_args: ModelConfig, training_args: SFTConfig | GRPOConfig) -> AutoModelForCausalLM:
     """Get the model"""
     torch_dtype = (
-        model_args.torch_dtype
-        if model_args.torch_dtype in ["auto", None]
-        else getattr(torch, model_args.torch_dtype)
+        model_args.torch_dtype if model_args.torch_dtype in ["auto", None] else getattr(torch, model_args.torch_dtype)
     )
     quantization_config = get_quantization_config(model_args)
     model_kwargs = dict(

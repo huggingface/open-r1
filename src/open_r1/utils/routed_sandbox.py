@@ -76,9 +76,7 @@ class RoutedSandbox:
         }
 
         # Send the request to the E2B Router
-        response = requests.post(
-            f"http://{self.router_url}/execute_batch", json=payload
-        )
+        response = requests.post(f"http://{self.router_url}/execute_batch", json=payload)
         if not response.ok:
             print(f"Request failed with status code: {response.status_code}")
 
@@ -94,11 +92,7 @@ class RoutedSandbox:
                 execution = Execution(
                     results=[Result(**r) for r in result["execution"]["results"]],
                     logs=result["execution"]["logs"],
-                    error=(
-                        ExecutionError(**result["execution"]["error"])
-                        if result["execution"]["error"]
-                        else None
-                    ),
+                    error=(ExecutionError(**result["execution"]["error"]) if result["execution"]["error"] else None),
                     execution_count=result["execution"]["execution_count"],
                 )
             output.append(execution)
