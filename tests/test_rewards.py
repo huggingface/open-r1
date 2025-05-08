@@ -15,6 +15,7 @@
 
 import unittest
 
+from dotenv import load_dotenv
 from open_r1.configs import GRPOScriptArguments
 from open_r1.rewards import (
     accuracy_reward,
@@ -25,8 +26,12 @@ from open_r1.rewards import (
     get_reward_funcs,
     len_reward,
     reasoning_steps_reward,
+    soft_format_reward,
     tag_count_reward,
 )
+
+
+load_dotenv()
 
 
 class TestGetRewardFuncs(unittest.TestCase):
@@ -70,6 +75,101 @@ class TestGetRewardFuncs(unittest.TestCase):
             self.assertEqual(func_name, func.__name__)
 
 
+class TestFormatRewards(unittest.TestCase):
+    def test_format_reward_correct(self):
+        """Test format_reward with correct format."""
+        completion = [[{"content": "<think>\nSome reasoning\n</think>\n<answer>\nThe answer\n</answer>"}]]
+        rewards = format_reward(completion)
+        self.assertEqual(rewards[0], 1.0)
+
+    def test_format_reward_incorrect(self):
+        """Test format_reward with incorrect format."""
+        incorrect_formats = [
+            "<think>Only thinking</think>",
+            "<answer>Only answer</answer>",
+            "No tags at all",
+            "<think>Missing closing</think><answer>Missing closing",
+            "<think>Wrong order</answer><answer>Wrong order</think>",
+        ]
+
+        for fmt in incorrect_formats:
+            completion = [[{"content": fmt}]]
+            rewards = format_reward(completion)
+            self.assertEqual(rewards[0], 0.0)
+
+
+class TestSoftFormatReward(unittest.TestCase):
+    def test_correct_with_newlines(self):
+        completion = [
+            [{"content": "Here is my reasoning: <think>\nSome reasoning\n</think>\n<answer>\nThe answer\n</answer>"}]
+        ]
+        rewards = soft_format_reward(completion)
+        self.assertEqual(rewards[0], 1.0)
+
+    def test_correct_without_newlines(self):
+        completion = [[{"content": "Here is my reasoning: <think>Some reasoning</think><answer>The answer</answer>"}]]
+        rewards = soft_format_reward(completion)
+        self.assertEqual(rewards[0], 1.0)
+
+    def test_correct_with_extra_spaces(self):
+        completion = [
+            [{"content": "Here is my reasoning: <think> Some reasoning </think> <answer> The answer </answer>"}]
+        ]
+        rewards = soft_format_reward(completion)
+        self.assertEqual(rewards[0], 1.0)
+
+    def test_correct_with_strict_format(self):
+        completion = [[{"content": "<think>\nSome reasoning\n</think>\n<answer>\nThe answer\n</answer>"}]]
+        rewards = soft_format_reward(completion)
+        self.assertEqual(rewards[0], 1.0)
+
+    def test_incorrect_with_multiple_reasoning_block(self):
+        completion = [
+            [
+                {
+                    "content": "Here is my reasoning: <think> Some reasoning </think> <answer> The answer </answer> New rambling <think> Some reasoning </think> <answer> The answer </answer>"
+                }
+            ]
+        ]
+        rewards = soft_format_reward(completion)
+        self.assertEqual(rewards[0], 0.0)
+
+    def test_incorrect_with_answer_before_think(self):
+        completion = [[{"content": "<answer>The answer</answer><think>Some reasoning</think>"}]]
+        rewards = soft_format_reward(completion)
+        self.assertEqual(rewards[0], 0.0)
+
+    def test_incorrect_missing_think_block(self):
+        completion = [[{"content": "Here is my reasoning: <answer>The answer</answer>"}]]
+        rewards = soft_format_reward(completion)
+        self.assertEqual(rewards[0], 0.0)
+
+    def test_incorrect_missing_answer_block(self):
+        completion = [[{"content": "Here is my reasoning: <think>Some reasoning</think>"}]]
+        rewards = soft_format_reward(completion)
+        self.assertEqual(rewards[0], 0.0)
+
+
+class TestReasoningStepsReward(unittest.TestCase):
+    def test_reasoning_steps_reward(self):
+        """Test reasoning_steps_reward with various formats."""
+        test_cases = [
+            # Full credit cases (3 or more steps)
+            ("Step 1: First step\nStep 2: Second step\nStep 3: Third step", 1.0),
+            ("First, we do this.\nSecond, we do that.\nFinally, we conclude.", 1.0),
+            # Partial credit cases (less than 3 steps)
+            ("Step 1: Only step", 1 / 3),
+            ("First, we do this.\nFinally, we conclude.", 2 / 3),
+            # No credit case
+            ("Just plain text without any clear steps", 0.0),
+        ]
+
+        for content, expected_reward in test_cases:
+            completion = [[{"content": content}]]
+            rewards = reasoning_steps_reward(completion)
+            self.assertAlmostEqual(rewards[0], expected_reward)
+
+
 class TestRewards(unittest.TestCase):
     def test_accuracy_reward_correct_answer(self):
         """Test accuracy_reward with a correct answer."""
@@ -92,48 +192,12 @@ class TestRewards(unittest.TestCase):
         rewards = accuracy_reward(completion, solution)
         self.assertEqual(rewards[0], 0.0)
 
-    def test_format_reward_correct(self):
-        """Test format_reward with correct format."""
-        completion = [[{"content": "<think>\nSome reasoning\n</think>\n<answer>\nThe answer\n</answer>"}]]
-        rewards = format_reward(completion)
-        self.assertEqual(rewards[0], 1.0)
-
-    def test_format_reward_incorrect(self):
-        """Test format_reward with incorrect format."""
-        incorrect_formats = [
-            "<think>Only thinking</think>",
-            "<answer>Only answer</answer>",
-            "No tags at all",
-            "<think>Missing closing</think><answer>Missing closing",
-            "<think>Wrong order</answer><answer>Wrong order</think>",
-        ]
-
-        for fmt in incorrect_formats:
-            completion = [[{"content": fmt}]]
-            rewards = format_reward(completion)
-            self.assertEqual(rewards[0], 0.0)
-
-    def test_reasoning_steps_reward(self):
-        """Test reasoning_steps_reward with various formats."""
-        test_cases = [
-            # Full credit cases (3 or more steps)
-            ("Step 1: First step\nStep 2: Second step\nStep 3: Third step", 1.0),
-            ("First, we do this.\nSecond, we do that.\nFinally, we conclude.", 1.0),
-            # Partial credit cases (less than 3 steps)
-            ("Step 1: Only step", 1 / 3),
-            ("First, we do this.\nFinally, we conclude.", 2 / 3),
-            # No credit case
-            ("Just plain text without any clear steps", 0.0),
-        ]
-
-        for content, expected_reward in test_cases:
-            completion = [[{"content": content}]]
-            rewards = reasoning_steps_reward(completion)
-            self.assertAlmostEqual(rewards[0], expected_reward)
-
     def test_multiple_completions(self):
         """Test handling multiple completions at once."""
-        completions = [[{"content": r"\boxed{\frac{63}{400}}"}], [{"content": r"\boxed{\frac{64}{400}}"}]]
+        completions = [
+            [{"content": r"\boxed{\frac{63}{400}}"}],
+            [{"content": r"\boxed{\frac{64}{400}}"}],
+        ]
         solutions = [r"\frac{63}{400}", r"\frac{63}{400}"]
 
         rewards = accuracy_reward(completions, solutions)
@@ -154,11 +218,31 @@ class TestRewards(unittest.TestCase):
 
         test_cases = [
             # Correct answers with different lengths
-            (r"\boxed{\frac{63}{400}}", r"\frac{63}{400}", 20, 0.943),  # Short correct answer
-            (r"\boxed{\frac{63}{400}}", r"\frac{63}{400}", 80, 0.547),  # Long correct answer
+            (
+                r"\boxed{\frac{63}{400}}",
+                r"\frac{63}{400}",
+                20,
+                0.943,
+            ),  # Short correct answer
+            (
+                r"\boxed{\frac{63}{400}}",
+                r"\frac{63}{400}",
+                80,
+                0.547,
+            ),  # Long correct answer
             # Wrong answers with different lengths
-            (r"\boxed{\frac{64}{400}}", r"\frac{63}{400}", 20, -0.942),  # Short wrong answer
-            (r"\boxed{\frac{64}{400}}", r"\frac{63}{400}", 80, -0.547),  # Long wrong answer
+            (
+                r"\boxed{\frac{64}{400}}",
+                r"\frac{63}{400}",
+                20,
+                -0.942,
+            ),  # Short wrong answer
+            (
+                r"\boxed{\frac{64}{400}}",
+                r"\frac{63}{400}",
+                80,
+                -0.547,
+            ),  # Long wrong answer
         ]
 
         for content, solution, content_len, expected_reward in test_cases:
@@ -178,7 +262,10 @@ class TestRewards(unittest.TestCase):
 
     def test_same_length_responses(self):
         """Test len_reward when all responses have the same length."""
-        completions = [[{"content": r"\boxed{\frac{63}{400}}"}], [{"content": r"\boxed{\frac{64}{400}}"}]]
+        completions = [
+            [{"content": r"\boxed{\frac{63}{400}}"}],
+            [{"content": r"\boxed{\frac{64}{400}}"}],
+        ]
         solutions = [r"\frac{63}{400}", r"\frac{63}{400}"]
 
         rewards = len_reward(completions, solutions)
@@ -238,7 +325,10 @@ class TestRewards(unittest.TestCase):
 
     def test_unparseable_solution(self):
         """Test len_reward with unparseable solution."""
-        completions = [[{"content": r"\boxed{answer}"}], [{"content": r"\boxed{answer} " + "x" * 10}]]
+        completions = [
+            [{"content": r"\boxed{answer}"}],
+            [{"content": r"\boxed{answer} " + "x" * 10}],
+        ]
         solutions = ["unparseable_latex", "unparseable_latex"]
 
         rewards = len_reward(completions, solutions)
