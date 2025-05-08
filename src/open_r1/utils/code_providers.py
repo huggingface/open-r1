@@ -19,7 +19,7 @@ import abc
 import asyncio
 from typing import List, Optional
 
-from ..utils import is_e2b_available
+from ..utils import is_e2b_available, is_morph_available
 
 
 if is_e2b_available():
@@ -31,6 +31,16 @@ else:
     AsyncSandbox = None
     Execution = None
     RoutedSandbox = None
+
+if is_morph_available():
+    from morphcloud.api import MorphCloudClient
+    from morphcloud.sandbox import Sandbox
+
+    from .routed_morph import RoutedMorphSandbox
+else:
+    MorphCloudClient = None
+    Sandbox = None
+    RoutedMorphSandbox = None
 
 
 class CodeExecutionProvider(abc.ABC):
@@ -102,9 +112,7 @@ class E2BProvider(CodeExecutionProvider):
 
         return rewards
 
-    def _run_async_from_sync(
-        self, scripts: List[str], languages: List[str], num_parallel: int
-    ) -> List[float]:
+    def _run_async_from_sync(self, scripts: List[str], languages: List[str], num_parallel: int) -> List[float]:
         """Function wrapping the `_run_async` function."""
         try:
             rewards = asyncio.run(self._run_async(scripts, languages, num_parallel))
@@ -114,9 +122,7 @@ class E2BProvider(CodeExecutionProvider):
 
         return rewards
 
-    async def _run_async(
-        self, scripts: List[str], languages: List[str], num_parallel: int
-    ) -> List[float]:
+    async def _run_async(self, scripts: List[str], languages: List[str], num_parallel: int) -> List[float]:
         semaphore = asyncio.Semaphore(num_parallel)
 
         tasks = [self._run_script(script, languages, semaphore) for script in scripts]
@@ -126,9 +132,7 @@ class E2BProvider(CodeExecutionProvider):
 
         return rewards
 
-    async def _run_script(
-        self, script: str, languages: List[str], semaphore: asyncio.Semaphore
-    ) -> float:
+    async def _run_script(self, script: str, languages: List[str], semaphore: asyncio.Semaphore) -> float:
         # We set a timeout margin, as the AsyncSandbox timeout does not seem to work
         # These values are based on running 256 examples with the gold solution
         # from open-r1/verifiable-coding-problems-python_decontaminated
@@ -141,9 +145,7 @@ class E2BProvider(CodeExecutionProvider):
 
         async with semaphore:
             try:
-                sandbox = await AsyncSandbox.create(
-                    timeout=SANDBOX_TIMEOUT, request_timeout=REQUEST_TIMEOUT
-                )
+                sandbox = await AsyncSandbox.create(timeout=SANDBOX_TIMEOUT, request_timeout=REQUEST_TIMEOUT)
                 execution = await asyncio.wait_for(
                     sandbox.run_code(script, languages=languages),
                     timeout=ASYNCIO_TIMEOUT,
@@ -155,17 +157,13 @@ class E2BProvider(CodeExecutionProvider):
                 print("Operation timed out")
                 return 0.0
             except Exception as e:
-                print(
-                    f"Error in `_run_script` from E2B sandbox ID {sandbox.sandbox_id} : {e}"
-                )
+                print(f"Error in `_run_script` from E2B sandbox ID {sandbox.sandbox_id} : {e}")
                 return 0.0
             finally:
                 try:
                     await sandbox.kill()
                 except Exception as e:
-                    print(
-                        f"Error from E2B executor kill with sandbox ID {sandbox.sandbox_id} : {e}"
-                    )
+                    print(f"Error from E2B executor kill with sandbox ID {sandbox.sandbox_id} : {e}")
 
 
 class MorphProvider(CodeExecutionProvider):
@@ -178,21 +176,23 @@ class MorphProvider(CodeExecutionProvider):
             num_parallel: Number of parallel executions to use
             morph_router_url: URL for the MorphCloud router (if using router mode)
         """
+        if not is_morph_available():
+            raise ImportError(
+                "MorphCloud is not available and required for this provider. Please install MorphCloud with "
+                "`pip install morphcloud` and add an API key to a `.env` file."
+            )
+
         try:
             from dotenv import load_dotenv
 
             load_dotenv()
         except ImportError:
-            print(
-                "Warning: python-dotenv not installed. Environment variables must be set directly."
-            )
+            print("Warning: python-dotenv not installed. Environment variables must be set directly.")
 
         self.num_parallel = num_parallel
         self.morph_router_url = morph_router_url
 
         if self.morph_router_url is not None:
-            from .routed_morph import RoutedMorphSandbox
-
             self.routed_sandbox = RoutedMorphSandbox(router_url=self.morph_router_url)
             return
 
@@ -200,14 +200,9 @@ class MorphProvider(CodeExecutionProvider):
 
         self.api_key = os.getenv("MORPH_API_KEY")
         if not self.api_key:
-            raise ValueError(
-                "MorphCloud API key not found. Please set the MORPH_API_KEY environment variable."
-            )
+            raise ValueError("MorphCloud API key not found. Please set the MORPH_API_KEY environment variable.")
 
         try:
-            from morphcloud.api import MorphCloudClient
-            from morphcloud.sandbox import Sandbox
-
             self.client = MorphCloudClient(api_key=self.api_key)
             self.Sandbox = Sandbox
         except ImportError as e:
@@ -248,18 +243,14 @@ class MorphProvider(CodeExecutionProvider):
         import asyncio
 
         try:
-            rewards = asyncio.run(
-                self._run_async(scripts, languages, self.num_parallel)
-            )
+            rewards = asyncio.run(self._run_async(scripts, languages, self.num_parallel))
         except Exception as e:
             print(f"Error from MorphCloud executor: {e}")
             rewards = [0.0] * len(scripts)
 
         return rewards
 
-    async def _run_async(
-        self, scripts: List[str], languages: List[str], num_parallel: int
-    ) -> List[float]:
+    async def _run_async(self, scripts: List[str], languages: List[str], num_parallel: int) -> List[float]:
         """Run multiple scripts concurrently with limited parallelism.
 
         Args:
@@ -279,9 +270,7 @@ class MorphProvider(CodeExecutionProvider):
 
         return list(results)
 
-    async def _run_script(
-        self, script: str, languages: List[str], semaphore: asyncio.Semaphore
-    ) -> float:
+    async def _run_script(self, script: str, languages: List[str], semaphore: asyncio.Semaphore) -> float:
         """Execute a single script in a MorphCloud Sandbox.
 
         Args:
@@ -299,9 +288,7 @@ class MorphProvider(CodeExecutionProvider):
         sandbox = None
         async with semaphore:
             try:
-                sandbox = await asyncio.to_thread(
-                    self.Sandbox.new, client=self.client, ttl_seconds=SANDBOX_TIMEOUT
-                )
+                sandbox = await asyncio.to_thread(self.Sandbox.new, client=self.client, ttl_seconds=SANDBOX_TIMEOUT)
                 result = await asyncio.wait_for(
                     asyncio.to_thread(
                         sandbox.run_code,
