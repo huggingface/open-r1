@@ -45,9 +45,7 @@ def register_lighteval_task(
         is_custom_task (bool, optional): Whether the task is a custom task. Defaults to False.
     """
     # Format task list in lighteval format
-    task_list = ",".join(
-        f"{eval_suite}|{task}|{num_fewshot}|0" for task in task_list.split(",")
-    )
+    task_list = ",".join(f"{eval_suite}|{task}|{num_fewshot}|0" for task in task_list.split(","))
     configs[task_name] = task_list
 
 
@@ -58,9 +56,7 @@ register_lighteval_task(LIGHTEVAL_TASKS, "lighteval", "aime24", "aime24", 0)
 register_lighteval_task(LIGHTEVAL_TASKS, "lighteval", "aime25", "aime25", 0)
 register_lighteval_task(LIGHTEVAL_TASKS, "lighteval", "gpqa", "gpqa:diamond", 0)
 register_lighteval_task(LIGHTEVAL_TASKS, "extended", "lcb", "lcb:codegeneration", 0)
-register_lighteval_task(
-    LIGHTEVAL_TASKS, "extended", "lcb_v4", "lcb:codegeneration_v4", 0
-)
+register_lighteval_task(LIGHTEVAL_TASKS, "extended", "lcb_v4", "lcb:codegeneration_v4", 0)
 
 
 def get_lighteval_tasks():
@@ -107,9 +103,7 @@ def run_lighteval_job(
     subprocess.run(cmd, check=True)
 
 
-def run_benchmark_jobs(
-    training_args: Union["SFTConfig", "GRPOConfig"], model_args: "ModelConfig"
-) -> None:
+def run_benchmark_jobs(training_args: Union["SFTConfig", "GRPOConfig"], model_args: "ModelConfig") -> None:
     benchmarks = training_args.benchmarks
     if len(benchmarks) == 1 and benchmarks[0] == "all":
         benchmarks = get_lighteval_tasks()

@@ -24,66 +24,41 @@ from open_r1.utils.routed_sandbox import RoutedSandbox
 
 
 class TestCodeRewards(unittest.TestCase):
-
     def test_python_code_reward(self):
         # requires E2B, see the README.md file
-        code_dataset = load_dataset(
-            "open-r1/verifiable-coding-problems-python_decontaminated-tested-shuffled"
-        )
+        code_dataset = load_dataset("open-r1/verifiable-coding-problems-python_decontaminated-tested-shuffled")
         NUM_SAMPLES = 20
         samples = code_dataset["train"].select(range(NUM_SAMPLES))
-        test_completions = [
-            [{"content": sample["gold_standard_solution"]}] for sample in samples
-        ]
-        reward_kwargs = {
-            "verification_info": [sample["verification_info"] for sample in samples]
-        }
+        test_completions = [[{"content": sample["gold_standard_solution"]}] for sample in samples]
+        reward_kwargs = {"verification_info": [sample["verification_info"] for sample in samples]}
         rewards = code_reward(test_completions, **reward_kwargs)
         print(rewards)
         assert rewards == [1.0] * NUM_SAMPLES
 
     def test_e2b_router(self):
         # run router locally: python scripts/e2b_router.py
-        code_dataset = load_dataset(
-            "open-r1/verifiable-coding-problems-python_decontaminated-tested-shuffled"
-        )
+        code_dataset = load_dataset("open-r1/verifiable-coding-problems-python_decontaminated-tested-shuffled")
         NUM_SAMPLES = 128
         samples = code_dataset["train"].select(range(NUM_SAMPLES))
-        test_completions = [
-            [{"content": sample["gold_standard_solution"]}] for sample in samples
-        ]
-        reward_kwargs = {
-            "verification_info": [sample["verification_info"] for sample in samples]
-        }
-        rewards = code_reward(
-            test_completions, e2b_router_url="0.0.0.0:8000", **reward_kwargs
-        )
+        test_completions = [[{"content": sample["gold_standard_solution"]}] for sample in samples]
+        reward_kwargs = {"verification_info": [sample["verification_info"] for sample in samples]}
+        rewards = code_reward(test_completions, e2b_router_url="0.0.0.0:8000", **reward_kwargs)
         print(rewards)
         assert rewards == [1.0] * NUM_SAMPLES
 
     def test_e2b_router_parallel(self):
         # run router locally: python scripts/e2b_router.py
-        code_dataset = load_dataset(
-            "open-r1/verifiable-coding-problems-python_decontaminated-tested-shuffled"
-        )
+        code_dataset = load_dataset("open-r1/verifiable-coding-problems-python_decontaminated-tested-shuffled")
 
         BATCH_SIZE = 32
         NUM_SAMPLES = 256
 
         def batch_code_reward(examples):
-            test_completions = [
-                [{"content": solution}]
-                for solution in examples["gold_standard_solution"]
-            ]
+            test_completions = [[{"content": solution}] for solution in examples["gold_standard_solution"]]
             reward_kwargs = {
-                "verification_info": [
-                    verification_info
-                    for verification_info in examples["verification_info"]
-                ]
+                "verification_info": [verification_info for verification_info in examples["verification_info"]]
             }
-            rewards = code_reward(
-                test_completions, e2b_router_url="0.0.0.0:8000", **reward_kwargs
-            )
+            rewards = code_reward(test_completions, e2b_router_url="0.0.0.0:8000", **reward_kwargs)
             assert rewards == [1.0] * BATCH_SIZE
             return examples
 
@@ -102,10 +77,7 @@ class TestCodeRewards(unittest.TestCase):
         code_dataset = load_dataset("open-r1/ioi-reward-test-dataset")
         NUM_SAMPLES = 16
         samples = code_dataset["train"].select(range(NUM_SAMPLES))
-        test_completions = [
-            [{"content": f"```cpp\n{sample['sample_solution']}```"}]
-            for sample in samples
-        ]
+        test_completions = [[{"content": f"```cpp\n{sample['sample_solution']}```"}] for sample in samples]
         keys = [key for key in samples[0] if key not in ["prompt", "completion"]]
         reward_kwargs = {key: [example[key] for example in samples] for key in keys}
         rewards = ioi_code_reward(test_completions, **reward_kwargs)
@@ -128,9 +100,7 @@ class TestCodeRewards(unittest.TestCase):
             assert isinstance(result, Execution)
             # assert result.exit_code == 0
             assert result.error is None
-            assert (
-                "hello" in result.logs["stdout"][0] or "4" in result.logs["stdout"][0]
-            )
+            assert "hello" in result.logs["stdout"][0] or "4" in result.logs["stdout"][0]
 
     def test_e2b_router_run_code_with_error(self):
         # run router locally: python scripts/e2b_router.py
@@ -156,14 +126,10 @@ class TestCodeRewards(unittest.TestCase):
 
     def test_python_code_reward_morph(self):
         # requires MorphCloud, see the README.md file
-        code_dataset = load_dataset(
-            "open-r1/verifiable-coding-problems-python_decontaminated-tested-shuffled"
-        )
+        code_dataset = load_dataset("open-r1/verifiable-coding-problems-python_decontaminated-tested-shuffled")
         NUM_SAMPLES = 20
         samples = code_dataset["train"].select(range(NUM_SAMPLES))
-        test_completions = [
-            [{"content": sample["gold_standard_solution"]}] for sample in samples
-        ]
+        test_completions = [[{"content": sample["gold_standard_solution"]}] for sample in samples]
         reward_kwargs = {
             "verification_info": [sample["verification_info"] for sample in samples],
             "provider_type": "morph",
@@ -174,14 +140,10 @@ class TestCodeRewards(unittest.TestCase):
 
     def test_morph_router(self):
         # run router locally: python scripts/morph_router.py --port 8001 --max_num_sandboxes 20
-        code_dataset = load_dataset(
-            "open-r1/verifiable-coding-problems-python_decontaminated-tested-shuffled"
-        )
+        code_dataset = load_dataset("open-r1/verifiable-coding-problems-python_decontaminated-tested-shuffled")
         NUM_SAMPLES = 32
         samples = code_dataset["train"].select(range(NUM_SAMPLES))
-        test_completions = [
-            [{"content": sample["gold_standard_solution"]}] for sample in samples
-        ]
+        test_completions = [[{"content": sample["gold_standard_solution"]}] for sample in samples]
         reward_kwargs = {
             "verification_info": [sample["verification_info"] for sample in samples],
             "provider_type": "morph",
@@ -193,23 +155,15 @@ class TestCodeRewards(unittest.TestCase):
 
     def test_morph_router_parallel(self):
         # run router locally: python scripts/morph_router.py --port 8001 --max_num_sandboxes 20
-        code_dataset = load_dataset(
-            "open-r1/verifiable-coding-problems-python_decontaminated-tested-shuffled"
-        )
+        code_dataset = load_dataset("open-r1/verifiable-coding-problems-python_decontaminated-tested-shuffled")
 
         BATCH_SIZE = 32
         NUM_SAMPLES = 256
 
         def batch_code_reward(examples):
-            test_completions = [
-                [{"content": solution}]
-                for solution in examples["gold_standard_solution"]
-            ]
+            test_completions = [[{"content": solution}] for solution in examples["gold_standard_solution"]]
             reward_kwargs = {
-                "verification_info": [
-                    verification_info
-                    for verification_info in examples["verification_info"]
-                ],
+                "verification_info": [verification_info for verification_info in examples["verification_info"]],
                 "provider_type": "morph",
                 "morph_router_url": "0.0.0.0:8001",
             }
