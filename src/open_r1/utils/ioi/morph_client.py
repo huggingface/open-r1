@@ -317,7 +317,7 @@ class MorphCloudExecutionClient:
 
             except asyncio.TimeoutError:
                 if attempt < max_retries:
-                    print(f"Execution timed out, retrying ({attempt+1}/{max_retries})")
+                    print(f"Execution timed out, retrying ({attempt + 1}/{max_retries})")
                 else:
                     return "0", "Execution timed out after multiple retries"
 
@@ -327,7 +327,7 @@ class MorphCloudExecutionClient:
                     retry_delay = min(base_delay * (2**attempt), 30)  # Exponential backoff, capped at 30 seconds
 
                     print(
-                        f"Execution failed with {type(e).__name__}: {str(e)}, retrying in {retry_delay:.2f}s ({attempt+1}/{max_retries})"
+                        f"Execution failed with {type(e).__name__}: {str(e)}, retrying in {retry_delay:.2f}s ({attempt + 1}/{max_retries})"
                     )
                     await asyncio.sleep(retry_delay)
                 else:
@@ -379,9 +379,7 @@ class MorphCloudExecutionClient:
 
                         async with temp_instance:
                             # Install dependencies
-                            await temp_instance.aexec(
-                                "apt-get update && " "apt-get install -y build-essential cmake g++"
-                            )
+                            await temp_instance.aexec("apt-get update && apt-get install -y build-essential cmake g++")
 
                             # Create workspace directory
                             await temp_instance.aexec(

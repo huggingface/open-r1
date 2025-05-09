@@ -95,8 +95,7 @@ class SubtaskResult:
             0
             if not self.test_results
             else round(
-                min([test_result.score for test_result in self.test_results])
-                * self.points,
+                min([test_result.score for test_result in self.test_results]) * self.points,
                 self.score_precision,
             )
         )
@@ -171,9 +170,7 @@ async def score_single_test_case(
         TestResult: Result of the test case execution
     """
     # Run submission for this test case
-    score, feedback = await run_submission(
-        client, subtask, test_input, submission, test_output
-    )
+    score, feedback = await run_submission(client, subtask, test_input, submission, test_output)
     score = float(score)
 
     return TestResult(
@@ -233,18 +230,14 @@ async def score_subtask(
     # we skip submissions where no code was extracted
     # no need to do anything, as we have a failed cached result
     if not submission or any(
-        test_result.status != "SKIPPED" and test_result.score == 0.0
-        for test_result in subtask_result.test_results
+        test_result.status != "SKIPPED" and test_result.score == 0.0 for test_result in subtask_result.test_results
     ):
         return subtask_result
 
     if "test_cases" in subtask:
         test_cases = subtask["test_cases"]
         if isinstance(subtask["test_cases"], list):
-            test_cases = {
-                test_name: test
-                for test_name, test in zip(subtask["test_names"], subtask["test_cases"])
-            }
+            test_cases = {test_name: test for test_name, test in zip(subtask["test_names"], subtask["test_cases"])}
     else:
         test_cases = load_ioi_tests(subtask["year"], subtask["id"])
 
@@ -295,10 +288,7 @@ async def score_subtasks(
     # avoid rerunning tests present in multiple subtasks
     test_case_run_cache = {}
 
-    return [
-        await score_subtask(client, subtask, submission, test_case_run_cache, skip_mode)
-        for subtask in subtasks
-    ]
+    return [await score_subtask(client, subtask, submission, test_case_run_cache, skip_mode) for subtask in subtasks]
 
 
 async def run_submission(
@@ -328,17 +318,9 @@ async def run_submission(
             # pass the input
             {"name": "input.txt", "content": test_input},
             # pass the expected output
-            *(
-                [{"name": "correct_output.txt", "content": test_output}]
-                if test_output
-                else []
-            ),
+            *([{"name": "correct_output.txt", "content": test_output}] if test_output else []),
             # grader files
-            *(
-                {"name": name, "content": content}
-                for name, content in problem["grader_files"]
-                if content
-            ),
+            *({"name": name, "content": content} for name, content in problem["grader_files"] if content),
         ],
         "run_timeout": round(
             (problem["time_limit"] + 3) * 1000
