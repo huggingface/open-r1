@@ -118,9 +118,9 @@ class GRPOScriptArguments(trl.ScriptArguments):
         code_language (`str`):
             Language for code format reward.
         max_completion_len (`int`):
-            Maximum number of characters in completion.
+            Maximum number of tokens in completion.
         soft_punish_cache (`int`):
-            Minimum number of characters in completion.
+            Minimum number of tokens in completion.
     """
 
     reward_funcs: list[str] = field(
