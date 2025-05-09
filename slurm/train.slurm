@@ -7,6 +7,8 @@
 #SBATCH --output=./logs/%x-%j.out
 #SBATCH --error=./logs/%x-%j.err
 #SBATCH --requeue
+#SBATCH --time=3-00:00:00
+
 
 if [[ "$*" == *"--help"* ]]; then
   echo "Usage: sbatch slurm/train.slurm [options]"
