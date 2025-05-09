@@ -1,0 +1,180 @@
+# Copyright 2025 The HuggingFace Team. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# example usage python scripts/filter_dataset.py --config recipes/dataset_filtering/config_demo.yaml
+
+import logging
+import os
+from dataclasses import dataclass
+from git import Optional
+import torch
+import sys
+
+import datasets
+import transformers
+from datasets import load_dataset
+from transformers import set_seed
+
+from open_r1.configs import GRPOConfig, GRPOScriptArguments
+from open_r1.rewards import get_reward_funcs
+from open_r1.utils import get_model, get_tokenizer
+from trl import ModelConfig, TrlParser
+from trl.data_utils import apply_chat_template
+from vllm import LLM, SamplingParams
+
+logger = logging.getLogger(__name__)
+
+@dataclass
+class FilterScriptArguments(GRPOScriptArguments):
+    # we can be lazy and just use the same script args as GRPO
+    output_dataset_name: Optional[str] = None
+    low_reward_threshold: float = 0.1
+    high_reward_threshold: float = 0.9
+
+
+def main(script_args, training_args, model_args):
+    # Set seed for reproducibility
+    set_seed(training_args.seed)
+
+    ###############
+    # Setup logging
+    ###############
+    logging.basicConfig(
+        format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+        handlers=[logging.StreamHandler(sys.stdout)],
+    )
+    log_level = training_args.get_process_log_level()
+    logger.setLevel(log_level)
+    datasets.utils.logging.set_verbosity(log_level)
+    transformers.utils.logging.set_verbosity(log_level)
+    transformers.utils.logging.enable_default_handler()
+    transformers.utils.logging.enable_explicit_format()
+
+    logger.info(f"Model parameters {model_args}")
+    logger.info(f"Script parameters {script_args}")
+    logger.info(f"Training parameters {training_args}")
+
+    # Load the dataset
+    dataset = load_dataset(script_args.dataset_name, name=script_args.dataset_config)
+
+
+    # Get reward functions from the registry
+    reward_funcs = get_reward_funcs(script_args)
+
+    # Format into conversation
+    def make_conversation(example, prompt_column: str = script_args.dataset_prompt_column):
+        prompt = []
+
+        if training_args.system_prompt is not None:
+            prompt.append({"role": "system", "content": training_args.system_prompt})
+
+        if prompt_column not in example:
+            raise ValueError(f"Dataset Question Field Error: {prompt_column} is not supported.")
+
+        prompt.append({"role": "user", "content": example[prompt_column]})
+        return {"prompt": prompt}
+
+    dataset = dataset.map(make_conversation)
+    tokenizer = get_tokenizer(model_args, training_args)
+    for split in dataset:
+        if "messages" in dataset[split].column_names:
+            dataset[split] = dataset[split].remove_columns("messages")
+    
+    dataset = dataset.map(apply_chat_template, fn_kwargs={"tokenizer": tokenizer})
+    llm = LLM(
+        model=model_args.model_name_or_path,
+        revision=model_args.model_revision,
+        trust_remote_code=model_args.trust_remote_code,
+    )
+
+    sampling_params=SamplingParams(
+        temperature=training_args.temperature,
+        n=training_args.num_generations,
+        max_tokens=training_args.max_completion_length,
+    )
+    
+    def batch_score(examples):
+        prompts = examples["prompt"]
+        
+        outputs = llm.generate(
+            prompts,
+            sampling_params=sampling_params,
+            use_tqdm=False,
+        )
+        repeated_prompts = []
+        reward_completions = []
+        grouped_completions = []
+        for output in outputs:
+            prompt = output.prompt
+            group = []
+            for completion in output.outputs:
+                text = completion.text
+                group.append(text)
+                message = [{"role": "assistant", "content": text}]
+                repeated_prompts.append(prompt)
+                reward_completions.append(message)
+            grouped_completions.append(group)
+        
+        def repeat_each_element_k_times(list_to_repeat: list, k: int) -> list:
+            return [element for item in list_to_repeat for element in [item] * k]
+        
+        rewards_per_func = torch.zeros(len(repeated_prompts), len(reward_funcs))
+        for i, reward_func in enumerate(reward_funcs):
+            keys = [key for key in examples.data.keys() if key not in ["prompt", "completion"]]
+            reward_kwargs = {key: repeat_each_element_k_times(examples[key], training_args.num_generations) for key in keys}
+            output_reward_func = reward_func(prompts=repeated_prompts, completions=reward_completions, **reward_kwargs)
+            # Convert None values to NaN
+            output_reward_func = [reward if reward is not None else torch.nan for reward in output_reward_func]
+
+            rewards_per_func[:, i] = torch.tensor(output_reward_func, dtype=torch.float32)
+            
+        reshaped_rewards = rewards_per_func.view(-1, training_args.num_generations)
+        
+        examples["filter_generations"] = grouped_completions
+        examples["filter_rewards"] = reshaped_rewards.tolist()
+            
+        return examples
+        
+    dataset["train"] = dataset["train"].select(range(0, 1024))
+    dataset = dataset.map(batch_score, batched=True, batch_size=128)
+    
+    
+    if script_args.output_dataset_name is not None:
+        unfiltered_dataset_name = script_args.output_dataset_name
+    else:
+        unfiltered_dataset_name = f"{script_args.dataset_name}-generated"
+    filtered_dataset_name = f"{unfiltered_dataset_name}-filtered"
+    
+    dataset.push_to_hub(unfiltered_dataset_name)
+    
+    def filter_func(example):
+        rewards = example["filter_rewards"]
+        # get the mean of the rewards that are not None
+        mean_reward = torch.nanmean(torch.tensor(rewards, dtype=torch.float32))
+        
+        return script_args.low_reward_threshold < mean_reward < script_args.high_reward_threshold
+    
+    logger.info(f"Filtering dataset with low reward threshold {script_args.low_reward_threshold} and high reward threshold {script_args.high_reward_threshold}")
+    logger.info(f"Dataset size before filtering: {dataset}")
+    dataset = dataset.filter(filter_func)
+    logger.info(f"Dataset size after filtering: {dataset}")
+    dataset.push_to_hub(filtered_dataset_name)
+    
+    
+
+if __name__ == "__main__":
+    parser = TrlParser((FilterScriptArguments, GRPOConfig, ModelConfig))
+    script_args, training_args, model_args = parser.parse_args_and_config()
+    main(script_args, training_args, model_args)
