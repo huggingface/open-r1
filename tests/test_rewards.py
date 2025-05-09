@@ -15,6 +15,7 @@
 
 import unittest
 
+from dotenv import load_dotenv
 from open_r1.configs import GRPOScriptArguments
 from open_r1.rewards import (
     accuracy_reward,
@@ -28,6 +29,9 @@ from open_r1.rewards import (
     reasoning_steps_reward,
     tag_count_reward,
 )
+
+
+load_dotenv()
 
 
 class TestGetRewardFuncs(unittest.TestCase):
@@ -83,7 +87,13 @@ class TestRewards(unittest.TestCase):
         """Test accuracy_reward with an incorrect answer."""
         completion = [[{"content": r"\boxed{\frac{64}{400}}"}]]
         solution = [r"\frac{63}{400}"]
+        rewards = accuracy_reward(completion, solution)
+        self.assertEqual(rewards[0], 0.0)
 
+    def test_accuracy_reward_wrong_answer_no_latex(self):
+        """Test accuracy_reward with an incorrect answer and gold solution with no latex."""
+        completion = [[{"content": r"\boxed{3}"}]]
+        solution = ["6"]
         rewards = accuracy_reward(completion, solution)
         self.assertEqual(rewards[0], 0.0)
 
@@ -128,7 +138,10 @@ class TestRewards(unittest.TestCase):
 
     def test_multiple_completions(self):
         """Test handling multiple completions at once."""
-        completions = [[{"content": r"\boxed{\frac{63}{400}}"}], [{"content": r"\boxed{\frac{64}{400}}"}]]
+        completions = [
+            [{"content": r"\boxed{\frac{63}{400}}"}],
+            [{"content": r"\boxed{\frac{64}{400}}"}],
+        ]
         solutions = [r"\frac{63}{400}", r"\frac{63}{400}"]
 
         rewards = accuracy_reward(completions, solutions)
@@ -149,11 +162,31 @@ class TestRewards(unittest.TestCase):
 
         test_cases = [
             # Correct answers with different lengths
-            (r"\boxed{\frac{63}{400}}", r"\frac{63}{400}", 20, 0.943),  # Short correct answer
-            (r"\boxed{\frac{63}{400}}", r"\frac{63}{400}", 80, 0.547),  # Long correct answer
+            (
+                r"\boxed{\frac{63}{400}}",
+                r"\frac{63}{400}",
+                20,
+                0.943,
+            ),  # Short correct answer
+            (
+                r"\boxed{\frac{63}{400}}",
+                r"\frac{63}{400}",
+                80,
+                0.547,
+            ),  # Long correct answer
             # Wrong answers with different lengths
-            (r"\boxed{\frac{64}{400}}", r"\frac{63}{400}", 20, -0.942),  # Short wrong answer
-            (r"\boxed{\frac{64}{400}}", r"\frac{63}{400}", 80, -0.547),  # Long wrong answer
+            (
+                r"\boxed{\frac{64}{400}}",
+                r"\frac{63}{400}",
+                20,
+                -0.942,
+            ),  # Short wrong answer
+            (
+                r"\boxed{\frac{64}{400}}",
+                r"\frac{63}{400}",
+                80,
+                -0.547,
+            ),  # Long wrong answer
         ]
 
         for content, solution, content_len, expected_reward in test_cases:
@@ -173,7 +206,10 @@ class TestRewards(unittest.TestCase):
 
     def test_same_length_responses(self):
         """Test len_reward when all responses have the same length."""
-        completions = [[{"content": r"\boxed{\frac{63}{400}}"}], [{"content": r"\boxed{\frac{64}{400}}"}]]
+        completions = [
+            [{"content": r"\boxed{\frac{63}{400}}"}],
+            [{"content": r"\boxed{\frac{64}{400}}"}],
+        ]
         solutions = [r"\frac{63}{400}", r"\frac{63}{400}"]
 
         rewards = len_reward(completions, solutions)
@@ -233,7 +269,10 @@ class TestRewards(unittest.TestCase):
 
     def test_unparseable_solution(self):
         """Test len_reward with unparseable solution."""
-        completions = [[{"content": r"\boxed{answer}"}], [{"content": r"\boxed{answer} " + "x" * 10}]]
+        completions = [
+            [{"content": r"\boxed{answer}"}],
+            [{"content": r"\boxed{answer} " + "x" * 10}],
+        ]
         solutions = ["unparseable_latex", "unparseable_latex"]
 
         rewards = len_reward(completions, solutions)
@@ -407,6 +446,17 @@ class TestRepetitionPenaltyReward(unittest.TestCase):
         completion = [[{"content": "Some reasoning\nThe answer"}]]
         rewards = tag_count_reward(completion)
         self.assertEqual(rewards[0], 0.0)
+
+    def test_full_repetition_with_language(self):
+        reward_fn = get_repetition_penalty_reward(ngram_size=2, max_penalty=-1.0, language="en")
+        completions = [[{"content": "that that that that that"}]]
+        rewards = reward_fn(completions)
+        self.assertEqual(rewards, [-0.75])
+        # begin test for zh language
+        reward_fn = get_repetition_penalty_reward(ngram_size=2, max_penalty=-1.0, language="zh")
+        completions = [[{"content": "这个这个这个这个这个"}]]
+        rewards = reward_fn(completions)
+        self.assertEqual(rewards, [-0.75])
 
     def test_soft_overlong_punishment_short_completion(self):
         """Test soft overlong punishment reward function with a short completion."""

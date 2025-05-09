@@ -6,6 +6,7 @@ attn_implementation: flash_attention_2
 
 # Data training arguments
 dataset_name: open-r1/OpenR1-Math-220k
+dataset_prompt_column: problem
 system_prompt: "You are a helpful AI Assistant that provides well-reasoned and detailed responses. You first think about the reasoning process as an internal monologue and then provide the user with the answer. Respond in the following format: <think>\n...\n</think>\n<answer>\n...\n</answer>"
 
 # GRPO trainer config

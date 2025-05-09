@@ -45,5 +45,5 @@ save_only_model: true # needed to bypass FSDP errors with saving paged optimizer
 save_strategy: epoch
 save_total_limit: 1
 seed: 42
-use_liger: false # fails on multi-node
+use_liger_kernel: false # fails on multi-node
 warmup_ratio: 0.03

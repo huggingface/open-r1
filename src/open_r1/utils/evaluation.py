@@ -7,6 +7,7 @@ from .hub import get_gpu_count_for_vllm, get_param_count_from_repo_id
 if TYPE_CHECKING:
     from trl import GRPOConfig, SFTConfig, ModelConfig
 
+import base64
 import os
 
 
@@ -24,7 +25,11 @@ VLLM_SLURM_PREFIX = [
 
 
 def register_lighteval_task(
-    configs: Dict[str, str], eval_suite: str, task_name: str, task_list: str, num_fewshot: int = 0
+    configs: Dict[str, str],
+    eval_suite: str,
+    task_name: str,
+    task_list: str,
+    num_fewshot: int = 0,
 ):
     """Registers a LightEval task configuration.
 
@@ -46,10 +51,10 @@ def register_lighteval_task(
 
 LIGHTEVAL_TASKS = {}
 
-register_lighteval_task(LIGHTEVAL_TASKS, "custom", "math_500", "math_500", 0)
-register_lighteval_task(LIGHTEVAL_TASKS, "custom", "aime24", "aime24", 0)
-register_lighteval_task(LIGHTEVAL_TASKS, "custom", "aime25", "aime25", 0)
-register_lighteval_task(LIGHTEVAL_TASKS, "custom", "gpqa", "gpqa:diamond", 0)
+register_lighteval_task(LIGHTEVAL_TASKS, "lighteval", "math_500", "math_500", 0)
+register_lighteval_task(LIGHTEVAL_TASKS, "lighteval", "aime24", "aime24", 0)
+register_lighteval_task(LIGHTEVAL_TASKS, "lighteval", "aime25", "aime25", 0)
+register_lighteval_task(LIGHTEVAL_TASKS, "lighteval", "gpqa", "gpqa:diamond", 0)
 register_lighteval_task(LIGHTEVAL_TASKS, "extended", "lcb", "lcb:codegeneration", 0)
 register_lighteval_task(LIGHTEVAL_TASKS, "extended", "lcb_v4", "lcb:codegeneration_v4", 0)
 
@@ -62,7 +67,9 @@ SUPPORTED_BENCHMARKS = get_lighteval_tasks()
 
 
 def run_lighteval_job(
-    benchmark: str, training_args: Union["SFTConfig", "GRPOConfig"], model_args: "ModelConfig"
+    benchmark: str,
+    training_args: Union["SFTConfig", "GRPOConfig"],
+    model_args: "ModelConfig",
 ) -> None:
     task_list = LIGHTEVAL_TASKS[benchmark]
     model_name = training_args.hub_model_id
@@ -88,7 +95,10 @@ def run_lighteval_job(
         f"{model_args.trust_remote_code}",
     ]
     if training_args.system_prompt is not None:
-        cmd_args.append(f"--system_prompt={training_args.system_prompt}")
+        # encode to base64 to avoid issues with special characters
+        # we decode in the sbatch script
+        prompt_encoded = base64.b64encode(training_args.system_prompt.encode()).decode()
+        cmd_args.append(prompt_encoded)
     cmd[-1] += " " + " ".join(cmd_args)
     subprocess.run(cmd, check=True)
 

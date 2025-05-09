@@ -44,7 +44,13 @@ class PushToHubRevisionCallback(TrainerCallback):
     def __init__(self, model_config) -> None:
         self.model_config = model_config
 
-    def on_save(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
+    def on_save(
+        self,
+        args: TrainingArguments,
+        state: TrainerState,
+        control: TrainerControl,
+        **kwargs,
+    ):
         if state.is_world_process_zero:
             global_step = state.global_step
 

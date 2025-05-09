@@ -91,7 +91,10 @@ class PistonClient:
 
     async def _send_request(self, endpoint, route, data=None, method="post"):
         async with self.session.request(
-            method, f"{endpoint.rstrip('/')}/{route}", json=data, headers={"Content-Type": "application/json"}
+            method,
+            f"{endpoint.rstrip('/')}/{route}",
+            json=data,
+            headers={"Content-Type": "application/json"},
         ) as response:
             return await response.json(content_type=None)
 
@@ -123,9 +126,13 @@ class PistonClient:
             raise PistonError(response["message"])
 
         if "compile" in response and response["compile"]["code"] != 0:
-            return "0", "Compilation error exit code " + str(response["compile"]["code"]) + "\n" + response["compile"][
-                "stderr"
-            ]
+            return (
+                "0",
+                "Compilation error exit code "
+                + str(response["compile"]["code"])
+                + "\n"
+                + response["compile"]["stderr"],
+            )
 
         if "run" not in response:
             raise PistonError(response)
@@ -176,7 +183,9 @@ class PistonClient:
                 if attempt > 0:
                     await asyncio.sleep(1)
                 async with self.session.post(
-                    f"{endpoint.rstrip('/')}/execute", json=data, headers={"Content-Type": "application/json"}
+                    f"{endpoint.rstrip('/')}/execute",
+                    json=data,
+                    headers={"Content-Type": "application/json"},
                 ) as response:
                     status = response.status
                     res_json = await response.json(content_type=None)
@@ -190,7 +199,12 @@ class PistonClient:
                         raise PistonError(f"Piston overloaded: {res_json['run']['stderr']}")
                     return res_json
 
-            except (PistonError, asyncio.TimeoutError, aiohttp.ClientConnectionError, RuntimeError) as e:
+            except (
+                PistonError,
+                asyncio.TimeoutError,
+                aiohttp.ClientConnectionError,
+                RuntimeError,
+            ) as e:
                 # Only retry if we haven't reached max retries yet
                 if attempt < max_retries:
                     # Calculate backoff with jitter
@@ -228,7 +242,9 @@ def get_slurm_piston_endpoints():
     """Get list of active piston worker endpoints from squeue output"""
     # Run squeue command to get job name, hostname and status, filtering for RUNNING state
     result = subprocess.run(
-        ["squeue", '--format="%j %N %T"', "--noheader", "--states=RUNNING"], capture_output=True, text=True
+        ["squeue", '--format="%j %N %T"', "--noheader", "--states=RUNNING"],
+        capture_output=True,
+        text=True,
     )
 
     # Split output into lines and skip header

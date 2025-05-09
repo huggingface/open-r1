@@ -42,5 +42,5 @@ report_to:
 save_strategy: epoch
 save_total_limit: 1
 seed: 42
-use_liger: true
+use_liger_kernel: true
 warmup_ratio: 0.03

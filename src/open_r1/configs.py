@@ -27,10 +27,12 @@ class GRPOConfig(trl.GRPOConfig):
     """
 
     benchmarks: list[str] = field(
-        default_factory=lambda: [], metadata={"help": "The benchmarks to run after training."}
+        default_factory=lambda: [],
+        metadata={"help": "The benchmarks to run after training."},
     )
     callbacks: list[str] = field(
-        default_factory=lambda: [], metadata={"help": "The callbacks to run during training."}
+        default_factory=lambda: [],
+        metadata={"help": "The callbacks to run during training."},
     )
     chat_template: Optional[str] = field(default=None, metadata={"help": "The chat template to use."})
     system_prompt: Optional[str] = field(
@@ -50,6 +52,10 @@ class GRPOConfig(trl.GRPOConfig):
         default=None,
         metadata={"help": ("The project to store runs under.")},
     )
+    wandb_run_group: Optional[str] = field(
+        default=None,
+        metadata={"help": ("The group to store runs under.")},
+    )
 
 
 @dataclass
@@ -59,10 +65,12 @@ class SFTConfig(trl.SFTConfig):
     """
 
     benchmarks: list[str] = field(
-        default_factory=lambda: [], metadata={"help": "The benchmarks to run after training."}
+        default_factory=lambda: [],
+        metadata={"help": "The benchmarks to run after training."},
     )
     callbacks: list[str] = field(
-        default_factory=lambda: [], metadata={"help": "The callbacks to run during training."}
+        default_factory=lambda: [],
+        metadata={"help": "The callbacks to run during training."},
     )
     chat_template: Optional[str] = field(default=None, metadata={"help": "The chat template to use."})
     system_prompt: Optional[str] = field(
@@ -82,6 +90,10 @@ class SFTConfig(trl.SFTConfig):
     wandb_project: Optional[str] = field(
         default=None,
         metadata={"help": ("The project to store runs under.")},
+    )
+    wandb_run_group: Optional[str] = field(
+        default=None,
+        metadata={"help": ("The group to store runs under.")},
     )
 
 
@@ -168,6 +180,32 @@ class GRPOScriptArguments(trl.ScriptArguments):
     dataset_prompt_column: str = field(
         default="prompt",
         metadata={"help": "Column to use as prompts for training."},
+    )
+
+    e2b_router_url: Optional[str] = field(
+        default=None,
+        metadata={"help": "URL for the E2B router. See scripts/e2b_router.py"},
+    )
+
+    morph_router_url: Optional[str] = field(
+        default=None,
+        metadata={"help": "URL for the MorphCloud router. See scripts/morph_router.py"},
+    )
+
+    code_provider: Optional[str] = field(
+        default="e2b",
+        metadata={
+            "help": "Provider for code execution. Options: 'e2b', 'local', 'morph'.",
+            "choices": ["e2b", "local", "morph"],
+        },
+    )
+
+    ioi_provider: Optional[str] = field(
+        default="piston",
+        metadata={
+            "help": "Provider for IOI code execution. Options: 'piston', 'morph'.",
+            "choices": ["piston", "morph"],
+        },
     )
 
     max_completion_len: int = field(

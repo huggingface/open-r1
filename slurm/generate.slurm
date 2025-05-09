@@ -6,7 +6,7 @@
 #SBATCH --exclusive
 #SBATCH --gpus-per-node=8
 #SBATCH --output=./logs/%x-%j.out
-#SBATCH --err=./logs/%x-%j.err
+#SBATCH --error=./logs/%x-%j.err
 #SBATCH --time=04-00:00:00
 
 # Parse command line arguments
