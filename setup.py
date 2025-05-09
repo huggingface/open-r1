@@ -58,6 +58,7 @@ _deps = [
     "liger-kernel>=0.5.6",
     "lighteval @ git+https://github.com/huggingface/lighteval.git@d50bc3072b8814656633400a1850c500c6aa2e39",
     "math-verify==0.5.2",  # Used for math verification in grpo
+    "morphcloud==0.1.67",
     "packaging>=23.0",
     "parameterized>=0.9.0",
     "peft>=0.14.0",
@@ -89,7 +90,7 @@ extras = {}
 extras["tests"] = deps_list("pytest", "parameterized", "math-verify", "jieba")
 extras["torch"] = deps_list("torch")
 extras["quality"] = deps_list("ruff", "isort", "flake8")
-extras["code"] = deps_list("e2b-code-interpreter", "python-dotenv", "jieba")
+extras["code"] = deps_list("e2b-code-interpreter", "python-dotenv", "morphcloud", "jieba")
 extras["eval"] = deps_list("lighteval", "math-verify")
 extras["dev"] = extras["quality"] + extras["tests"] + extras["eval"] + extras["code"]
 

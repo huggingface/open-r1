@@ -25,19 +25,14 @@ from typing import Callable, Dict, Optional
 from latex2sympy2_extended import NormalizationConfig
 from math_verify import LatexExtractionConfig, parse, verify
 
-from .utils import is_e2b_available
-from .utils.ioi import SubtaskResult, add_includes, get_piston_client_from_env, score_subtask
-
-
-if is_e2b_available():
-    from dotenv import load_dotenv
-    from e2b_code_interpreter import AsyncSandbox
-
-    from .utils.routed_sandbox import RoutedSandbox
-
-    load_dotenv()
-else:
-    AsyncSandbox = None
+from .utils.code_providers import get_provider
+from .utils.ioi import (
+    SubtaskResult,
+    add_includes,
+    get_morph_client_from_env,
+    get_piston_client_from_env,
+    score_subtask,
+)
 
 
 def accuracy_reward(completions: list[list[dict[str, str]]], solution: list[str], **kwargs) -> list[Optional[float]]:
@@ -233,7 +228,11 @@ def get_cosine_scaled_reward(
         rewards = []
 
         for content, sol in zip(contents, solution):
-            gold_parsed = parse(sol, extraction_mode="first_match", extraction_config=[LatexExtractionConfig()])
+            gold_parsed = parse(
+                sol,
+                extraction_mode="first_match",
+                extraction_config=[LatexExtractionConfig()],
+            )
             if len(gold_parsed) == 0:
                 rewards.append(1.0)  # Skip unparseable examples
                 print("Failed to parse gold solution: ", sol)
@@ -299,6 +298,7 @@ def get_repetition_penalty_reward(ngram_size: int, max_penalty: float, language:
         def zipngram(text: str, ngram_size: int):
             words = text.lower().split()
             return zip(*[words[i:] for i in range(ngram_size)]), words
+
     elif language == "zh":
         from transformers.utils.import_utils import _is_package_available
 
@@ -310,6 +310,7 @@ def get_repetition_penalty_reward(ngram_size: int, max_penalty: float, language:
 
             seg_list = list(jieba.cut(text))
             return zip(*[seg_list[i:] for i in range(ngram_size)]), seg_list
+
     else:
         raise ValueError(
             f"Word splitting for language `{language}` is not yet implemented. Please implement your own zip-ngram function."
@@ -352,6 +353,7 @@ def get_repetition_penalty_reward(ngram_size: int, max_penalty: float, language:
 
 
 def _init_event_loop():
+    """Initialize or get the current event loop."""
     try:
         loop = asyncio.get_event_loop()
     except RuntimeError:
@@ -360,15 +362,24 @@ def _init_event_loop():
     return loop
 
 
-def ioi_code_reward(completions, test_batch_size: int = 1, **kwargs) -> list[float]:
-    """Reward function that evaluates IOI problems using Piston+our IOI package.
+def ioi_code_reward(completions, test_batch_size: int = 1, provider_type: str = "piston", **kwargs) -> list[float]:
+    """Reward function that evaluates IOI problems using a specified execution client.
 
     Assumes the dataset has the same format as hf.co/datasets/open-r1/ioi
 
-    test_batch_size: evaluate these many test cases in parallel, then check if any of them failed (0 score): if so stop evaluating; otherwise continue with the next batch of test cases.
+    Args:
+        completions: List of model completions to evaluate
+        test_batch_size: Evaluate these many test cases in parallel, then check if any of them failed (0 score):
+                       if so stop evaluating; otherwise continue with the next batch of test cases.
+        provider_type: The execution provider to use (default: "piston"). Supported values: "piston", "morph"
+        **kwargs: Additional arguments passed from the dataset
     """
-    # for info on setting up piston workers, see slurm/piston/README.md
-    piston_client = get_piston_client_from_env()
+    # Get the appropriate client based on provider_type
+    if provider_type == "morph":
+        execution_client = get_morph_client_from_env()
+    else:
+        # for info on setting up piston workers, see slurm/piston/README.md
+        execution_client = get_piston_client_from_env()
 
     code_snippets = [
         # note: grading is automatically skipped if no code is extracted
@@ -380,16 +391,22 @@ def ioi_code_reward(completions, test_batch_size: int = 1, **kwargs) -> list[flo
         try:
             return await task
         except Exception as e:
-            print(f"Error from Piston worker: {e}")
-            return SubtaskResult()  # score 0.0
+            print(f"Error from {provider_type} worker: {e}")
+            return SubtaskResult()
 
-    # load problem data. undo separating kwargs by column
     problems_data = [dict(zip(kwargs.keys(), values)) for values in zip(*kwargs.values())]
 
     loop = _init_event_loop()
     evals = [
         loop.create_task(
-            run_catch_exceptions(score_subtask(piston_client, problem_data, code, test_batch_size=test_batch_size))
+            run_catch_exceptions(
+                score_subtask(
+                    execution_client,
+                    problem_data,
+                    code,
+                    test_batch_size=test_batch_size,
+                )
+            )
         )
         for problem_data, code in zip(problems_data, code_snippets)
     ]
@@ -405,8 +422,20 @@ def extract_code(completion: str, language: str = "python") -> str:
     return extracted_answer
 
 
-def binary_code_reward(completions, num_parallel: int = 2, e2b_router_url=None, **kwargs) -> list[float]:
-    rewards = code_reward(completions, num_parallel=num_parallel, e2b_router_url=e2b_router_url, **kwargs)
+def binary_code_reward(
+    completions,
+    num_parallel: int = 2,
+    provider_type: str = "e2b",
+    enforce_same_language: bool = False,
+    **kwargs,
+) -> list[float]:
+    rewards = code_reward(
+        completions,
+        num_parallel=num_parallel,
+        provider_type=provider_type,
+        enforce_same_language=enforce_same_language,
+        **kwargs,
+    )
     BINARY_THRESHOLD = 0.99
 
     output = []
@@ -419,19 +448,24 @@ def binary_code_reward(completions, num_parallel: int = 2, e2b_router_url=None, 
     return output
 
 
-def code_reward(completions, num_parallel: int = 2, e2b_router_url=None, **kwargs) -> list[float]:
-    """Reward function that evaluates code snippets using the E2B code interpreter.
+def code_reward(
+    completions,
+    num_parallel: int = 2,
+    provider_type: str = "e2b",
+    enforce_same_language: bool = False,
+    **kwargs,
+) -> list[float]:
+    """Reward function that evaluates code snippets using a code execution provider.
 
     Assumes the dataset contains a `verification_info` column with test cases.
-    """
-    if not is_e2b_available():
-        raise ImportError(
-            "E2B is not available and required for this reward function. Please install E2B with "
-            "`pip install e2b-code-interpreter` and add an API key to a `.env` file."
-        )
 
-    # TODO: add support for other languages in E2B: https://e2b.dev/docs/code-interpreting/supported-languages
-    """Returns a reward function that evaluates code snippets in a sandbox."""
+    Args:
+        completions: List of model completions to evaluate
+        num_parallel: Number of parallel code executions (default: 2)
+        provider_type: Which code execution provider to use (default: "e2b")
+        enforce_same_language: If True, verify all problems use the same language (default: False)
+        **kwargs: Additional arguments passed to the verification
+    """
     evaluation_script_template = """
     import subprocess
     import json
@@ -471,43 +505,31 @@ def code_reward(completions, num_parallel: int = 2, e2b_router_url=None, **kwarg
 
     evaluate_code(code_snippet, test_cases)
     """
+
     code_snippets = [extract_code(completion[-1]["content"]) for completion in completions]
     verification_info = kwargs["verification_info"]
+
+    template = evaluation_script_template
+
     scripts = [
-        evaluation_script_template.format(code=json.dumps(code), test_cases=json.dumps(json.dumps(info["test_cases"])))
+        template.format(code=json.dumps(code), test_cases=json.dumps(json.dumps(info["test_cases"])))
         for code, info in zip(code_snippets, verification_info)
     ]
 
     language = verification_info[0]["language"]
-    if not all(v["language"] == language for v in verification_info):
-        raise ValueError("All verification_info must have the same language", verification_info)
 
-    if e2b_router_url is not None:
-        routed_sandbox = RoutedSandbox(router_url=e2b_router_url)
+    if enforce_same_language:
+        all_same_language = all(v["language"] == language for v in verification_info)
+        if not all_same_language:
+            raise ValueError("All verification_info must have the same language", verification_info)
 
-        executions = routed_sandbox.run_code(
-            scripts=scripts,
-            language=language,
-            timeout=30,
-            request_timeout=28,
-        )
+    execution_provider = get_provider(
+        provider_type=provider_type,
+        num_parallel=num_parallel,
+        **kwargs,
+    )
 
-        rewards = []
-        for execution in executions:
-            try:
-                reward = float(execution.text)
-                rewards.append(reward)
-            except Exception:
-                rewards.append(None)
-        return rewards
-
-    try:
-        rewards = run_async_from_sync(scripts, language, num_parallel)
-    except Exception as e:
-        print(f"Error from E2B executor: {e}")
-        rewards = [0.0] * len(completions)
-
-    return rewards
+    return execution_provider.execute_scripts(scripts, ["python"] * len(scripts))
 
 
 def get_code_format_reward(language: str = "python"):
@@ -524,64 +546,6 @@ def get_code_format_reward(language: str = "python"):
         return [1.0 if match else 0.0 for match in matches]
 
     return code_format_reward
-
-
-def run_async_from_sync(scripts: list[str], language: str, num_parallel: int) -> list[float]:
-    """Function wrapping the `run_async` function."""
-    # Create a new event loop and set it
-    try:
-        # Run the async function and get the result
-        rewards = asyncio.run(run_async(scripts, language, num_parallel))
-    except Exception as e:
-        print(f"Error from E2B executor async: {e}")
-        raise e
-
-    return rewards
-
-
-async def run_async(scripts: list[str], language: str, num_parallel: int) -> list[float]:
-    # Limit the number of concurrent tasks
-    semaphore = asyncio.Semaphore(num_parallel)
-
-    # Create a list of tasks for running scripts concurrently
-    tasks = [run_script(script, language, semaphore) for script in scripts]
-
-    # Wait for all tasks to complete and gather their results as they finish
-    results = await asyncio.gather(*tasks)
-    rewards = list(results)  # collect results
-
-    return rewards
-
-
-async def run_script(script: str, language: str, semaphore: asyncio.Semaphore) -> float:
-    # We set a timeout margin, as the AsyncSandbox timeout does not seem to work
-    # These values are based on running 256 examples with the gold solution
-    # from open-r1/verifiable-coding-problems-python_decontaminated
-    # see scripts/benchmark_e2b.py
-
-    SANDBOX_TIMEOUT = 30
-    MARGIN = 2
-    REQUEST_TIMEOUT = SANDBOX_TIMEOUT - MARGIN
-    ASYNCIO_TIMEOUT = SANDBOX_TIMEOUT + MARGIN
-
-    async with semaphore:
-        try:
-            sandbox = await AsyncSandbox.create(timeout=SANDBOX_TIMEOUT, request_timeout=REQUEST_TIMEOUT)
-            execution = await asyncio.wait_for(sandbox.run_code(script, language=language), timeout=ASYNCIO_TIMEOUT)
-            return float(execution.text)
-        except (TypeError, ValueError):
-            return 0.0
-        except asyncio.TimeoutError:
-            print("Operation timed out")
-            return 0.0
-        except Exception as e:
-            print(f"Error in `run_script` from E2B sandbox ID {sandbox.sandbox_id} : {e}")
-            return 0.0
-        finally:
-            try:
-                await sandbox.kill()
-            except Exception as e:
-                print(f"Error from E2B executor kill with sandbox ID {sandbox.sandbox_id} : {e}")
 
 
 def get_reward_funcs(script_args) -> list[Callable]:
@@ -605,7 +569,8 @@ def get_reward_funcs(script_args) -> list[Callable]:
             partial(
                 code_reward,
                 num_parallel=script_args.parallel_code_exec_per_proc,
-                e2b_router_url=script_args.e2b_router_url,
+                provider_type=script_args.code_provider,
+                enforce_same_language=getattr(script_args, "enforce_same_language", False),
             ),
             code_reward,
         ),
@@ -613,12 +578,18 @@ def get_reward_funcs(script_args) -> list[Callable]:
             partial(
                 binary_code_reward,
                 num_parallel=script_args.parallel_code_exec_per_proc,
-                e2b_router_url=script_args.e2b_router_url,
+                provider_type=script_args.code_provider,
+                enforce_same_language=getattr(script_args, "enforce_same_language", False),
             ),
             binary_code_reward,
         ),
         "ioi_code": update_wrapper(
-            partial(ioi_code_reward, test_batch_size=script_args.code_eval_test_batch_size), ioi_code_reward
+            partial(
+                ioi_code_reward,
+                test_batch_size=script_args.code_eval_test_batch_size,
+                provider_type=getattr(script_args, "ioi_provider", "piston"),
+            ),
+            ioi_code_reward,
         ),
         "code_format": get_code_format_reward(language=script_args.code_language),
         "tag_count": tag_count_reward,

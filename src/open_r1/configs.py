@@ -27,10 +27,12 @@ class GRPOConfig(trl.GRPOConfig):
     """
 
     benchmarks: list[str] = field(
-        default_factory=lambda: [], metadata={"help": "The benchmarks to run after training."}
+        default_factory=lambda: [],
+        metadata={"help": "The benchmarks to run after training."},
     )
     callbacks: list[str] = field(
-        default_factory=lambda: [], metadata={"help": "The callbacks to run during training."}
+        default_factory=lambda: [],
+        metadata={"help": "The callbacks to run during training."},
     )
     chat_template: Optional[str] = field(default=None, metadata={"help": "The chat template to use."})
     system_prompt: Optional[str] = field(
@@ -63,10 +65,12 @@ class SFTConfig(trl.SFTConfig):
     """
 
     benchmarks: list[str] = field(
-        default_factory=lambda: [], metadata={"help": "The benchmarks to run after training."}
+        default_factory=lambda: [],
+        metadata={"help": "The benchmarks to run after training."},
     )
     callbacks: list[str] = field(
-        default_factory=lambda: [], metadata={"help": "The callbacks to run during training."}
+        default_factory=lambda: [],
+        metadata={"help": "The callbacks to run during training."},
     )
     chat_template: Optional[str] = field(default=None, metadata={"help": "The chat template to use."})
     system_prompt: Optional[str] = field(
@@ -176,5 +180,26 @@ class GRPOScriptArguments(trl.ScriptArguments):
 
     e2b_router_url: Optional[str] = field(
         default=None,
-        metadata={"help": "URL for the E2B route. See scripts/e2b_router.py"},
+        metadata={"help": "URL for the E2B router. See scripts/e2b_router.py"},
+    )
+
+    morph_router_url: Optional[str] = field(
+        default=None,
+        metadata={"help": "URL for the MorphCloud router. See scripts/morph_router.py"},
+    )
+
+    code_provider: Optional[str] = field(
+        default="e2b",
+        metadata={
+            "help": "Provider for code execution. Options: 'e2b', 'local', 'morph'.",
+            "choices": ["e2b", "local", "morph"],
+        },
+    )
+
+    ioi_provider: Optional[str] = field(
+        default="piston",
+        metadata={
+            "help": "Provider for IOI code execution. Options: 'piston', 'morph'.",
+            "choices": ["piston", "morph"],
+        },
     )
