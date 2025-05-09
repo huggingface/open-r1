@@ -171,10 +171,10 @@ class GRPOScriptArguments(trl.ScriptArguments):
     )
 
     max_completion_len: int = field(
-        default=73728,
+        default=16384,
         metadata={"help": "Maximum number of characters in completion."},
     )
     soft_punish_cache: int = field(
-        default=14746,
+        default=4096,
         metadata={"help": "Minimum number of characters in completion."},
     )
