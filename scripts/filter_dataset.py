@@ -147,8 +147,7 @@ def main(script_args, training_args, model_args):
             
         return examples
         
-    dataset["train"] = dataset["train"].select(range(0, 1024))
-    dataset = dataset.map(batch_score, batched=True, batch_size=128)
+    dataset = dataset.map(batch_score, batched=True, batch_size=256)
     
     
     if script_args.output_dataset_name is not None:
