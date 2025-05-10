@@ -591,6 +591,32 @@ def get_code_format_reward(language: str = "python"):
     return code_format_reward
 
 
+def get_soft_overlong_punishment(max_completion_len, soft_punish_cache):
+    """
+    Reward function that penalizes overlong completions. It is used to penalize overlong completions,
+    but not to reward shorter completions. Reference: Eq. (13) from the DAPO paper (https://huggingface.co/papers/2503.14476)
+
+    Args:
+        max_completion_len: Maximum length of the completion
+        soft_punish_cache: Minimum length of the completion. If set to 0, no minimum length is applied.
+    """
+
+    def soft_overlong_punishment_reward(completion_ids: list[list[int]], **kwargs) -> list[float]:
+        """Reward function that penalizes overlong completions."""
+        rewards = []
+        for ids in completion_ids:
+            completion_length = len(ids)
+            if completion_length <= max_completion_len - soft_punish_cache:
+                rewards.append(0.0)
+            elif max_completion_len - soft_punish_cache < completion_length <= max_completion_len:
+                rewards.append((max_completion_len - soft_punish_cache - completion_length) / soft_punish_cache)
+            else:
+                rewards.append(-1.0)
+        return rewards
+
+    return soft_overlong_punishment_reward
+
+
 def get_reward_funcs(script_args) -> list[Callable]:
     REWARD_FUNCS_REGISTRY = {
         "accuracy": accuracy_reward,
@@ -645,6 +671,10 @@ def get_reward_funcs(script_args) -> list[Callable]:
         ),
         "code_format": get_code_format_reward(language=script_args.code_language),
         "tag_count": tag_count_reward,
+        "soft_overlong_punishment": get_soft_overlong_punishment(
+            max_completion_len=script_args.max_completion_len,
+            soft_punish_cache=script_args.soft_punish_cache,
+        ),
     }
     reward_funcs = [REWARD_FUNCS_REGISTRY[func] for func in script_args.reward_funcs]
 

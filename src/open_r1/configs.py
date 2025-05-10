@@ -111,7 +111,7 @@ class GRPOScriptArguments(trl.ScriptArguments):
 
     Args:
         reward_funcs (`list[str]`):
-            List of reward functions. Possible values: 'accuracy', 'format', 'reasoning_steps', 'cosine', 'repetition_penalty', 'length', 'tag_count', 'code', 'ioi_code', 'code_format'.
+            List of reward functions. Possible values: 'accuracy', 'format', 'reasoning_steps', 'cosine', 'repetition_penalty', 'length', 'tag_count', 'code', 'ioi_code', 'code_format', 'soft_overlong_punishment'.
         cosine_min_value_wrong (`float`):
             Minimum reward for cosine scaling for wrong answers.
         cosine_max_value_wrong (`float`):
@@ -124,6 +124,10 @@ class GRPOScriptArguments(trl.ScriptArguments):
             Maximum length for cosine scaling.
         code_language (`str`):
             Language for code format reward.
+        max_completion_len (`int`):
+            Maximum number of tokens in completion.
+        soft_punish_cache (`int`):
+            Minimum number of tokens in completion.
     """
 
     reward_funcs: list[str] = field(
@@ -209,4 +213,13 @@ class GRPOScriptArguments(trl.ScriptArguments):
             "help": "Provider for IOI code execution. Options: 'piston', 'morph'.",
             "choices": ["piston", "morph"],
         },
+    )
+
+    max_completion_len: int = field(
+        default=16384,
+        metadata={"help": "Maximum number of characters in completion."},
+    )
+    soft_punish_cache: int = field(
+        default=4096,
+        metadata={"help": "Minimum number of characters in completion."},
     )
