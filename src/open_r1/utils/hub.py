@@ -76,7 +76,8 @@ def check_hub_revision_exists(training_args: SFTConfig | GRPOConfig):
             # If the revision exists, we next check it has a README file
             if training_args.hub_model_revision in revisions:
                 repo_files = list_repo_files(
-                    repo_id=training_args.hub_model_id, revision=training_args.hub_model_revision
+                    repo_id=training_args.hub_model_id,
+                    revision=training_args.hub_model_revision,
                 )
                 if "README.md" in repo_files and training_args.overwrite_hub_revision is False:
                     raise ValueError(

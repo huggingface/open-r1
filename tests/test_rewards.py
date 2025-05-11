@@ -15,6 +15,7 @@
 
 import unittest
 
+from dotenv import load_dotenv
 from open_r1.configs import GRPOScriptArguments
 from open_r1.rewards import (
     accuracy_reward,
@@ -23,10 +24,14 @@ from open_r1.rewards import (
     get_cosine_scaled_reward,
     get_repetition_penalty_reward,
     get_reward_funcs,
+    get_soft_overlong_punishment,
     len_reward,
     reasoning_steps_reward,
     tag_count_reward,
 )
+
+
+load_dotenv()
 
 
 class TestGetRewardFuncs(unittest.TestCase):
@@ -133,7 +138,10 @@ class TestRewards(unittest.TestCase):
 
     def test_multiple_completions(self):
         """Test handling multiple completions at once."""
-        completions = [[{"content": r"\boxed{\frac{63}{400}}"}], [{"content": r"\boxed{\frac{64}{400}}"}]]
+        completions = [
+            [{"content": r"\boxed{\frac{63}{400}}"}],
+            [{"content": r"\boxed{\frac{64}{400}}"}],
+        ]
         solutions = [r"\frac{63}{400}", r"\frac{63}{400}"]
 
         rewards = accuracy_reward(completions, solutions)
@@ -154,11 +162,31 @@ class TestRewards(unittest.TestCase):
 
         test_cases = [
             # Correct answers with different lengths
-            (r"\boxed{\frac{63}{400}}", r"\frac{63}{400}", 20, 0.943),  # Short correct answer
-            (r"\boxed{\frac{63}{400}}", r"\frac{63}{400}", 80, 0.547),  # Long correct answer
+            (
+                r"\boxed{\frac{63}{400}}",
+                r"\frac{63}{400}",
+                20,
+                0.943,
+            ),  # Short correct answer
+            (
+                r"\boxed{\frac{63}{400}}",
+                r"\frac{63}{400}",
+                80,
+                0.547,
+            ),  # Long correct answer
             # Wrong answers with different lengths
-            (r"\boxed{\frac{64}{400}}", r"\frac{63}{400}", 20, -0.942),  # Short wrong answer
-            (r"\boxed{\frac{64}{400}}", r"\frac{63}{400}", 80, -0.547),  # Long wrong answer
+            (
+                r"\boxed{\frac{64}{400}}",
+                r"\frac{63}{400}",
+                20,
+                -0.942,
+            ),  # Short wrong answer
+            (
+                r"\boxed{\frac{64}{400}}",
+                r"\frac{63}{400}",
+                80,
+                -0.547,
+            ),  # Long wrong answer
         ]
 
         for content, solution, content_len, expected_reward in test_cases:
@@ -178,7 +206,10 @@ class TestRewards(unittest.TestCase):
 
     def test_same_length_responses(self):
         """Test len_reward when all responses have the same length."""
-        completions = [[{"content": r"\boxed{\frac{63}{400}}"}], [{"content": r"\boxed{\frac{64}{400}}"}]]
+        completions = [
+            [{"content": r"\boxed{\frac{63}{400}}"}],
+            [{"content": r"\boxed{\frac{64}{400}}"}],
+        ]
         solutions = [r"\frac{63}{400}", r"\frac{63}{400}"]
 
         rewards = len_reward(completions, solutions)
@@ -238,7 +269,10 @@ class TestRewards(unittest.TestCase):
 
     def test_unparseable_solution(self):
         """Test len_reward with unparseable solution."""
-        completions = [[{"content": r"\boxed{answer}"}], [{"content": r"\boxed{answer} " + "x" * 10}]]
+        completions = [
+            [{"content": r"\boxed{answer}"}],
+            [{"content": r"\boxed{answer} " + "x" * 10}],
+        ]
         solutions = ["unparseable_latex", "unparseable_latex"]
 
         rewards = len_reward(completions, solutions)
@@ -419,14 +453,33 @@ class TestRepetitionPenaltyReward(unittest.TestCase):
         rewards = reward_fn(completions)
         self.assertEqual(rewards, [-0.75])
         # begin test for zh language
-        try:
-            import jieba
-        except:
-            self.skipTest("jieba is not installed")
         reward_fn = get_repetition_penalty_reward(ngram_size=2, max_penalty=-1.0, language="zh")
         completions = [[{"content": "这个这个这个这个这个"}]]
         rewards = reward_fn(completions)
         self.assertEqual(rewards, [-0.75])
+
+    def test_soft_overlong_punishment_short_completion(self):
+        """Test soft overlong punishment reward function with a short completion."""
+        # length 50, with max=100 and soft cache=20, reward should be 0.
+        reward_fn = get_soft_overlong_punishment(max_completion_len=100, soft_punish_cache=20)
+        completion_ids = [[1] * 50]  # 50 <= 80
+        rewards = reward_fn(completion_ids=completion_ids)
+        self.assertEqual(rewards, [0])
+
+    def test_soft_overlong_punishment_long_completion(self):
+        """Test soft overlong punishment reward function with a longer than max completion."""
+        # 110 > 100, reward should be -1.
+        reward_fn = get_soft_overlong_punishment(max_completion_len=100, soft_punish_cache=20)
+        completion_ids = [[1] * 110]
+        rewards = reward_fn(completion_ids)
+        self.assertEqual(rewards, [-1])
+
+    def test_soft_overlong_punishment_intermediate_completion(self):
+        """Test soft overlong punishment reward function for intermediate length completion."""
+        reward_fn = get_soft_overlong_punishment(max_completion_len=100, soft_punish_cache=20)
+        completion_ids = [[1] * 90]  # 90 is between 80 and 100
+        rewards = reward_fn(completion_ids)
+        self.assertAlmostEqual(rewards[0], -0.5, places=4)
 
 
 class TestCodeFormat(unittest.TestCase):

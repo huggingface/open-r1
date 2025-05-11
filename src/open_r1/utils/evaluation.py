@@ -25,7 +25,11 @@ VLLM_SLURM_PREFIX = [
 
 
 def register_lighteval_task(
-    configs: Dict[str, str], eval_suite: str, task_name: str, task_list: str, num_fewshot: int = 0
+    configs: Dict[str, str],
+    eval_suite: str,
+    task_name: str,
+    task_list: str,
+    num_fewshot: int = 0,
 ):
     """Registers a LightEval task configuration.
 
@@ -63,7 +67,9 @@ SUPPORTED_BENCHMARKS = get_lighteval_tasks()
 
 
 def run_lighteval_job(
-    benchmark: str, training_args: Union["SFTConfig", "GRPOConfig"], model_args: "ModelConfig"
+    benchmark: str,
+    training_args: Union["SFTConfig", "GRPOConfig"],
+    model_args: "ModelConfig",
 ) -> None:
     task_list = LIGHTEVAL_TASKS[benchmark]
     model_name = training_args.hub_model_id
