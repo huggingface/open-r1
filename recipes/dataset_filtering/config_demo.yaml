@@ -13,8 +13,9 @@ system_prompt: "You are a helpful AI Assistant that provides well-reasoned and d
 
 # Generation arguments
 max_completion_length: 2048
-num_generations: 4
+num_generations: 8
 temperature: 0.7
+top_p: 0.95
 
 # Reward func arguments
 reward_funcs:
@@ -22,6 +23,6 @@ reward_funcs:
 reward_weights:
 - 1.0
 
-# Filtering arguments. Samples with mean reward outside of low / high will be filtered
-low_reward_threshold: 0.2
-high_reward_threshold: 0.8
+# Filtering arguments. Samples with a pass rate outside the interval `pass_rate_min < x < pass_rate_max` will be filtered.  
+pass_rate_min: 0.2
+pass_rate_max: 0.8

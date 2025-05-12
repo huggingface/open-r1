@@ -1,0 +1,25 @@
+# Model arguments
+model_name_or_path: open-r1/R1-Distill-Qwen-Math-7B-Merges
+model_revision: v00.00-step-000003660_v01.00-step-000002600_weights-0.50-0.50
+torch_dtype: bfloat16
+attn_implementation: flash_attention_2
+
+# Data training arguments
+# We edit the DeepSeek chat template to ensure (a) the reasoning block within <think> and </think> is included in the completion and (b) the <think> tag is not part of the prefill so that the format reward works
+dataset_name: open-r1/DAPO-Math-17k-Processed
+dataset_config: all
+
+# Generation arguments
+max_completion_length: 16000
+num_generations: 8
+temperature: 0.7
+
+# Reward func arguments
+reward_funcs:
+- accuracy
+reward_weights:
+- 1.0
+
+# Filtering arguments. Samples with mean reward outside of low / high will be filtered
+pass_rate_min: 0.1
+pass_rate_max: 0.6
