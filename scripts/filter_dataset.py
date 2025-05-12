@@ -39,8 +39,8 @@ logger = logging.getLogger(__name__)
 class FilterScriptArguments(GRPOScriptArguments):
     # we can be lazy and just use the same script args as GRPO
     output_dataset_name: Optional[str] = None
-    low_reward_threshold: float = 0.1
-    high_reward_threshold: float = 0.9
+    pass_rate_min: float = 0.1
+    pass_rate_max: float = 0.9
 
 
 def main(script_args, training_args, model_args):
@@ -101,6 +101,8 @@ def main(script_args, training_args, model_args):
 
     sampling_params=SamplingParams(
         temperature=training_args.temperature,
+        top_p=training_args.top_p,
+        top_k=training_args.top_k,
         n=training_args.num_generations,
         max_tokens=training_args.max_completion_length,
     )
@@ -142,34 +144,42 @@ def main(script_args, training_args, model_args):
             
         reshaped_rewards = rewards_per_func.view(-1, training_args.num_generations)
         
-        examples["filter_generations"] = grouped_completions
-        examples["filter_rewards"] = reshaped_rewards.tolist()
+        examples["pass_rate_generations"] = grouped_completions
+        examples["pass_rate_rewards"] = reshaped_rewards.tolist()
+
             
         return examples
-        
+    
+    dataset["train"] = dataset["train"].select(range(0, 512))
+    
     dataset = dataset.map(batch_score, batched=True, batch_size=256)
     
     
     if script_args.output_dataset_name is not None:
-        unfiltered_dataset_name = script_args.output_dataset_name
+        output_dataset_name = script_args.output_dataset_name
     else:
-        unfiltered_dataset_name = f"{script_args.dataset_name}-generated"
-    filtered_dataset_name = f"{unfiltered_dataset_name}-filtered"
+        model_name = model_args.model_name_or_path
+        if "/" in model_name:
+            model_name = model_name.split("/")[-1]
+        model_revision = model_args.model_revision
+        
+        output_dataset_name = f"{script_args.dataset_name}-{model_name}-{model_revision}-gen"
+    filtered_config_name = f"{output_dataset_name}-filt-{script_args.pass_rate_min}-{script_args.pass_rate_max}"
     
-    dataset.push_to_hub(unfiltered_dataset_name)
+    dataset.push_to_hub(output_dataset_name)
     
     def filter_func(example):
         rewards = example["filter_rewards"]
         # get the mean of the rewards that are not None
         mean_reward = torch.nanmean(torch.tensor(rewards, dtype=torch.float32))
         
-        return script_args.low_reward_threshold < mean_reward < script_args.high_reward_threshold
+        return script_args.pass_rate_min < mean_reward < script_args.pass_rate_max
     
-    logger.info(f"Filtering dataset with low reward threshold {script_args.low_reward_threshold} and high reward threshold {script_args.high_reward_threshold}")
+    logger.info(f"Filtering dataset with low reward threshold {script_args.pass_rate_min} and high reward threshold {script_args.pass_rate_max}")
     logger.info(f"Dataset size before filtering: {dataset}")
     dataset = dataset.filter(filter_func)
     logger.info(f"Dataset size after filtering: {dataset}")
-    dataset.push_to_hub(filtered_dataset_name)
+    dataset.push_to_hub(output_dataset_name, config=filtered_config_name)
     
     
 
