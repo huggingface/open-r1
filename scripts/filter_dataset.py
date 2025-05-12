@@ -150,10 +150,9 @@ def main(script_args, training_args, model_args):
             
         return examples
     
-    dataset["train"] = dataset["train"].select(range(0, 512))
+    # dataset["train"] = dataset["train"].select(range(0, 64))
     
     dataset = dataset.map(batch_score, batched=True, batch_size=256)
-    
     
     if script_args.output_dataset_name is not None:
         output_dataset_name = script_args.output_dataset_name
@@ -166,10 +165,10 @@ def main(script_args, training_args, model_args):
         output_dataset_name = f"{script_args.dataset_name}-{model_name}-{model_revision}-gen"
     filtered_config_name = f"{output_dataset_name}-filt-{script_args.pass_rate_min}-{script_args.pass_rate_max}"
     
-    dataset.push_to_hub(output_dataset_name)
+    dataset.push_to_hub(output_dataset_name, config_name="default")
     
     def filter_func(example):
-        rewards = example["filter_rewards"]
+        rewards = example["pass_rate_rewards"]
         # get the mean of the rewards that are not None
         mean_reward = torch.nanmean(torch.tensor(rewards, dtype=torch.float32))
         
@@ -179,7 +178,7 @@ def main(script_args, training_args, model_args):
     logger.info(f"Dataset size before filtering: {dataset}")
     dataset = dataset.filter(filter_func)
     logger.info(f"Dataset size after filtering: {dataset}")
-    dataset.push_to_hub(output_dataset_name, config=filtered_config_name)
+    dataset.push_to_hub(output_dataset_name, config_name=filtered_config_name)
     
     
 
