@@ -41,6 +41,9 @@ class FilterScriptArguments(GRPOScriptArguments):
     output_dataset_name: Optional[str] = None
     pass_rate_min: float = 0.1
     pass_rate_max: float = 0.9
+    dataset_start_index: Optional[int] = None
+    dataset_end_index: Optional[int] = None
+    dataset_split: str = "train"
 
 
 def main(script_args, training_args, model_args):
@@ -67,8 +70,9 @@ def main(script_args, training_args, model_args):
     logger.info(f"Training parameters {training_args}")
 
     # Load the dataset
-    dataset = load_dataset(script_args.dataset_name, name=script_args.dataset_config)
-
+    dataset = load_dataset(script_args.dataset_name, name=script_args.dataset_config, split=script_args.dataset_split)
+    if script_args.dataset_start_index is not None and script_args.dataset_end_index is not None:
+        dataset = dataset.select(range(script_args.dataset_start_index, script_args.dataset_end_index))
 
     # Get reward functions from the registry
     reward_funcs = get_reward_funcs(script_args)
@@ -88,9 +92,9 @@ def main(script_args, training_args, model_args):
 
     dataset = dataset.map(make_conversation)
     tokenizer = get_tokenizer(model_args, training_args)
-    for split in dataset:
-        if "messages" in dataset[split].column_names:
-            dataset[split] = dataset[split].remove_columns("messages")
+    
+    if "messages" in dataset.column_names:
+        dataset = dataset.remove_columns("messages")
     
     dataset = dataset.map(apply_chat_template, fn_kwargs={"tokenizer": tokenizer})
     llm = LLM(
@@ -150,9 +154,7 @@ def main(script_args, training_args, model_args):
             
         return examples
     
-    # dataset["train"] = dataset["train"].select(range(0, 64))
-    
-    dataset = dataset.map(batch_score, batched=True, batch_size=256)
+    dataset = dataset.map(batch_score, batched=True, batch_size=64)
     
     if script_args.output_dataset_name is not None:
         output_dataset_name = script_args.output_dataset_name
@@ -161,11 +163,17 @@ def main(script_args, training_args, model_args):
         if "/" in model_name:
             model_name = model_name.split("/")[-1]
         model_revision = model_args.model_revision
-        
-        output_dataset_name = f"{script_args.dataset_name}-{model_name}-{model_revision}-gen"
-    filtered_config_name = f"{output_dataset_name}-filt-{script_args.pass_rate_min}-{script_args.pass_rate_max}"
     
-    dataset.push_to_hub(output_dataset_name, config_name="default")
+        output_dataset_name = f"{script_args.dataset_name}-{model_name}-{model_revision}-gen"
+    
+    config_name="default"
+    filtered_config_name = f"filt-{script_args.pass_rate_min}-{script_args.pass_rate_max}"
+    
+    if script_args.dataset_start_index is not None and script_args.dataset_end_index is not None:
+        config_name = f"{output_dataset_name}-{script_args.dataset_start_index}-{script_args.dataset_end_index}"
+        filtered_config_name = f"{filtered_config_name}-{script_args.dataset_start_index}-{script_args.dataset_end_index}"
+        
+    dataset.push_to_hub(output_dataset_name, config_name=config_name)
     
     def filter_func(example):
         rewards = example["pass_rate_rewards"]
