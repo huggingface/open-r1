@@ -71,6 +71,9 @@ _deps = [
     "transformers @ git+https://github.com/huggingface/transformers.git@acdbe627e323dbc822f21499fead789b439cf45b",  # Fix DeepSpeed x vLLM conflict: https://github.com/huggingface/transformers/pull/37755
     "trl[vllm] @ git+https://github.com/huggingface/trl.git@1bca49515ecd5b85d16e68c42c76670e252e19f1",  # Fix DeepSpeed x vLLM conflict: https://github.com/huggingface/trl/pull/3351
     "wandb>=0.19.1",
+    "smolagents==1.12.0",
+    "ipykernel",
+    "ipywidgets",
 ]
 
 # this is a lookup table with items like:
@@ -93,6 +96,8 @@ extras["quality"] = deps_list("ruff", "isort", "flake8")
 extras["code"] = deps_list("e2b-code-interpreter", "python-dotenv", "morphcloud", "jieba")
 extras["eval"] = deps_list("lighteval", "math-verify")
 extras["dev"] = extras["quality"] + extras["tests"] + extras["eval"] + extras["code"]
+extras["smolagents"] = deps_list("smolagents")
+extras["jupyter"] = deps_list("ipykernel", "ipywidgets")
 
 # core dependencies shared across the whole project - keep this to a bare minimum :)
 install_requires = [
