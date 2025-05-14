@@ -36,7 +36,7 @@ from vllm import LLM, SamplingParams
 logger = logging.getLogger(__name__)
 
 @dataclass
-class FilterScriptArguments(GRPOScriptArguments):
+class PassRateScriptArguments(GRPOScriptArguments):
     # we can be lazy and just use the same script args as GRPO
     output_dataset_name: Optional[str] = None
     pass_rate_min: float = 0.1
@@ -170,10 +170,10 @@ def main(script_args, training_args, model_args):
     filtered_config_name = f"filt-{script_args.pass_rate_min}-{script_args.pass_rate_max}"
     
     if script_args.dataset_start_index is not None and script_args.dataset_end_index is not None:
-        config_name = f"{output_dataset_name}-{script_args.dataset_start_index}-{script_args.dataset_end_index}"
+        config_name = f"gen-{script_args.dataset_start_index}-{script_args.dataset_end_index}"
         filtered_config_name = f"{filtered_config_name}-{script_args.dataset_start_index}-{script_args.dataset_end_index}"
         
-    dataset.push_to_hub(output_dataset_name, config_name=config_name)
+    dataset.push_to_hub(output_dataset_name, config_name=config_name, revision="gen")
     
     def filter_func(example):
         rewards = example["pass_rate_rewards"]
@@ -186,11 +186,11 @@ def main(script_args, training_args, model_args):
     logger.info(f"Dataset size before filtering: {dataset}")
     dataset = dataset.filter(filter_func)
     logger.info(f"Dataset size after filtering: {dataset}")
-    dataset.push_to_hub(output_dataset_name, config_name=filtered_config_name)
+    dataset.push_to_hub(output_dataset_name, config_name=filtered_config_name, revision="pass_rate")
     
     
 
 if __name__ == "__main__":
-    parser = TrlParser((FilterScriptArguments, GRPOConfig, ModelConfig))
+    parser = TrlParser((PassRateScriptArguments, GRPOConfig, ModelConfig))
     script_args, training_args, model_args = parser.parse_args_and_config()
     main(script_args, training_args, model_args)
