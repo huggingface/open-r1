@@ -53,7 +53,7 @@ def build_distilabel_pipeline(
                 generation_kwargs=generation_kwargs,
             ),
             template=prompt_template,
-            input_mappings={"instruction": prompt_column} if prompt_column is not None else {},
+            input_mappings=({"instruction": prompt_column} if prompt_column is not None else {}),
             input_batch_size=input_batch_size,
             num_generations=num_generations,
             group_generations=True,

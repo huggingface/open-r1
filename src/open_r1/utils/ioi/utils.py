@@ -31,7 +31,10 @@ def load_ioi_tests_for_year(year: int) -> dict[str, dict[str, tuple[str, str]]]:
     tests_dataset = load_dataset("open-r1/ioi-test-cases", name=f"{year}", split="train")
     test_cases = defaultdict(dict)
     for test_case in tests_dataset:
-        test_cases[test_case["problem_id"]][test_case["test_name"]] = test_case["test_input"], test_case["test_output"]
+        test_cases[test_case["problem_id"]][test_case["test_name"]] = (
+            test_case["test_input"],
+            test_case["test_output"],
+        )
     return test_cases
 
 
