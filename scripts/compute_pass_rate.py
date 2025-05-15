@@ -79,6 +79,8 @@ def main(script_args, training_args, model_args):
 
     # Format into conversation
     def make_conversation(example, prompt_column: str = script_args.dataset_prompt_column):
+        example["prompt_backup"] = example[prompt_column]
+        
         prompt = []
 
         if training_args.system_prompt is not None:
@@ -155,6 +157,14 @@ def main(script_args, training_args, model_args):
         return examples
     
     dataset = dataset.map(batch_score, batched=True, batch_size=64)
+    
+    # we need to restore the prompt for the final dataset
+    def restore_prompt(example):
+        example["prompt"] = example["prompt_backup"]
+        return example
+    
+    dataset = dataset.map(restore_prompt)
+    dataset = dataset.remove_columns("prompt_backup")
     
     if script_args.output_dataset_name is not None:
         output_dataset_name = script_args.output_dataset_name

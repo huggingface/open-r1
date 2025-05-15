@@ -8,6 +8,7 @@
 #SBATCH --output=./logs/%x-%j.out
 #SBATCH --error=./logs/%x-%j.err
 #SBATCH --time=01-00:00:00
+#SBATCH --requeue
 
 # example usage: sbatch slurm/dataset_filter.slurm recipes/dataset_filtering/filter_dapo.yaml 0 500
 
