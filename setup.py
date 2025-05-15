@@ -56,7 +56,7 @@ _deps = [
     "langdetect",  # Needed for LightEval's extended tasks
     "latex2sympy2_extended>=1.0.6",
     "liger-kernel>=0.5.6",
-    "lighteval @ git+https://github.com/huggingface/lighteval.git@d50bc3072b8814656633400a1850c500c6aa2e39",
+    "lighteval @ git+https://github.com/huggingface/lighteval.git@d3da6b9bbf38104c8b5e1acc86f83541f9a502d1",  # Critical bug fix for tokenizer revisions: https://github.com/huggingface/lighteval/pull/721
     "math-verify==0.5.2",  # Used for math verification in grpo
     "morphcloud==0.1.67",
     "packaging>=23.0",
