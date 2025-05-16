@@ -27,7 +27,7 @@ def get_dataset(
         return datasets.load_dataset(args.dataset_name, args.dataset_config_name)
     elif args.dataset_mixture:
         logger.info(f"Creating dataset mixture with {len(args.dataset_mixture.datasets)} datasets")
-
+        seed = args.dataset_mixture.seed
         datasets_list = []
 
         for dataset_config in args.dataset_mixture.datasets:
@@ -40,7 +40,7 @@ def get_dataset(
             if dataset_config.columns is not None:
                 ds = ds.select_columns(dataset_config.columns)
             if dataset_config.weight is not None:
-                ds = ds.shuffle(seed=42).select(range(int(len(ds) * dataset_config.weight)))
+                ds = ds.shuffle(seed=seed).select(range(int(len(ds) * dataset_config.weight)))
                 logger.info(
                     f"Subsampled dataset '{dataset_config.id}' (config: {dataset_config.config}) with weight={dataset_config.weight} to {len(ds)} examples"
                 )
@@ -49,12 +49,19 @@ def get_dataset(
 
         if datasets_list:
             combined_dataset = concatenate_datasets(datasets_list)
-            if args.dataset_mixture.shuffle:
-                combined_dataset = combined_dataset.shuffle(seed=42)
+            combined_dataset = combined_dataset.shuffle(seed=seed)
             logger.info(f"Created dataset mixture with {len(combined_dataset)} examples")
 
-            # Return as a DatasetDict with a 'train' split
-            return DatasetDict({"train": combined_dataset})
+            if args.dataset_mixture.test_split_size is not None:
+                combined_dataset = combined_dataset.train_test_split(
+                    test_size=args.dataset_mixture.test_split_size, seed=seed
+                )
+                logger.info(
+                    f"Split dataset into train and test sets with test size: {args.dataset_mixture.test_split_size}"
+                )
+                return combined_dataset
+            else:
+                return DatasetDict({"train": combined_dataset})
         else:
             raise ValueError("No datasets were loaded from the mixture configuration")
 

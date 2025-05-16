@@ -35,7 +35,8 @@ class DatasetMixtureConfig:
     """Configuration for a mixture of datasets."""
 
     datasets: List[DatasetConfig]  # Change from Dict to List
-    shuffle: bool = False
+    seed: int = 0
+    test_split_size: Optional[float] = None
 
 
 @dataclass
@@ -57,7 +58,8 @@ class ScriptArguments(trl.ScriptArguments):
                     config: config_name
                     columns: [col1, col2]
                     weight: 0.5
-                shuffle: true
+                seed: 42
+                test_split_size: 0.1
     """
 
     # Override the dataset_name to make it optional
@@ -70,25 +72,19 @@ class ScriptArguments(trl.ScriptArguments):
     )
 
     def __post_init__(self):
-        """
-        Validate the configuration after initialization.
-        """
         if self.dataset_name is None and self.dataset_mixture is None:
             raise ValueError("Either `dataset_name` or `dataset_mixture` must be provided")
 
         if self.dataset_mixture is not None:
-            # Verify the expected structure
             if not isinstance(self.dataset_mixture, dict) or "datasets" not in self.dataset_mixture:
                 raise ValueError(
                     "dataset_mixture must be a dictionary with a 'datasets' key. "
-                    "Expected format: {'datasets': [...], 'shuffle': bool}"
+                    "Expected format: {'datasets': [...], 'seed': int}"
                 )
 
-            # Process the datasets list
             datasets_list = []
             datasets_data = self.dataset_mixture.get("datasets", [])
 
-            # Handle list format for datasets
             if isinstance(datasets_data, list):
                 for dataset_config in datasets_data:
                     datasets_list.append(
@@ -103,9 +99,10 @@ class ScriptArguments(trl.ScriptArguments):
             else:
                 raise ValueError("'datasets' must be a list of dataset configurations")
 
-            # Create a DatasetMixtureConfig with the processed datasets and other options
             self.dataset_mixture = DatasetMixtureConfig(
-                datasets=datasets_list, shuffle=self.dataset_mixture.get("shuffle", False)
+                datasets=datasets_list,
+                seed=self.dataset_mixture.get("seed", 0),
+                test_split_size=self.dataset_mixture.get("test_split_size", None),
             )
 
 
