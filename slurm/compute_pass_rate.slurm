@@ -17,4 +17,4 @@ set -x -e
 source ~/.bashrc
 source openr1/bin/activate
 
-python scripts/compute_pass_rate.py --config $1 --dataset_start_index $2 --dataset_end_index $3
+python scripts/pass_rate_filtering/compute_pass_rate.py --config $1 --dataset_start_index $2 --dataset_end_index $3
