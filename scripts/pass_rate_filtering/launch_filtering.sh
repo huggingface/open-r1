@@ -1,6 +1,6 @@
 
 
-# a bash foor loop from 0 to 17,400 in chunks of 500
+# a bash foor loop from 0 to 17,400 in chunks of 200
 
 for i in {0..17000..200}
 do
