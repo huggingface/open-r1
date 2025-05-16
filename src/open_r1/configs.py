@@ -14,42 +14,29 @@
 # limitations under the License.
 
 from dataclasses import dataclass, field
-from typing import Optional, Dict, Any, List
+from typing import Any, Dict, List, Optional
 
 import trl
 
+
 @dataclass
 class DatasetConfig:
-    """
-    Configuration for a single dataset in a mixture.
-    
-    Args:
-        config (`str` or `None`, *optional*, defaults to `None`):
-            Dataset configuration name.
-        split (`str`, *optional*, defaults to `"train"`):
-            Dataset split to use.
-        columns (`List[str]`, *optional*, defaults to `None`):
-            List of columns to use from the dataset.
-        weight (`float`, *optional*, defaults to `1.0`):
-            Weight of this dataset in the mixture.
-    """
-    
-    config: Optional[str] = field(
-        default=None,
-        metadata={"help": "Dataset configuration name."}
-    )
-    split: str = field(
-        default="train",
-        metadata={"help": "Dataset split to use."}
-    )
-    columns: Optional[List[str]] = field(
-        default=None,
-        metadata={"help": "List of columns to use from the dataset."}
-    )
-    weight: float = field(
-        default=1.0,
-        metadata={"help": "Weight of this dataset in the mixture."}
-    )
+    """Configuration for a dataset in a mixture."""
+
+    id: str  # Dataset identifier
+    config: Optional[str] = None
+    split: str = "train"
+    columns: Optional[List[str]] = None
+    weight: Optional[float] = None
+
+
+@dataclass
+class DatasetMixtureConfig:
+    """Configuration for a mixture of datasets."""
+
+    datasets: List[DatasetConfig]  # Change from Dict to List
+    shuffle: bool = False
+
 
 @dataclass
 class ScriptArguments(trl.ScriptArguments):
@@ -57,39 +44,69 @@ class ScriptArguments(trl.ScriptArguments):
     Extended version of ScriptArguments with support for dataset mixtures.
 
     Args:
-        dataset_mixture (`Dict[str, DatasetConfig]` or `None`, *optional*, defaults to `None`):
-            Dictionary mapping dataset names to their configurations for creating dataset mixtures.
+        dataset_mixture (`Dict[str, Any]` or `None`, *optional*, defaults to `None`):
+            Configuration for creating dataset mixtures with advanced options.
+            Format:
+              dataset_mixture:
+                datasets:
+                  - id: dataset_id1
+                    config: config_name
+                    columns: [col1, col2]
+                    weight: 0.5
+                  - id: dataset_id2
+                    config: config_name
+                    columns: [col1, col2]
+                    weight: 0.5
+                shuffle: true
     """
 
     # Override the dataset_name to make it optional
     dataset_name: Optional[str] = field(
-        default=None,
-        metadata={"help": "Dataset name. Can be omitted if using dataset_mixture."}
+        default=None, metadata={"help": "Dataset name. Can be omitted if using dataset_mixture."}
     )
-    dataset_mixture: Optional[Dict[str, Dict[str, Any]]] = field(
+    dataset_mixture: Optional[Dict[str, Any]] = field(
         default=None,
-        metadata={
-            "help": "Dictionary mapping dataset names to their configurations for creating mixed datasets."
-        },
+        metadata={"help": "Configuration for creating dataset mixtures with advanced options like shuffling."},
     )
-    
+
     def __post_init__(self):
         """
         Validate the configuration after initialization.
         """
         if self.dataset_name is None and self.dataset_mixture is None:
             raise ValueError("Either `dataset_name` or `dataset_mixture` must be provided")
-        
+
         if self.dataset_mixture is not None:
-            formatted_mixture = {}
-            for dataset_name, config_dict in self.dataset_mixture.items():
-                formatted_mixture[dataset_name] = DatasetConfig(
-                    config=config_dict.get("config"),
-                    split=config_dict.get("split", "train"),
-                    columns=config_dict.get("columns"),
-                    weight=config_dict.get("weight", 1.0)
+            # Verify the expected structure
+            if not isinstance(self.dataset_mixture, dict) or "datasets" not in self.dataset_mixture:
+                raise ValueError(
+                    "dataset_mixture must be a dictionary with a 'datasets' key. "
+                    "Expected format: {'datasets': [...], 'shuffle': bool}"
                 )
-            self.dataset_mixture = formatted_mixture
+
+            # Process the datasets list
+            datasets_list = []
+            datasets_data = self.dataset_mixture.get("datasets", [])
+
+            # Handle list format for datasets
+            if isinstance(datasets_data, list):
+                for dataset_config in datasets_data:
+                    datasets_list.append(
+                        DatasetConfig(
+                            id=dataset_config.get("id"),
+                            config=dataset_config.get("config"),
+                            split=dataset_config.get("split", "train"),
+                            columns=dataset_config.get("columns"),
+                            weight=dataset_config.get("weight", 1.0),
+                        )
+                    )
+            else:
+                raise ValueError("'datasets' must be a list of dataset configurations")
+
+            # Create a DatasetMixtureConfig with the processed datasets and other options
+            self.dataset_mixture = DatasetMixtureConfig(
+                datasets=datasets_list, shuffle=self.dataset_mixture.get("shuffle", False)
+            )
 
 
 # TODO: add the shared options with a mixin to reduce code duplication
@@ -159,10 +176,6 @@ class SFTConfig(trl.SFTConfig):
     wandb_entity: Optional[str] = field(
         default=None,
         metadata={"help": ("The entity to store runs under.")},
-    )
-    wandb_project: Optional[str] = field(
-        default=None,
-        metadata={"help": ("The project to store runs under.")},
     )
     wandb_run_group: Optional[str] = field(
         default=None,
