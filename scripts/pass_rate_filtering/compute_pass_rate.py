@@ -15,7 +15,6 @@
 # example usage python scripts/filter_dataset.py --config recipes/dataset_filtering/config_demo.yaml
 
 import logging
-import os
 from dataclasses import dataclass
 from git import Optional
 import torch
@@ -28,7 +27,7 @@ from transformers import set_seed
 
 from open_r1.configs import GRPOConfig, GRPOScriptArguments
 from open_r1.rewards import get_reward_funcs
-from open_r1.utils import get_model, get_tokenizer
+from open_r1.utils import get_tokenizer
 from trl import ModelConfig, TrlParser
 from trl.data_utils import apply_chat_template
 from vllm import LLM, SamplingParams
