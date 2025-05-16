@@ -14,9 +14,82 @@
 # limitations under the License.
 
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Optional, Dict, Any, List
 
 import trl
+
+@dataclass
+class DatasetConfig:
+    """
+    Configuration for a single dataset in a mixture.
+    
+    Args:
+        config (`str` or `None`, *optional*, defaults to `None`):
+            Dataset configuration name.
+        split (`str`, *optional*, defaults to `"train"`):
+            Dataset split to use.
+        columns (`List[str]`, *optional*, defaults to `None`):
+            List of columns to use from the dataset.
+        weight (`float`, *optional*, defaults to `1.0`):
+            Weight of this dataset in the mixture.
+    """
+    
+    config: Optional[str] = field(
+        default=None,
+        metadata={"help": "Dataset configuration name."}
+    )
+    split: str = field(
+        default="train",
+        metadata={"help": "Dataset split to use."}
+    )
+    columns: Optional[List[str]] = field(
+        default=None,
+        metadata={"help": "List of columns to use from the dataset."}
+    )
+    weight: float = field(
+        default=1.0,
+        metadata={"help": "Weight of this dataset in the mixture."}
+    )
+
+@dataclass
+class ScriptArguments(trl.ScriptArguments):
+    """
+    Extended version of ScriptArguments with support for dataset mixtures.
+
+    Args:
+        dataset_mixture (`Dict[str, DatasetConfig]` or `None`, *optional*, defaults to `None`):
+            Dictionary mapping dataset names to their configurations for creating dataset mixtures.
+    """
+
+    # Override the dataset_name to make it optional
+    dataset_name: Optional[str] = field(
+        default=None,
+        metadata={"help": "Dataset name. Can be omitted if using dataset_mixture."}
+    )
+    dataset_mixture: Optional[Dict[str, Dict[str, Any]]] = field(
+        default=None,
+        metadata={
+            "help": "Dictionary mapping dataset names to their configurations for creating mixed datasets."
+        },
+    )
+    
+    def __post_init__(self):
+        """
+        Validate the configuration after initialization.
+        """
+        if self.dataset_name is None and self.dataset_mixture is None:
+            raise ValueError("Either `dataset_name` or `dataset_mixture` must be provided")
+        
+        if self.dataset_mixture is not None:
+            formatted_mixture = {}
+            for dataset_name, config_dict in self.dataset_mixture.items():
+                formatted_mixture[dataset_name] = DatasetConfig(
+                    config=config_dict.get("config"),
+                    split=config_dict.get("split", "train"),
+                    columns=config_dict.get("columns"),
+                    weight=config_dict.get("weight", 1.0)
+                )
+            self.dataset_mixture = formatted_mixture
 
 
 # TODO: add the shared options with a mixin to reduce code duplication
@@ -98,7 +171,7 @@ class SFTConfig(trl.SFTConfig):
 
 
 @dataclass
-class GRPOScriptArguments(trl.ScriptArguments):
+class GRPOScriptArguments(ScriptArguments):
     """
     Script arguments for the GRPO training script.
 
