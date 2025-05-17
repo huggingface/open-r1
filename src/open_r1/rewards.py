@@ -130,7 +130,7 @@ def reasoning_steps_reward(completions, **kwargs):
 def len_reward(completions: list[Dict[str, str]], solution: list[str], **kwargs) -> float:
     """Compute length-based rewards to discourage overthinking and promote token efficiency.
 
-    Taken from the Kimi 1.5 tech report: https://arxiv.org/abs/2501.12599
+    Taken from the Kimi 1.5 tech report: https://huggingface.co/papers/2501.12599
 
     Args:
         completions: List of model completions
@@ -282,7 +282,7 @@ def get_cosine_scaled_reward(
 
 def get_repetition_penalty_reward(ngram_size: int, max_penalty: float, language: str = "en"):
     """
-    Computes N-gram repetition penalty as described in Appendix C.2 of https://arxiv.org/abs/2502.03373.
+    Computes N-gram repetition penalty as described in Appendix C.2 of https://huggingface.co/papers/2502.03373.
     Reference implementation from: https://github.com/eddycmu/demystify-long-cot/blob/release/openrlhf/openrlhf/reward/repetition.py
 
     Args:
