@@ -26,9 +26,7 @@ from latex2sympy2_extended import NormalizationConfig
 from math_verify import LatexExtractionConfig, parse, verify
 
 from .utils.code_providers import get_provider
-from .utils.codeforces import patch_code as cf_patch_code, score_submission as cf_score_submission
-from .utils.ioi import SubtaskResult, add_includes, get_piston_client_from_env, get_morph_client_from_env, score_subtask
-from .utils.competitive_programming import SubtaskResult, add_includes, get_piston_client_from_env, score_subtask, patch_code as cf_patch_code, score_submission as cf_score_submission
+from .utils.competitive_programming import SubtaskResult, add_includes, get_piston_client_from_env, get_morph_client_from_env, score_subtask, patch_code as cf_patch_code, score_submission as cf_score_submission
 
 
 def accuracy_reward(completions: list[list[dict[str, str]]], solution: list[str], **kwargs) -> list[Optional[float]]:
