@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import trl
 
@@ -26,7 +26,7 @@ class DatasetConfig:
     id: str
     config: Optional[str] = None
     split: str = "train"
-    columns: Optional[List[str]] = None
+    columns: Optional[list[str]] = None
     weight: Optional[float] = None
 
 
@@ -34,7 +34,7 @@ class DatasetConfig:
 class DatasetMixtureConfig:
     """Configuration for a mixture of datasets."""
 
-    datasets: List[DatasetConfig]
+    datasets: list[DatasetConfig]
     seed: int = 0
     test_split_size: Optional[float] = None
 
@@ -45,7 +45,7 @@ class ScriptArguments(trl.ScriptArguments):
     Extended version of ScriptArguments with support for dataset mixtures.
 
     Args:
-        dataset_mixture (`Dict[str, Any]` or `None`, *optional*, defaults to `None`):
+        dataset_mixture (`dict[str, Any]` or `None`, *optional*, defaults to `None`):
             Configuration for creating dataset mixtures with advanced options.
             Format:
               dataset_mixture:
@@ -66,7 +66,7 @@ class ScriptArguments(trl.ScriptArguments):
     dataset_name: Optional[str] = field(
         default=None, metadata={"help": "Dataset name. Can be omitted if using dataset_mixture."}
     )
-    dataset_mixture: Optional[Dict[str, Any]] = field(
+    dataset_mixture: Optional[dict[str, Any]] = field(
         default=None,
         metadata={"help": "Configuration for creating dataset mixtures with advanced options like shuffling."},
     )
@@ -201,7 +201,7 @@ class GRPOScriptArguments(ScriptArguments):
 
     Args:
         reward_funcs (`list[str]`):
-            List of reward functions. Possible values: 'accuracy', 'format', 'reasoning_steps', 'cosine', 'repetition_penalty', 'length', 'tag_count', 'code', 'ioi_code', 'code_format', 'soft_overlong_punishment'.
+            list of reward functions. Possible values: 'accuracy', 'format', 'reasoning_steps', 'cosine', 'repetition_penalty', 'length', 'tag_count', 'code', 'ioi_code', 'code_format', 'soft_overlong_punishment'.
         cosine_min_value_wrong (`float`):
             Minimum reward for cosine scaling for wrong answers.
         cosine_max_value_wrong (`float`):
@@ -223,7 +223,7 @@ class GRPOScriptArguments(ScriptArguments):
     reward_funcs: list[str] = field(
         default_factory=lambda: ["accuracy", "format", "tag_count"],
         metadata={
-            "help": "List of reward functions. Possible values: 'accuracy', 'format', 'reasoning_steps', 'cosine', 'repetition_penalty', 'length', tag_count', 'code', 'code_format'"
+            "help": "list of reward functions. Possible values: 'accuracy', 'format', 'reasoning_steps', 'cosine', 'repetition_penalty', 'length', tag_count', 'code', 'code_format'"
         },
     )
     cosine_min_value_wrong: float = field(
