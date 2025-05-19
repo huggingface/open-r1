@@ -52,11 +52,15 @@ class ScriptArguments(trl.ScriptArguments):
                 datasets:
                   - id: dataset_id1
                     config: config_name
-                    columns: [col1, col2]
+                    columns:
+                      - col1
+                      - col2
                     weight: 0.5
                   - id: dataset_id2
                     config: config_name
-                    columns: [col1, col2]
+                    columns:
+                      - col1
+                      - col2
                     weight: 0.5
                 seed: 42
                 test_split_size: 0.1
