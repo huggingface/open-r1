@@ -408,10 +408,10 @@ To combine multiple datasets as a single training mixture, you can specify the `
 ```yaml
 dataset_mixture:
   datasets:                     # List of datasets to include in the mixture
-    - id: dataset_1
+    - id: dataset_1             # Hub dataset ID
       config: config_name_1     # Name of the dataset config
       split: split_1            # Split to use from the dataset
-      columns: [col1, col2]     # Columns to use from the dataset
+      columns: [col1, col2]     # Columns to keep
       weight: 0.25              # Fraction of dataset to use
     - id: dataset_2
       config: config_name_2
@@ -419,7 +419,7 @@ dataset_mixture:
       columns: [col1, col2]
       weight: 0.5
   seed: 42                      # Seed for shuffling the combined dataset
-  test_split_size: 0.1          # Fraction of the combined dataset to use for a test split
+  test_split_size: 0.1          # Fraction of mixture to use for a test split
 ```
 
 ## Evaluating models
