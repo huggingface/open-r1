@@ -28,6 +28,7 @@ from math_verify import LatexExtractionConfig, parse, verify
 from .utils.code_providers import get_provider
 from .utils.codeforces import patch_code as cf_patch_code, score_submission as cf_score_submission
 from .utils.ioi import SubtaskResult, add_includes, get_piston_client_from_env, get_morph_client_from_env, score_subtask
+from .utils.competitive_programming import SubtaskResult, add_includes, get_piston_client_from_env, score_subtask, patch_code as cf_patch_code, score_submission as cf_score_submission
 
 
 def accuracy_reward(completions: list[list[dict[str, str]]], solution: list[str], **kwargs) -> list[Optional[float]]:
@@ -418,7 +419,7 @@ def cf_code_reward(completions, test_batch_size: int = 1, language: str = "cpp",
     test_batch_size: evaluate these many test cases in parallel, then check if any of them failed (0 score): if so stop evaluating; otherwise continue with the next batch of test cases.
     """
     # for info on setting up piston workers, see slurm/piston/README.md
-    piston_client = get_cf_piston_client_from_env()
+    piston_client = get_piston_client_from_env()
 
     patch_code = False
     code_snippets = [
