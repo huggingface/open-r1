@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from functools import partial
 import logging
 import os
 import sys
+from functools import partial
 
 import datasets
 import transformers
@@ -99,11 +99,11 @@ def main(script_args, training_args, model_args):
         return prompt
 
     # for split in dataset:
-        # if "messages" in dataset[split].column_names:
-            # dataset[split] = dataset[split].remove_columns("messages")
+    # if "messages" in dataset[split].column_names:
+    # dataset[split] = dataset[split].remove_columns("messages")
 
-    dataset_df = dataset['train'].to_pandas()
-    dataset_df['prompt'] = dataset_df[script_args.dataset_prompt_column].map(make_conversation)
+    dataset_df = dataset["train"].to_pandas()
+    dataset_df["prompt"] = dataset_df[script_args.dataset_prompt_column].map(make_conversation)
     dataset = datasets.Dataset.from_pandas(dataset_df)
 
     #############################

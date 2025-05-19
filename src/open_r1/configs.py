@@ -273,9 +273,7 @@ class GRPOScriptArguments(ScriptArguments):
     )
     code_eval_scoring_mode: Literal["pass_fail", "partial", "weighted_sum"] = field(
         default="weighted_sum",
-        metadata={
-            "help": "use fraction of passed test cases as reward. If false, use 0/1 scoring."
-        },
+        metadata={"help": "use fraction of passed test cases as reward. If false, use 0/1 scoring."},
     )
     parallel_code_exec_per_proc: int = field(
         default=2,
