@@ -103,10 +103,26 @@ class TestGetDataset(unittest.TestCase):
         self.assertIn("prompt", dataset["train"].column_names)
         self.assertIn("chosen", dataset["train"].column_names)
 
+    def test_mixture_with_mismatched_columns(self):
+        dataset_configs = [
+            DatasetConfig(
+                id=self.dataset_name, config=self.dataset_config, split="train", columns=["prompt"], weight=None
+            ),
+            DatasetConfig(
+                id=self.dataset_name, config=self.dataset_config, split="train", columns=["chosen"], weight=None
+            ),
+        ]
+        dataset_mixture = DatasetMixtureConfig(
+            datasets=dataset_configs,
+        )
+        with self.assertRaises(ValueError) as context:
+            _ = ScriptArguments(dataset_mixture=asdict(dataset_mixture))
+        self.assertIn("Column names must be consistent", str(context.exception))
+
     def test_no_dataset_name_or_mixture(self):
-        with self.assertRaises(ValueError):
-            args = ScriptArguments(dataset_name=None, dataset_mixture=None)
-            get_dataset(args)
+        with self.assertRaises(ValueError) as context:
+            _ = ScriptArguments(dataset_name=None, dataset_mixture=None)
+        self.assertIn("Either `dataset_name` or `dataset_mixture` must be provided", str(context.exception))
 
 
 if __name__ == "__main__":

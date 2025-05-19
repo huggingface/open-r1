@@ -34,7 +34,7 @@ class DatasetConfig:
 class DatasetMixtureConfig:
     """Configuration for a mixture of datasets."""
 
-    datasets: List[DatasetConfig]  # Change from Dict to List
+    datasets: List[DatasetConfig]
     seed: int = 0
     test_split_size: Optional[float] = None
 
@@ -104,6 +104,16 @@ class ScriptArguments(trl.ScriptArguments):
                 seed=self.dataset_mixture.get("seed", 0),
                 test_split_size=self.dataset_mixture.get("test_split_size", None),
             )
+
+            # Check that column names are consistent across all dataset configs
+            columns_sets = [set(dataset.columns) for dataset in datasets_list if dataset.columns is not None]
+            if columns_sets:
+                first_columns = columns_sets[0]
+                if not all(columns == first_columns for columns in columns_sets):
+                    raise ValueError(
+                        "Column names must be consistent across all dataset configurations in a mixture. "
+                        f"Found different column sets: {[list(cols) for cols in columns_sets]}"
+                    )
 
 
 # TODO: add the shared options with a mixin to reduce code duplication
