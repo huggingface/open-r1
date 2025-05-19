@@ -13,6 +13,8 @@ async def score_single_test_case(
     submission: str,
     submission_language: str = "cpp",
 ) -> tuple[str, str]:
+    if submission_language not in ["python", "cpp"]:
+        raise ValueError(f"Invalid submission language: {submission_language}")
     try:
         result = await client.send_execute(
             {
@@ -37,8 +39,8 @@ async def score_single_test_case(
                         ),
                     },
                 ],
-                "run_timeout": (problem_data["time_limit"] + 3) * 1000,
-                # +3 seconds hard limit. time limits are handled by the codeforces script
+                "run_timeout": (problem_data["time_limit"] + 10) * 1000,
+                # +10 seconds hard limit. time limits are handled by the codeforces script
             },
             language="cf_python3" if submission_language == "python" else "c++17",
         )
@@ -59,6 +61,8 @@ async def score_submission(
     no_submission_reward: float = -1.0,
     submission_language: str = "cpp",
 ) -> float:
+    if submission_language not in ["python", "cpp"]:
+        raise ValueError(f"Invalid submission language: {submission_language}")
     test_cases = problem_data["official_tests"] + problem_data.get("generated_tests", [])
     # invalid/not a coding problem
     if test_cases is None or len(test_cases) == 0:

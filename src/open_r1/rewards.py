@@ -420,7 +420,6 @@ def ioi_code_reward(completions, test_batch_size: int = 1, provider_type: str = 
 def cf_code_reward(
     completions,
     test_batch_size: int = 1,
-    language: str = "cpp",
     patch_code: bool = False,
     scoring_mode: Literal["pass_fail", "partial", "weighted_sum"] = "weighted_sum",
     **kwargs,
@@ -434,13 +433,13 @@ def cf_code_reward(
     # for info on setting up piston workers, see slurm/piston/README.md
     piston_client = get_piston_client_from_env()
 
-    patch_code = False
+    languages = kwargs["language"] if "language" in kwargs else [None] * len(completions)
     code_snippets = [
         # note: grading is automatically skipped if a problem has no tests
         cf_patch_code(extract_code(completion[-1]["content"], language), language)
         if patch_code
         else extract_code(completion[-1]["content"], language)
-        for completion in completions
+        for completion, language in zip(completions, languages)
     ]
 
     async def run_catch_exceptions(task):
@@ -463,7 +462,7 @@ def cf_code_reward(
                     code,
                     test_batch_size=test_batch_size,
                     scoring_mode=scoring_mode,
-                    submission_language=language,
+                    submission_language=problem_data['language'],
                 )
             )
         )
@@ -474,7 +473,9 @@ def cf_code_reward(
     return results
 
 
-def extract_code(completion: str, language: str = "python") -> str:
+def extract_code(completion: str, language: str | None = "python") -> str:
+    if language is None:
+        return ""
     pattern = re.compile(rf"```{language}\n(.*?)```", re.DOTALL)
     matches = pattern.findall(completion)
     extracted_answer = matches[-1] if len(matches) >= 1 else ""
@@ -591,17 +592,20 @@ def code_reward(
     return execution_provider.execute_scripts(scripts, ["python"] * len(scripts))
 
 
-def get_code_format_reward(language: str = "python"):
+def get_code_format_reward(def_language: str = "python"):
     """Format reward function specifically for code responses.
 
     Args:
-        language: Programming language supported by E2B https://e2b.dev/docs/code-interpreting/supported-languages
+        def_language: Programming language supported by E2B https://e2b.dev/docs/code-interpreting/supported-languages
     """
-    pattern = rf"^<think>\n.*?\n</think>\n<answer>\n.*?```{language}.*?```.*?\n</answer>$"
 
     def code_format_reward(completions, **kwargs):
+        # if there is a language field, use it instead of the default language. This way we can have mixed language training.
+        languages = kwargs["language"] if "language" in kwargs else [def_language] * len(completions)
+
         completion_contents = [completion[0]["content"] for completion in completions]
-        matches = [re.match(pattern, content, re.DOTALL | re.MULTILINE) for content in completion_contents]
+        matches = [re.match(rf"^<think>\n.*?\n</think>\n<answer>\n.*?```{language}.*?```.*?\n</answer>$", 
+        content, re.DOTALL | re.MULTILINE) for content, language in zip(completion_contents, languages)]
         return [1.0 if match else 0.0 for match in matches]
 
     return code_format_reward
@@ -680,12 +684,11 @@ def get_reward_funcs(script_args) -> list[Callable]:
             partial(
                 cf_code_reward,
                 test_batch_size=script_args.code_eval_test_batch_size,
-                language=script_args.code_language,
                 scoring_mode=script_args.code_eval_scoring_mode,
             ),
             cf_code_reward,
         ),
-        "code_format": get_code_format_reward(language=script_args.code_language),
+        "code_format": get_code_format_reward(def_language=script_args.code_language),
         "tag_count": tag_count_reward,
         "soft_overlong_punishment": get_soft_overlong_punishment(
             max_completion_len=script_args.max_completion_len,

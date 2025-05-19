@@ -260,6 +260,7 @@ class GRPOScriptArguments(ScriptArguments):
     )
     code_language: str = field(
         default="python",
+        # '(?:python|cpp)'
         metadata={
             "help": "Language for code format reward. Based on E2B supported languages https://e2b.dev/docs/code-interpreting/supported-languages",
             "choices": ["python", "javascript", "r", "java", "bash", "cpp"],
