@@ -411,12 +411,16 @@ dataset_mixture:
     - id: dataset_1             # Hub dataset ID
       config: config_name_1     # Name of the dataset config
       split: split_1            # Split to use from the dataset
-      columns: [col1, col2]     # Columns to keep
+      columns:                  # Columns to keep
+        - column_1              
+        - column_2    
       weight: 0.25              # Fraction of dataset to use
     - id: dataset_2
       config: config_name_2
       split: split_2
-      columns: [col1, col2]
+      columns:                  
+        - column_1              
+        - column_2   
       weight: 0.5
   seed: 42                      # Seed for shuffling the combined dataset
   test_split_size: 0.1          # Fraction of mixture to use for a test split
