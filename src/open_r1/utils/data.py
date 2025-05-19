@@ -1,8 +1,7 @@
 import logging
-from typing import Union
 
 import datasets
-from datasets import Dataset, DatasetDict, concatenate_datasets
+from datasets import DatasetDict, concatenate_datasets
 
 from ..configs import ScriptArguments
 
@@ -10,17 +9,14 @@ from ..configs import ScriptArguments
 logger = logging.getLogger(__name__)
 
 
-def get_dataset(
-    args: ScriptArguments,
-) -> Union[Dataset, DatasetDict]:
-    """
-    Load a dataset or a mixture of datasets based on the configuration.
+def get_dataset(args: ScriptArguments) -> DatasetDict:
+    """Load a dataset or a mixture of datasets based on the configuration.
 
     Args:
         args (ScriptArguments): Script arguments containing dataset configuration.
 
     Returns:
-        Dataset or DatasetDict: The loaded and processed dataset(s).
+        DatasetDict: The loaded datasets.
     """
     if args.dataset_name and not args.dataset_mixture:
         logger.info(f"Loading dataset: {args.dataset_name}")
