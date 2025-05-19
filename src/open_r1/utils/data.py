@@ -24,7 +24,7 @@ def get_dataset(
     """
     if args.dataset_name and not args.dataset_mixture:
         logger.info(f"Loading dataset: {args.dataset_name}")
-        return datasets.load_dataset(args.dataset_name, args.dataset_config_name)
+        return datasets.load_dataset(args.dataset_name, args.dataset_config)
     elif args.dataset_mixture:
         logger.info(f"Creating dataset mixture with {len(args.dataset_mixture.datasets)} datasets")
         seed = args.dataset_mixture.seed

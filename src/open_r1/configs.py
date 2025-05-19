@@ -23,7 +23,7 @@ import trl
 class DatasetConfig:
     """Configuration for a dataset in a mixture."""
 
-    id: str  # Dataset identifier
+    id: str
     config: Optional[str] = None
     split: str = "train"
     columns: Optional[List[str]] = None
