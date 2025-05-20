@@ -227,7 +227,7 @@ class GRPOScriptArguments(ScriptArguments):
     reward_funcs: list[str] = field(
         default_factory=lambda: ["accuracy", "format", "tag_count"],
         metadata={
-            "help": "list of reward functions. Possible values: 'accuracy', 'format', 'reasoning_steps', 'cosine', 'repetition_penalty', 'length', tag_count', 'code', 'code_format'"
+            "help": "List of reward functions. Possible values: 'accuracy', 'format', 'reasoning_steps', 'cosine', 'repetition_penalty', 'length', tag_count', 'code', 'code_format'"
         },
     )
     cosine_min_value_wrong: float = field(
