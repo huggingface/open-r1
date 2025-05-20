@@ -15,7 +15,7 @@
 # limitations under the License.
 """
 This script is used to decontaminate a dataset by checking for n-gram overlap with other datasets.
-It uses the same approach presented in https://arxiv.org/abs/2501.19393,
+It uses the same approach presented in https://huggingface.co/papers/2501.19393,
 as found in: https://github.com/simplescaling/s1/blob/main/data/decontaminate_util.py
 
 Usage:

@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import trl
 
@@ -26,7 +26,7 @@ class DatasetConfig:
     id: str
     config: Optional[str] = None
     split: str = "train"
-    columns: Optional[List[str]] = None
+    columns: Optional[list[str]] = None
     weight: Optional[float] = None
 
 
@@ -34,7 +34,7 @@ class DatasetConfig:
 class DatasetMixtureConfig:
     """Configuration for a mixture of datasets."""
 
-    datasets: List[DatasetConfig]
+    datasets: list[DatasetConfig]
     seed: int = 0
     test_split_size: Optional[float] = None
 
@@ -45,18 +45,22 @@ class ScriptArguments(trl.ScriptArguments):
     Extended version of ScriptArguments with support for dataset mixtures.
 
     Args:
-        dataset_mixture (`Dict[str, Any]` or `None`, *optional*, defaults to `None`):
+        dataset_mixture (`dict[str, Any]` or `None`, *optional*, defaults to `None`):
             Configuration for creating dataset mixtures with advanced options.
             Format:
               dataset_mixture:
                 datasets:
                   - id: dataset_id1
                     config: config_name
-                    columns: [col1, col2]
+                    columns:
+                      - col1
+                      - col2
                     weight: 0.5
                   - id: dataset_id2
                     config: config_name
-                    columns: [col1, col2]
+                    columns:
+                      - col1
+                      - col2
                     weight: 0.5
                 seed: 42
                 test_split_size: 0.1
@@ -66,7 +70,7 @@ class ScriptArguments(trl.ScriptArguments):
     dataset_name: Optional[str] = field(
         default=None, metadata={"help": "Dataset name. Can be omitted if using dataset_mixture."}
     )
-    dataset_mixture: Optional[Dict[str, Any]] = field(
+    dataset_mixture: Optional[dict[str, Any]] = field(
         default=None,
         metadata={"help": "Configuration for creating dataset mixtures with advanced options like shuffling."},
     )
