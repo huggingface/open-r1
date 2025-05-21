@@ -55,7 +55,7 @@ _deps = [
     "jieba",  # Needed for Chinese language support
     "langdetect",  # Needed for LightEval's extended tasks
     "latex2sympy2_extended>=1.0.6",
-    "liger-kernel>=0.5.6",
+    "liger-kernel>=0.5.9",
     "lighteval @ git+https://github.com/huggingface/lighteval.git@d3da6b9bbf38104c8b5e1acc86f83541f9a502d1",  # Critical bug fix for tokenizer revisions: https://github.com/huggingface/lighteval/pull/721
     "math-verify==0.5.2",  # Used for math verification in grpo
     "morphcloud==0.1.67",
