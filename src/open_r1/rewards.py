@@ -426,7 +426,7 @@ def cf_code_reward(
 ) -> list[float]:
     """Reward function that evaluates Codeforces problems using Piston+our CF package.
 
-    Assumes the dataset has the same format as hf.co/datasets/open-r1/codeforces-verifiable
+    Assumes the dataset has the same format as hf.co/datasets/open-r1/codeforces (verifiable-prompts subset)
 
     test_batch_size: evaluate these many test cases in parallel, then check if any of them failed (0 score): if so stop evaluating; otherwise continue with the next batch of test cases.
     """

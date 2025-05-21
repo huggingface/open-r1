@@ -71,6 +71,8 @@ _deps = [
     "transformers @ git+https://github.com/huggingface/transformers.git@acdbe627e323dbc822f21499fead789b439cf45b",  # Fix DeepSpeed x vLLM conflict: https://github.com/huggingface/transformers/pull/37755
     "trl[vllm] @ git+https://github.com/huggingface/trl.git@1bca49515ecd5b85d16e68c42c76670e252e19f1",  # Fix DeepSpeed x vLLM conflict: https://github.com/huggingface/trl/pull/3351
     "wandb>=0.19.1",
+    "async-lru>=2.0.5",
+    "aiofiles>=24.1.0",
 ]
 
 # this is a lookup table with items like:

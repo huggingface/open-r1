@@ -4,8 +4,11 @@ model_revision: main
 torch_dtype: bfloat16
 attn_implementation: flash_attention_2
 # Data training arguments
-dataset_name: open-r1/codeforces-verifiable
-dataset_prompt_column: prompt_c++17
+dataset_name: open-r1/codeforces
+dataset_prompt_column: prompt
+dataset_config: verifiable-prompts
+dataset_test_split: test
+dataset_train_split: train
 
 system_prompt: "You are a helpful AI Assistant that provides well-reasoned and detailed responses. You first think about the reasoning process as an internal monologue and then provide the user with the answer. Respond in the following format: <think>\n...\n</think>\n<answer>\n...\n</answer>"
 
@@ -23,7 +26,6 @@ eval_strategy: "no"
 use_vllm: true
 vllm_device: auto
 vllm_gpu_memory_utilization: 0.7
-do_eval: false
 gradient_accumulation_steps: 32
 gradient_checkpointing: true
 gradient_checkpointing_kwargs:
