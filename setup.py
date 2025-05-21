@@ -44,7 +44,7 @@ _deps = [
     "accelerate==1.4.0",
     "bitsandbytes>=0.43.0",
     "datasets>=3.2.0",
-    "deepspeed==0.16.7",
+    "deepspeed==0.16.8",
     "distilabel[vllm,ray,openai]>=1.5.2",
     "e2b-code-interpreter>=1.0.5",
     "einops>=0.8.0",
