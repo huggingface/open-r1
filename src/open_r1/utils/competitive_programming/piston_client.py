@@ -18,7 +18,7 @@ def get_piston_client_from_env(session=None):
     piston_endpoints = os.getenv("PISTON_ENDPOINTS")
     if piston_endpoints is None:
         raise ValueError(
-            "For IOI/CF problems Piston endpoints running our IOI package are required. Please add a list of valid Piston endpoints to a PISTON_ENDPOINTS varialbe in a `.env` file."
+            "For IOI/CF problems Piston endpoints running our IOI package are required. Please add a list of valid Piston endpoints to a PISTON_ENDPOINTS variable in a `.env` file."
         )
     piston_endpoints = sorted(
         piston_endpoints.split(",") if piston_endpoints != "slurm" else get_slurm_piston_endpoints()

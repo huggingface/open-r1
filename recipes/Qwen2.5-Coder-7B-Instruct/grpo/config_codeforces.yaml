@@ -45,7 +45,13 @@ max_prompt_length: 2000
 max_completion_length: 8192
 max_steps: -1
 num_generations: 16
-num_train_epochs: 40
+# aiming for 1k optimization steps
+# total_samples_per_batch = num_gpus * grad_accumulation_steps * per_device_batch_size = 8 * 32 * 4 = 1024
+# unique_prompts_per_batch = total_samples_per_batch / num_generations = 1024 / 16 = 64
+# #dataset ~= 16k (8k * 2, for python and cpp)
+# global_steps_per_epoch = #dataset / unique_prompts_per_batch = 16k / 64 ~= 250
+# epochs_for_1k_steps = 1000/250 = 4 epochs
+num_train_epochs: 4
 output_dir: data/Qwen2.5-Coder-7B-Instruct-Codeforces-GRPO_v01.00
 overwrite_output_dir: true
 per_device_train_batch_size: 4
@@ -68,7 +74,6 @@ wandb_project: open-r1
 warmup_ratio: 0.1
 
 mask_truncated_completions: true
-code_language: cpp
 # for each generation, evaluate these many test cases in parallel, then check if any of them failed (0 score): if so stop evaluating
 # otherwise continue with the next batch of test cases. Useful to avoid overloading the eval server + save time on wrong solutions
 code_eval_test_batch_size: -1
