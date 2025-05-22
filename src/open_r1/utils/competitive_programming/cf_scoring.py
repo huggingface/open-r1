@@ -3,10 +3,6 @@ import os
 from io import BytesIO
 from typing import Literal
 
-import pandas as pd
-
-import aiofiles
-import aiofiles.os
 from async_lru import alru_cache
 
 from .piston_client import PistonClient
@@ -61,6 +57,9 @@ async def score_single_test_case(
 
 @alru_cache(maxsize=32)  # TODO make this configurable
 async def get_generated_contest_tests(contest_id: str) -> list[dict]:
+    import aiofiles
+    import aiofiles.os
+    import pandas as pd
     tests_folder = os.environ.get("CF_TESTS_FOLDER", None)
     if not tests_folder:
         raise ValueError(

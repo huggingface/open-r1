@@ -73,6 +73,7 @@ _deps = [
     "wandb>=0.19.1",
     "async-lru>=2.0.5",
     "aiofiles>=24.1.0",
+    "pandas>=2.2.3",
 ]
 
 # this is a lookup table with items like:
@@ -92,7 +93,7 @@ extras = {}
 extras["tests"] = deps_list("pytest", "parameterized", "math-verify", "jieba")
 extras["torch"] = deps_list("torch")
 extras["quality"] = deps_list("ruff", "isort", "flake8")
-extras["code"] = deps_list("e2b-code-interpreter", "python-dotenv", "morphcloud", "jieba")
+extras["code"] = deps_list("e2b-code-interpreter", "python-dotenv", "morphcloud", "jieba", "pandas", "aiofiles")
 extras["eval"] = deps_list("lighteval", "math-verify")
 extras["dev"] = extras["quality"] + extras["tests"] + extras["eval"] + extras["code"]
 
@@ -115,6 +116,7 @@ install_requires = [
     deps["transformers"],
     deps["trl"],
     deps["wandb"],
+    deps["async-lru"]
 ]
 
 setup(
