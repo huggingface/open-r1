@@ -1,14 +1,18 @@
 import asyncio
-from multiprocessing import Value
 import os
+from io import BytesIO
+from multiprocessing import Value
 from typing import Literal
+
 import pandas as pd
+
 import aiofiles
 import aiofiles.os
-from io import BytesIO
+from async_lru import alru_cache
+
 from .piston_client import PistonClient
 from .utils import batched
-from async_lru import alru_cache
+
 
 async def score_single_test_case(
     client: PistonClient,
@@ -55,32 +59,35 @@ async def score_single_test_case(
 
     return result
 
+
 @alru_cache(maxsize=32)  # TODO make this configurable
 async def get_generated_contest_tests(contest_id: str) -> list[dict]:
     tests_folder = os.environ.get("CF_TESTS_FOLDER", None)
     if not tests_folder:
-        raise ValueError("CF_TESTS_FOLDER environment variable not set! Please download the codeforces generated tests and set CF_TESTS_FOLDER to the folder path. See https://huggingface.co/datasets/open-r1/codeforces for more information.")
+        raise ValueError(
+            "CF_TESTS_FOLDER environment variable not set! Please download the codeforces generated tests and set CF_TESTS_FOLDER to the folder path. See https://huggingface.co/datasets/open-r1/codeforces for more information."
+        )
     if not await aiofiles.os.path.exists(tests_folder):
-        raise ValueError(f"CF_TESTS_FOLDER path '{tests_folder}' does not exist! Please download the codeforces generated tests and set CF_TESTS_FOLDER to the folder path. See https://huggingface.co/datasets/open-r1/codeforces for more information.")
+        raise ValueError(
+            f"CF_TESTS_FOLDER path '{tests_folder}' does not exist! Please download the codeforces generated tests and set CF_TESTS_FOLDER to the folder path. See https://huggingface.co/datasets/open-r1/codeforces for more information."
+        )
     parquet_path = os.path.join(tests_folder, f"test_cases_{int(contest_id):04d}.parquet")
     if not await aiofiles.os.path.exists(parquet_path):
         return {}
-    
+
     # Read parquet file asynchronously
-    async with aiofiles.open(parquet_path, 'rb') as f:
+    async with aiofiles.open(parquet_path, "rb") as f:
         content = await f.read()
         df = pd.read_parquet(BytesIO(content))
-    
+
     # Group by problem_id and convert to dictionary of lists
-    grouped_tests = df.groupby('problem_id').apply(
-        lambda x: x[['input', 'output']].to_dict('records')
-    ).to_dict()
-    
+    grouped_tests = df.groupby("problem_id").apply(lambda x: x[["input", "output"]].to_dict("records")).to_dict()
+
     return grouped_tests
 
 
 async def get_generated_tests(problem_id: str) -> list[dict]:
-    contest_id = problem_id.split('/')[0]
+    contest_id = problem_id.split("/")[0]
     return (await get_generated_contest_tests(contest_id)).get(problem_id, [])
 
 

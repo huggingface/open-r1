@@ -462,7 +462,7 @@ def cf_code_reward(
                     code,
                     test_batch_size=test_batch_size,
                     scoring_mode=scoring_mode,
-                    submission_language=problem_data.get('language', None),
+                    submission_language=problem_data.get("language", None),
                 )
             )
         )
@@ -604,8 +604,14 @@ def get_code_format_reward(def_language: str = "python"):
         languages = kwargs["language"] if "language" in kwargs else [def_language] * len(completions)
 
         completion_contents = [completion[0]["content"] for completion in completions]
-        matches = [re.match(rf"^<think>\n.*?\n</think>\n<answer>\n.*?```{language}.*?```.*?\n</answer>$", 
-        content, re.DOTALL | re.MULTILINE) for content, language in zip(completion_contents, languages)]
+        matches = [
+            re.match(
+                rf"^<think>\n.*?\n</think>\n<answer>\n.*?```{language}.*?```.*?\n</answer>$",
+                content,
+                re.DOTALL | re.MULTILINE,
+            )
+            for content, language in zip(completion_contents, languages)
+        ]
         return [1.0 if match else 0.0 for match in matches]
 
     return code_format_reward
