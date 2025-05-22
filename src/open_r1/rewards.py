@@ -592,7 +592,7 @@ def code_reward(
     return execution_provider.execute_scripts(scripts, ["python"] * len(scripts))
 
 
-def get_code_format_reward(def_language: str = "python"):
+def get_code_format_reward(language: str = "python"):
     """Format reward function specifically for code responses.
 
     Args:
@@ -601,16 +601,16 @@ def get_code_format_reward(def_language: str = "python"):
 
     def code_format_reward(completions, **kwargs):
         # if there is a language field, use it instead of the default language. This way we can have mixed language training.
-        languages = kwargs["language"] if "language" in kwargs else [def_language] * len(completions)
+        languages = kwargs["language"] if "language" in kwargs else [language] * len(completions)
 
         completion_contents = [completion[0]["content"] for completion in completions]
         matches = [
             re.match(
-                rf"^<think>\n.*?\n</think>\n<answer>\n.*?```{language}.*?```.*?\n</answer>$",
+                rf"^<think>\n.*?\n</think>\n<answer>\n.*?```{sample_language}.*?```.*?\n</answer>$",
                 content,
                 re.DOTALL | re.MULTILINE,
             )
-            for content, language in zip(completion_contents, languages)
+            for content, sample_language in zip(completion_contents, languages)
         ]
         return [1.0 if match else 0.0 for match in matches]
 
@@ -694,7 +694,7 @@ def get_reward_funcs(script_args) -> list[Callable]:
             ),
             cf_code_reward,
         ),
-        "code_format": get_code_format_reward(def_language=script_args.code_language),
+        "code_format": get_code_format_reward(language=script_args.code_language),
         "tag_count": tag_count_reward,
         "soft_overlong_punishment": get_soft_overlong_punishment(
             max_completion_len=script_args.max_completion_len,
