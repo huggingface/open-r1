@@ -462,7 +462,7 @@ def cf_code_reward(
                     code,
                     test_batch_size=test_batch_size,
                     scoring_mode=scoring_mode,
-                    submission_language=problem_data['language'],
+                    submission_language=problem_data.get('language', None),
                 )
             )
         )

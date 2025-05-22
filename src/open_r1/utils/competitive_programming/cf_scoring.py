@@ -4,6 +4,8 @@ import os
 from typing import Literal
 import pandas as pd
 import aiofiles
+import aiofiles.os
+from io import BytesIO
 from .piston_client import PistonClient
 from .utils import batched
 from async_lru import alru_cache
@@ -60,14 +62,14 @@ async def get_generated_contest_tests(contest_id: str) -> list[dict]:
         raise ValueError("CF_TESTS_FOLDER environment variable not set! Please download the codeforces generated tests and set CF_TESTS_FOLDER to the folder path. See https://huggingface.co/datasets/open-r1/codeforces for more information.")
     if not await aiofiles.os.path.exists(tests_folder):
         raise ValueError(f"CF_TESTS_FOLDER path '{tests_folder}' does not exist! Please download the codeforces generated tests and set CF_TESTS_FOLDER to the folder path. See https://huggingface.co/datasets/open-r1/codeforces for more information.")
-    parquet_path = os.path.join(tests_folder, f"test_cases_{contest_id:04d}.parquet")
+    parquet_path = os.path.join(tests_folder, f"test_cases_{int(contest_id):04d}.parquet")
     if not await aiofiles.os.path.exists(parquet_path):
         return {}
     
     # Read parquet file asynchronously
     async with aiofiles.open(parquet_path, 'rb') as f:
         content = await f.read()
-        df = pd.read_parquet(content)
+        df = pd.read_parquet(BytesIO(content))
     
     # Group by problem_id and convert to dictionary of lists
     grouped_tests = df.groupby('problem_id').apply(
@@ -79,7 +81,7 @@ async def get_generated_contest_tests(contest_id: str) -> list[dict]:
 
 async def get_generated_tests(problem_id: str) -> list[dict]:
     contest_id = problem_id.split('/')[0]
-    return await get_generated_contest_tests(contest_id).get(problem_id, [])
+    return (await get_generated_contest_tests(contest_id)).get(problem_id, [])
 
 
 async def score_submission(
@@ -94,7 +96,7 @@ async def score_submission(
 ) -> float:
     if submission_language not in ["python", "cpp"]:
         raise ValueError(f"Invalid submission language: {submission_language}")
-    test_cases = problem_data["official_tests"] + (await get_generated_tests(problem_data["problem_id"]))
+    test_cases = problem_data["official_tests"] + (await get_generated_tests(problem_data["id"]))
     # invalid/not a coding problem
     if test_cases is None or len(test_cases) == 0:
         return None
