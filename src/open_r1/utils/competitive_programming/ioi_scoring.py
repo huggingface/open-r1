@@ -3,7 +3,7 @@ from dataclasses import asdict, dataclass, field
 from typing import Union
 
 from .ioi_utils import load_ioi_tests
-from .piston_client import PistonClient
+from .piston_client import PistonClient, PistonError
 from .utils import batched
 
 
