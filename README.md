@@ -350,16 +350,31 @@ morph_router_url: 1.2.3.4:8000
 The port should match the one used when launching the router.
 All training jobs can share the same router IP which will ensure parallel executions are properly managed.
 
-#### IOI problems
+#### Competitive Programming problems: IOI & CodeForces
 
-We provide a `ioi_code_reward` reward function for executing problems from [IOI](https://hf.co/datasets/open-r1/ioi). You can use either [piston](https://github.com/engineer-man/piston) or Morph as your execution provider.
+We provide `ioi_code_reward` and `cf_code_reward` reward functions for executing problems from [IOI](https://hf.co/datasets/open-r1/ioi) and [CodeForces](https://huggingface.co/datasets/open-r1/codeforces), respectively. You can use either [piston](https://github.com/engineer-man/piston) or Morph (currently IOI only) as your execution provider.
 
 ##### Piston 
 
 To use Piston:
 1. Get piston workers running, see [slurm/piston/README.md](./slurm/piston/README.md)
 2. Set your environment variable `PISTON_ENDPOINTS` to `slurm` or to a list of piston worker endpoints
+
+For IOI:
+
 3. In your configuration, use `ioi_provider: "piston"`
+
+For CodeForces:
+
+3. Download the generated (hard) test cases:
+```
+# change PATH_TO_SAVE_TESTCASES. Increase --max-workers according to your machine's capacity
+huggingface-cli download open-r1/codeforces --repo-type=dataset --include='generated_tests/*.parquet' --max-workers=8 --local-dir PATH_TO_SAVE_TESTCASES 
+```
+4. Save the path in .env:
+```
+CF_TESTS_FOLDER=PATH_TO_SAVE_TESTCASES
+```
 
 ##### Morph 
 
@@ -368,12 +383,21 @@ Morph is a cloud-based solution that provides sandboxed environments for running
 2. Add your Morph API key to the `.env` file: `MORPH_API_KEY="your_key_here"`
 3. In your configuration, use `ioi_provider: "morph"`
 
-See the [example recipe](./recipes/Qwen2.5-1.5B-Instruct/grpo/config_demo_code_ioi.yaml) for how to use the reward function:
+##### Example recipes
+For IOI:
+
+See the [example recipe](./recipes/Qwen2.5-1.5B-Instruct/grpo/config_demo_code_ioi.yaml) for how to use the IOI reward function:
 
 ```shell
 ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/zero2.yaml \
     --num_processes=7 src/open_r1/grpo.py \
     --config recipes/Qwen2.5-1.5B-Instruct/grpo/config_demo_code_ioi.yaml
+```
+
+For CodeForces:
+
+```shell
+sbatch --job-name=cf-grpo --nodes=2 slurm/train.slurm --model Qwen2.5-Coder-7B-Instruct --task grpo --config codeforces --accelerator zero3 --dp 8 --tp 1
 ```
 
 ### Launching jobs on a Slurm cluster
