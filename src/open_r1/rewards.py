@@ -596,7 +596,7 @@ def get_code_format_reward(language: str = "python"):
     """Format reward function specifically for code responses.
 
     Args:
-        def_language: Programming language supported by E2B https://e2b.dev/docs/code-interpreting/supported-languages
+        language: Programming language supported by E2B https://e2b.dev/docs/code-interpreting/supported-languages
     """
 
     def code_format_reward(completions, **kwargs):
