@@ -368,7 +368,6 @@ For CodeForces:
 
 3. Download the generated (hard) test cases:
 ```
-pip install -U huggingface_hub[cli,hf_xet]
 # change PATH_TO_SAVE_TESTCASES. Increase --max-workers according to your machine's capacity
 huggingface-cli download open-r1/codeforces --repo-type=dataset --include='generated_tests/*.parquet' --max-workers=8 --local-dir PATH_TO_SAVE_TESTCASES 
 ```
