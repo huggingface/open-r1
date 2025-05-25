@@ -23,8 +23,8 @@ do_eval: false
 eval_strategy: "no"
 use_vllm: true
 do_eval: false
-generation_batch_size: 8192
-steps_per_generation: 16
+generation_batch_size: 1024
+steps_per_generation: 8
 gradient_checkpointing: true
 gradient_checkpointing_kwargs:
   use_reentrant: false
@@ -44,7 +44,7 @@ max_grad_norm: 0.2
 max_prompt_length: 1024
 max_completion_length: 20480
 max_steps: -1
-num_generations: 16
+num_generations: 8
 num_iterations: 1
 num_train_epochs: 1
 output_dir: data/R1-Zero-Qwen-Math-7B-Math-v00.00
