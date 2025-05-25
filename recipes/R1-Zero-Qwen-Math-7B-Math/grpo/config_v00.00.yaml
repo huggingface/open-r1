@@ -42,28 +42,32 @@ lr_scheduler_type: constant_with_warmup
 mask_truncated_completions: true
 max_grad_norm: 0.2
 max_prompt_length: 1024
-max_completion_length: 16384
+max_completion_length: 20480
 max_steps: -1
 num_generations: 16
 num_iterations: 1
 num_train_epochs: 1
 output_dir: data/R1-Zero-Qwen-Math-7B-Math-v00.00
 overwrite_output_dir: true
-per_device_train_batch_size: 4
+per_device_train_batch_size: 1
 push_to_hub: true
 report_to:
 - wandb
 reward_funcs:
-- think_accuracy
 - think_format
+- think_accuracy
+- soft_overlong_punishment
 reward_weights:
 - 1.0
-- 0.25
+- 1.0
+- 1.0
 save_strategy: "steps"
 save_steps: 0.2
 save_total_limit: 1
 scale_rewards: false
-sync_ref_model: false 
+max_completion_len: 20480
+soft_punish_cache: 4196
 seed: 42
 temperature: 1.0
+use_liger_kernel: true
 warmup_ratio: 0.0
