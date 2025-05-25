@@ -25,6 +25,7 @@ use_vllm: true
 do_eval: false
 generation_batch_size: 1024
 steps_per_generation: 8
+gradient_accumulation_steps: 1
 gradient_checkpointing: true
 gradient_checkpointing_kwargs:
   use_reentrant: false
@@ -62,7 +63,7 @@ reward_weights:
 - 1.0
 - 1.0
 save_strategy: "steps"
-save_steps: 0.2
+save_steps: 0.1
 save_total_limit: 1
 scale_rewards: false
 max_completion_len: 20480
