@@ -23,9 +23,7 @@ do_eval: false
 eval_strategy: "no"
 use_vllm: true
 do_eval: false
-generation_batch_size: 1024
-steps_per_generation: 8
-gradient_accumulation_steps: 1
+gradient_accumulation_steps: 64
 gradient_checkpointing: true
 gradient_checkpointing_kwargs:
   use_reentrant: false
@@ -50,7 +48,7 @@ num_iterations: 1
 num_train_epochs: 1
 output_dir: data/R1-Zero-Qwen-Math-7B-Math-v00.00
 overwrite_output_dir: true
-per_device_train_batch_size: 1
+per_device_train_batch_size: 4
 push_to_hub: true
 report_to:
 - wandb
