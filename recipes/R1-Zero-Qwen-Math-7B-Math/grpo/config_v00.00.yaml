@@ -40,7 +40,7 @@ lr_scheduler_type: constant_with_warmup
 mask_truncated_completions: true
 max_grad_norm: 0.2
 max_prompt_length: 1024
-max_completion_length: 20480
+max_completion_length: 16384
 max_steps: -1
 num_generations: 16
 num_iterations: 1
@@ -54,16 +54,12 @@ report_to:
 reward_funcs:
 - think_format
 - think_accuracy
-- soft_overlong_punishment
 reward_weights:
-- 1.0
-- 1.0
+- 0.25
 - 1.0
 save_strategy: "steps"
 save_steps: 0.1
 save_total_limit: 1
-max_completion_len: 20480
-soft_punish_cache: 4196
 seed: 42
 temperature: 1.0
 use_liger_kernel: true
