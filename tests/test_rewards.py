@@ -28,6 +28,8 @@ from open_r1.rewards import (
     len_reward,
     reasoning_steps_reward,
     tag_count_reward,
+    think_accuracy_reward,
+    think_format_reward,
 )
 
 
@@ -40,7 +42,8 @@ class TestGetRewardFuncs(unittest.TestCase):
         reward_names = [
             "accuracy",
             "format",
-            "reasoning_steps",
+            "think_format",
+            "think_accruacyreasoning_steps",
             "cosine",
             "repetition_penalty",
             "length",
@@ -53,6 +56,8 @@ class TestGetRewardFuncs(unittest.TestCase):
         reward_func_names = [
             "accuracy_reward",
             "format_reward",
+            "think_format_reward",
+            "think_accuracy_reward",
             "reasoning_steps_reward",
             "cosine_scaled_reward",
             "repetition_penalty_reward",
@@ -562,6 +567,68 @@ class TestCodeFormat(unittest.TestCase):
         reward_fn = get_code_format_reward(language="python")
         rewards = reward_fn(completion)
         self.assertEqual(rewards[0], 1.0)
+
+
+class TestThinkFormatReward(unittest.TestCase):
+    def test_correct_think_format(self):
+        """Test think_format_reward with correct think format."""
+        correct_formats = [
+            "<think>\n\nThought\n\n</think>\n\nSolution",
+            "<think>\nThought\n</think>\nSolution",
+            "<think>Thought</think>Solution",
+            "<think> Thought </think> Solution",
+        ]
+
+        for fmt in correct_formats:
+            completion = [[{"content": fmt}]]
+            rewards = think_format_reward(completion)
+            self.assertEqual(rewards[0], 1.0)
+
+    def test_incorrect_think_format(self):
+        """Test think_format_reward with incorrect think format."""
+        incorrect_formats = [
+            "Preamble <think> Thought </think> Solution",
+            "\n<think> Thought </think> Solution",
+            "No tags at all",
+            "<think> Missing closing thought",
+        ]
+
+        for fmt in incorrect_formats:
+            completion = [[{"content": fmt}]]
+            rewards = think_format_reward(completion)
+            self.assertEqual(rewards[0], 0.0)
+
+
+class TestThinkAccuracyReward(unittest.TestCase):
+    def test_correct_answer_after_think(self):
+        completion = [[{"content": "<think> Thought </think> The answer is \\boxed{42}"}]]
+        rewards = think_accuracy_reward(completion, solution=["\\boxed{42}"])
+        self.assertEqual(rewards[0], 1.0)
+
+    def test_incorrect_answer_after_think(self):
+        completion = [[{"content": "<think> Thought </think> The answer is \\boxed{43}"}]]
+        rewards = think_accuracy_reward(completion, solution=["\\boxed{42}"])
+        self.assertEqual(rewards[0], 0.0)
+
+    def test_multiple_answers_gives_zero_reward(self):
+        completion = [[{"content": "<think> Thought </think> The answer is \\boxed{6} and \\boxed{42}"}]]
+        rewards = think_accuracy_reward(completion, solution=["\\boxed{42}"])
+        self.assertEqual(rewards[0], 0.0)
+
+    def test_no_latex_answer_gives_zero_reward(self):
+        completion = [[{"content": "<think> Thought </think> The answer is 42"}]]
+        rewards = think_accuracy_reward(completion, solution=["\\boxed{42}"])
+        self.assertEqual(rewards[0], 0.0)
+
+    def test_truncated_answer_gives_zero_reward(self):
+        completion = [[{"content": "<think> Thought the answer is \\boxed{42} </think> The answer is [TRUNCATED]"}]]
+        rewards = think_accuracy_reward(completion, solution=["\\boxed{42}"])
+        self.assertEqual(rewards[0], 0.0)
+
+    def test_truncated_thought_gives_zero_reward(self):
+        completion = [[{"content": "<think> Thought the answer is \\boxed{42} and [TRUNCATED]"}]]
+        rewards = think_accuracy_reward(completion, solution=["\\boxed{42}"])
+        self.assertEqual(rewards[0], 0.0)
 
 
 if __name__ == "__main__":

@@ -90,6 +90,92 @@ def format_reward(completions, **kwargs):
     return [1.0 if match else 0.0 for match in matches]
 
 
+# Copied from TRL: https://github.com/huggingface/trl/blob/9ac614fb081e17805f7f62ab3f5f7036bdefe7b0/trl/rewards/format_rewards.py#L18
+def think_format_reward(completions: list[list[dict[str, str]]], **kwargs) -> list[float]:
+    r"""
+    Reward function that checks if the reasoning process is enclosed within `"<think>"` and `"</think>"` tags. The
+    function returns a reward of 1.0 if the format is correct, otherwise 0.0.
+
+    Args:
+        completions (`list[list[dict[str, str]]]`):
+            List of completions to be evaluated. Each completion must be a list of one message, i.e. a dictionary
+            containing the key `"content"` with the value being the text of the completion.
+        **kwargs:
+            Additional keyword arguments. This function does not use them, but they are required in the function
+            signature to ensure compatibility with trainers like [`GRPOTrainer`].
+
+    Returns:
+        `list[float]`:
+            A list of rewards, where each reward is 1.0 if the completion matches the expected format, otherwise 0.0.
+
+    Example:
+    ```python
+    >>> from trl.rewards import think_format_reward
+    >>> completions = [
+    ...     [{"content": "<think>\nThis is my reasoning.\n</think>\nThis is my answer."}],
+    ...     [{"content": "<think>\nThis is my reasoning.\nThis is my answer."}],
+    ... ]
+    >>> think_format_reward(completions)
+    [1.0, 0.0]
+    ```
+    """
+    pattern = r"^<think>(?!.*<think>)(.*?)</think>.*$"
+    completion_contents = [completion[0]["content"] for completion in completions]
+    matches = [re.match(pattern, content, re.DOTALL | re.MULTILINE) for content in completion_contents]
+    return [1.0 if match else 0.0 for match in matches]
+
+
+def think_accuracy_reward(
+    completions: list[list[dict[str, str]]], solution: list[str], **kwargs
+) -> list[Optional[float]]:
+    """Reward function that checks if the answer after the closing </think> tag is the same as the ground truth."""
+    contents = [completion[0]["content"] for completion in completions]
+    # Extract the content after the </think> tag. If the </think> tag is not present, we return an empty string.
+    think_pattern = r"</think>(.*)"
+    contents = [re.search(think_pattern, content, re.DOTALL) for content in contents]
+    contents = [match.group(1).strip() if match else "" for match in contents]
+    rewards = []
+    for content, sol in zip(contents, solution):
+        gold_parsed = parse(
+            sol,
+            extraction_mode="first_match",
+        )
+        if len(gold_parsed) != 0:
+            # We require the answer to be provided in correct latex (no malformed operators)
+            answer_parsed = parse(
+                content,
+                extraction_config=[
+                    LatexExtractionConfig(
+                        normalization_config=NormalizationConfig(
+                            nits=False,
+                            malformed_operators=False,
+                            basic_latex=True,
+                            equations=True,
+                            boxed="all",
+                            units=True,
+                        ),
+                        # Ensures that boxed is tried first
+                        boxed_match_priority=0,
+                        try_extract_without_anchor=False,
+                    )
+                ],
+                extraction_mode="first_match",
+            )
+            # Compute binary rewards if verifiable, `None` otherwise to skip this example
+            try:
+                reward = float(verify(gold_parsed, answer_parsed))
+            except Exception as e:
+                print(f"verify failed: {e}, answer: {answer_parsed}, gold: {gold_parsed}")
+                reward = None
+        else:
+            # If the gold solution is not parseable, we assign `None` to skip this example
+            reward = None
+            print("Failed to parse gold solution: ", sol)
+        rewards.append(reward)
+
+    return rewards
+
+
 def tag_count_reward(completions, **kwargs) -> list[float]:
     """Reward function that checks if we produce the desired number of think and answer tags associated with `format_reward()`.
 
@@ -647,6 +733,8 @@ def get_reward_funcs(script_args) -> list[Callable]:
     REWARD_FUNCS_REGISTRY = {
         "accuracy": accuracy_reward,
         "format": format_reward,
+        "think_format": think_format_reward,
+        "think_accuracy": think_accuracy_reward,
         "reasoning_steps": reasoning_steps_reward,
         "cosine": get_cosine_scaled_reward(
             min_value_wrong=script_args.cosine_min_value_wrong,
