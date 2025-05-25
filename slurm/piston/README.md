@@ -17,8 +17,15 @@ slurm/piston/launch_piston_workers.sh 1
 ```
 
 2. Assuming it's running on `ip-10-53-86-146:1234`, send the package install request:
+
+For IOI:
 ```bash
 curl -X POST http://ip-10-53-86-146:1234/api/v2/packages -H "Content-Type: application/json" -d '{"language": "cms_ioi", "version": "1.0.0"}'
+```
+
+For CodeForces:
+```bash
+curl -X POST http://ip-10-53-86-146:1234/api/v2/packages -H "Content-Type: application/json" -d '{"language": "codeforces", "version": "1.0.0"}'
 ```
 
 3. You can now launch more workers and due to the shared mounted packages directory, they should already have the package installed.
@@ -32,6 +39,7 @@ Alternatively your can add `PISTON_ENDPOINTS=slurm` to your .env file.
 You can also change `PISTON_MAX_REQUESTS_PER_ENDPOINT`, which tries to limit how many simultaneous requests each worker will handle (1 by default). Keep in mind that this is a local limit and in distributed setups, as there is no global limit, workers might sometimes be overwhelmed when some processes hit the same worker.
 
 If you would like to adapt the code to run without piston, please see the [ioi repo](https://github.com/huggingface/ioi).
+For CodeForces, you should implement the [`run`](https://github.com/guipenedo/piston/blob/master/packages/codeforces/1.0.0/run) and [`compile`](https://github.com/guipenedo/piston/blob/master/packages/codeforces/1.0.0/compile) scripts.
 
 # Piston workers (local docker)
 This will launch a single worker in a docker container. Consider launching multiple workers for better scalability. Replace 2000 with the port you want to use.
@@ -57,8 +65,14 @@ docker run -d \
 ```
 
 Install the package:
+For IOI:
 ```bash
 curl -X POST http://localhost:2000/api/v2/packages -H "Content-Type: application/json" -d '{"language": "cms_ioi", "version": "1.0.0"}'
+```
+
+For CodeForces:
+```bash
+curl -X POST http://localhost:2000/api/v2/packages -H "Content-Type: application/json" -d '{"language": "codeforces", "version": "1.0.0"}'
 ```
 
 Remember to set `PISTON_ENDPOINTS`:
