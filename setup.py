@@ -116,7 +116,7 @@ install_requires = [
     deps["transformers"],
     deps["trl"],
     deps["wandb"],
-    deps["async-lru"]
+    deps["async-lru"],
 ]
 
 setup(

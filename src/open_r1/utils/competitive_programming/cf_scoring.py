@@ -61,6 +61,7 @@ async def get_generated_contest_tests(contest_id: str) -> list[dict]:
 
     import aiofiles
     import aiofiles.os
+
     tests_folder = os.environ.get("CF_TESTS_FOLDER", None)
     if not tests_folder:
         raise ValueError(
