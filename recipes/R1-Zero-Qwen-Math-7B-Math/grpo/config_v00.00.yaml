@@ -36,14 +36,13 @@ log_level: info
 logging_first_step: true
 logging_steps: 1
 logging_strategy: steps
-loss_type: dr_grpo
 lr_scheduler_type: constant_with_warmup
 mask_truncated_completions: true
 max_grad_norm: 0.2
 max_prompt_length: 1024
 max_completion_length: 20480
 max_steps: -1
-num_generations: 8
+num_generations: 16
 num_iterations: 1
 num_train_epochs: 1
 output_dir: data/R1-Zero-Qwen-Math-7B-Math-v00.00
@@ -63,7 +62,6 @@ reward_weights:
 save_strategy: "steps"
 save_steps: 0.1
 save_total_limit: 1
-scale_rewards: false
 max_completion_len: 20480
 soft_punish_cache: 4196
 seed: 42
