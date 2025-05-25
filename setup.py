@@ -55,7 +55,7 @@ _deps = [
     "jieba",  # Needed for Chinese language support
     "langdetect",  # Needed for LightEval's extended tasks
     "latex2sympy2_extended>=1.0.6",
-    "liger-kernel>=0.5.9",
+    "liger-kernel>=0.5.10",
     "lighteval @ git+https://github.com/huggingface/lighteval.git@d3da6b9bbf38104c8b5e1acc86f83541f9a502d1",  # Critical bug fix for tokenizer revisions: https://github.com/huggingface/lighteval/pull/721
     "math-verify==0.5.2",  # Used for math verification in grpo
     "morphcloud==0.1.67",
@@ -68,8 +68,8 @@ _deps = [
     "safetensors>=0.3.3",
     "sentencepiece>=0.1.99",
     "torch==2.6.0",
-    "transformers @ git+https://github.com/huggingface/transformers.git@acdbe627e323dbc822f21499fead789b439cf45b",  # Fix DeepSpeed x vLLM conflict: https://github.com/huggingface/transformers/pull/37755
-    "trl[vllm] @ git+https://github.com/huggingface/trl.git@1bca49515ecd5b85d16e68c42c76670e252e19f1",  # Fix DeepSpeed x vLLM conflict: https://github.com/huggingface/trl/pull/3351
+    "transformers==4.52.3",
+    "trl[vllm] @ git+https://github.com/huggingface/trl.git@9ac614fb081e17805f7f62ab3f5f7036bdefe7b0",  # Support for activation offload: https://github.com/huggingface/trl/pull/2954
     "wandb>=0.19.1",
     "async-lru>=2.0.5",
     "aiofiles>=24.1.0",
