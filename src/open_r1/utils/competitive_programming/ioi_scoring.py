@@ -2,8 +2,9 @@ import asyncio
 from dataclasses import asdict, dataclass, field
 from typing import Union
 
-from .piston_client import PistonClient
-from .utils import batched, load_ioi_tests
+from .ioi_utils import load_ioi_tests
+from .piston_client import PistonClient, PistonError
+from .utils import batched
 
 
 @dataclass
@@ -54,16 +55,7 @@ class SubtaskResult:
         Returns:
             str: The status with the highest priority (lowest value)
         """
-        status_prios = {
-            "CE": -1,
-            "RE": 0,
-            "WA": 1,
-            "MLE": 2,
-            "TLE": 3,
-            "PA": 4,
-            "AC": 5,
-            "SKIPPED": 999,
-        }
+        status_prios = {"CE": -1, "RE": 0, "WA": 1, "MLE": 2, "TLE": 3, "PA": 4, "AC": 5, "SKIPPED": 999}
         return min([x.status for x in self.test_results], key=lambda x: status_prios[x])
 
     @property
@@ -77,10 +69,7 @@ class SubtaskResult:
         return (
             0
             if not self.test_results
-            else round(
-                min([test_result.score for test_result in self.test_results]),
-                self.score_precision,
-            )
+            else round(min([test_result.score for test_result in self.test_results]), self.score_precision)
         )
 
     @property
@@ -95,8 +84,7 @@ class SubtaskResult:
             0
             if not self.test_results
             else round(
-                min([test_result.score for test_result in self.test_results]) * self.points,
-                self.score_precision,
+                min([test_result.score for test_result in self.test_results]) * self.points, self.score_precision
             )
         )
 
@@ -148,12 +136,7 @@ def _extract_single_status(score: float, feedback: str) -> str:
 
 
 async def score_single_test_case(
-    client: PistonClient,
-    subtask: dict,
-    test_name: str,
-    test_input: str,
-    test_output: str,
-    submission: str,
+    client: PistonClient, subtask: dict, test_name: str, test_input: str, test_output: str, submission: str
 ) -> TestResult:
     """
     Scores a single test case by running the submission against the provided input and output.
@@ -174,10 +157,7 @@ async def score_single_test_case(
     score = float(score)
 
     return TestResult(
-        test_name=test_name,
-        score=score,
-        status=_extract_single_status(score, feedback),
-        feedback=feedback,
+        test_name=test_name, score=score, status=_extract_single_status(score, feedback), feedback=feedback
     )
 
 
@@ -219,11 +199,9 @@ async def score_subtask(
 
     # initialize test results with cached results or empty (SKIPPED) TestResult objects
     subtask_result.test_results = [
-        (
-            test_case_run_cache[test_name]
-            if test_case_run_cache is not None and test_name in test_case_run_cache
-            else TestResult(test_name=test_name)
-        )
+        test_case_run_cache[test_name]
+        if test_case_run_cache is not None and test_name in test_case_run_cache
+        else TestResult(test_name=test_name)
         for test_name in subtask["test_names"]
     ]
 
@@ -247,12 +225,7 @@ async def score_subtask(
             *[
                 asyncio.create_task(
                     score_single_test_case(
-                        client,
-                        subtask,
-                        test_name,
-                        test_cases[test_name][0],
-                        test_cases[test_name][1],
-                        submission,
+                        client, subtask, test_name, test_cases[test_name][0], test_cases[test_name][1], submission
                     )
                 )
                 for _, test_name in test_batch_to_run
@@ -292,11 +265,7 @@ async def score_subtasks(
 
 
 async def run_submission(
-    client: PistonClient,
-    problem: dict,
-    test_input: str,
-    submission: str,
-    test_output: str | None = None,
+    client: PistonClient, problem: dict, test_input: str, submission: str, test_output: str | None = None
 ) -> tuple[str, str]:
     """
     Executes a submission against a test case using the Piston execution environment.
@@ -327,4 +296,40 @@ async def run_submission(
         ),  # +3 seconds hard limit. time limits are handled by the ioi script
         "run_memory_limit": problem["memory_limit"],
     }
-    return await client.execute(data)
+    return await execute_ioi(client, data)
+
+
+async def execute_ioi(client, data) -> tuple[str, str]:
+    """
+    Requests to the IOI package return the score as a float in the stdout, as well as optional feedback/errors in stderr.
+    Returns a tuple of (score, feedback).
+    """
+    response = await client.send_execute(data)
+
+    if "message" in response:
+        raise PistonError(response["message"])
+
+    if "compile" in response and response["compile"]["code"] != 0:
+        return "0", "Compilation error exit code " + str(response["compile"]["code"]) + "\n" + response["compile"][
+            "stderr"
+        ]
+
+    if "run" not in response:
+        raise PistonError(response)
+
+    if response["run"]["code"] == 1 and "MemoryError" in response["run"]["stderr"]:
+        return "0", "Memory limit exceeded"
+
+    # successful result
+    if response["run"]["stdout"]:
+        return response["run"]["stdout"], response["run"]["stderr"]
+
+    if response["run"]["signal"] == "SIGKILL":
+        return "0", "Time limit exceeded"
+
+    # other issues
+    if response["run"]["code"] != 0:
+        raise PistonError(
+            f"language={response['language']}, version={response['version']}, exit code={response['run']['code']}, stderr={response['run']['stderr']}, signal={response['run']['signal']}"
+        )
+    return "0", "Unknown error"

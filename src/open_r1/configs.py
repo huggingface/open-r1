@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 import trl
 
@@ -260,6 +260,7 @@ class GRPOScriptArguments(ScriptArguments):
     )
     code_language: str = field(
         default="python",
+        # '(?:python|cpp)'
         metadata={
             "help": "Language for code format reward. Based on E2B supported languages https://e2b.dev/docs/code-interpreting/supported-languages",
             "choices": ["python", "javascript", "r", "java", "bash", "cpp"],
@@ -270,6 +271,10 @@ class GRPOScriptArguments(ScriptArguments):
         metadata={
             "help": "for each generation, evaluate these many test cases in parallel, then check if any of them failed (0 score): if so stop evaluating; otherwise continue with the next batch of test cases. Useful to avoid overloading the eval server + save time on wrong solutions"
         },
+    )
+    code_eval_scoring_mode: Literal["pass_fail", "partial", "weighted_sum"] = field(
+        default="weighted_sum",
+        metadata={"help": "use fraction of passed test cases as reward. If false, use 0/1 scoring."},
     )
     parallel_code_exec_per_proc: int = field(
         default=2,
