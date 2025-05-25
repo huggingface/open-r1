@@ -143,6 +143,7 @@ class GRPOConfig(trl.GRPOConfig):
     hub_model_revision: Optional[str] = field(
         default="main", metadata={"help": "The Hub model branch to push the model to."}
     )
+    num_completions_to_print: int = field(default=0, metadata={"help": "Number of completions to print."})
     overwrite_hub_revision: bool = field(default=False, metadata={"help": "Whether to overwrite the Hub revision."})
     push_to_hub_revision: bool = field(default=False, metadata={"help": "Whether to push to a Hub revision/branch."})
     wandb_entity: Optional[str] = field(
@@ -156,6 +157,12 @@ class GRPOConfig(trl.GRPOConfig):
     wandb_run_group: Optional[str] = field(
         default=None,
         metadata={"help": ("The group to store runs under.")},
+    )
+    wandb_log_unique_prompts: bool = field(
+        default=True,
+        metadata={
+            "help": ("Whether to log the unique prompts to wandb. This will create a new run for each unique prompt.")
+        },
     )
 
 
