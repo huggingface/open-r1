@@ -42,6 +42,7 @@ We will use the DeepSeek-R1 [tech report](https://github.com/deepseek-ai/DeepSee
 
 ## News 🗞️
 
+* **🧑‍🍳 [2025/05/26] (Step 1 completed!)** We release [**Mixture-of-Thoughts**](https://huggingface.co/datasets/open-r1/Mixture-of-Thoughts)--a curated reasoning dataset of 350k verified traces distilled from R1. The dataset spans tasks in mathematics, coding, and science, and is designed to teach language models to reason step-by-step. We also provide a recipe to train [OpenR1-Distill-7B](https://huggingface.co/open-r1/OpenR1-Distill-7B), which replicates the reasoning capabilities of [deepseek-ai/DeepSeek-R1-Distill-Qwen-7B](https://huggingface.co/deepseek-ai/DeepSeek-R1-Distill-Qwen-7B) and marks the completion of step 1 in the Open R1 project.
 * **⚡️ [2025/03/11] [(update #3)](https://huggingface.co/blog/open-r1/update-3):** We release the [**CodeForces-CoTs**](https://huggingface.co/datasets/open-r1/codeforces-cots) dataset of 10k competitive programming problems and 100k solutions distilled from R1. We also release IOI24: a new benchmark of _very_ hard problems from international olympiads. A 7B Qwen model trained on CodeForces-CoTs can outperform Claude 3.7 Sonnet on IOI24, while a 32B model can outperform R1 itself.
 * **∞ [2025/02/10] [(update #2)](https://huggingface.co/blog/open-r1/update-2):** We release the [**OpenR1-Math-220k**](https://huggingface.co/datasets/open-r1/OpenR1-Math-220k) dataset of 220k traces distilled from R1 on a new version of NuminaMath. Models trained on this dataset match the performance of DeepSeek's distilled ones.
 * **🔥 [2025/02/02] [(update #1)](https://huggingface.co/blog/open-r1/update-1):** We implement the first parts of the [training](https://github.com/huggingface/open-r1?tab=readme-ov-file#training-models), [inference](https://github.com/huggingface/open-r1?tab=readme-ov-file#data-generation), and [evaluation](https://github.com/huggingface/open-r1?tab=readme-ov-file#reproducing-deepseeks-evaluation-results) pipelines. Let's go!  
@@ -103,14 +104,15 @@ sudo apt-get install git-lfs
 > [!NOTE]
 > The training commands below are configured for a node of 8 x H100s (80GB). For different hardware and topologies, you may need to tune the batch size and number of gradient accumulation steps.
 
-We support training models with either DDP or DeepSpeed (ZeRO-2 and ZeRO-3). For example, to run SFT on a dataset distilled from DeepSeek-R1 with reasoning traces such as [open-r1/OpenR1-Math-220k](https://huggingface.co/datasets/open-r1/OpenR1-Math-220k), run:
+We support training models with either DDP or DeepSpeed (ZeRO-2 and ZeRO-3). For example, to run SFT on a dataset distilled from DeepSeek-R1 with reasoning traces such as [open-r1/Mixture-of-Thoughts](https://huggingface.co/datasets/open-r1/Mixture-of-Thoughts), run:
 
 ```shell
 # Train via command line
 accelerate launch --config_file=recipes/accelerate_configs/zero3.yaml src/open_r1/sft.py \
     --model_name_or_path Qwen/Qwen2.5-1.5B-Instruct \
-    --dataset_name open-r1/OpenR1-Math-220k \
-    --learning_rate 5.0e-5 \
+    --dataset_name open-r1/Mixture-of-Thoughts \
+    --dataset_config all \
+    --learning_rate 4.0e-5 \
     --num_train_epochs 1 \
     --max_seq_length 16384 \
     --per_device_train_batch_size 16 \
@@ -158,10 +160,11 @@ Most base models like `meta-llama/Llama-3.2-1B` do not have a chat template, so 
 accelerate launch --config_file=recipes/accelerate_configs/zero3.yaml src/open_r1/sft.py \
     --model_name_or_path Qwen/Qwen2.5-1.5B \
 +   --eos_token '<|im_end|>'
-    --dataset_name open-r1/OpenR1-Math-220k \
-    --learning_rate 5.0e-5 \
+    --dataset_name open-r1/Mixture-of-Thoughts \
+    --dataset_config all \
+    --learning_rate 4.0e-5 \
     --num_train_epochs 1 \
-    --max_seq_length 16384 \
+    --max_seq_length 32768 \
     --per_device_train_batch_size 16 \
     --gradient_checkpointing \
     --bf16 \
@@ -177,10 +180,11 @@ accelerate launch --config_file=recipes/accelerate_configs/zero3.yaml src/open_r
     --model_name_or_path meta-llama/Llama-3.2-1B \
 +   --chat_template "$(cat llama_chat_template.jinja)" \
 +   --eos_token '<|eot_id|>' \
-    --dataset_name open-r1/OpenR1-Math-220k \
-    --learning_rate 5.0e-5 \
+    --dataset_name open-r1/Mixture-of-Thoughts \
+    --dataset_config all \
+    --learning_rate 4.0e-5 \
     --num_train_epochs 1 \
-    --max_seq_length 16384 \
+    --max_seq_length 32768 \
     --per_device_train_batch_size 16 \
     --gradient_checkpointing \
     --bf16 \
@@ -190,12 +194,12 @@ accelerate launch --config_file=recipes/accelerate_configs/zero3.yaml src/open_r
 
 ### SFT
 
-To run SFT on a dataset distilled from DeepSeek-R1 with reasoning traces such as [open-r1/OpenR1-Math-220k](https://huggingface.co/datasets/open-r1/OpenR1-Math-220k), run:
+To run SFT on a dataset distilled from DeepSeek-R1 with reasoning traces such as [open-r1/Mixture-of-Thoughts](https://huggingface.co/datasets/open-r1/Mixture-of-Thoughts), run:
 
 ```shell
 ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/zero3.yaml \
     src/open_r1/sft.py \
-    --config recipes/Qwen2.5-1.5B-Instruct/sft/config_demo.yaml
+    --config recipes/OpenR1-Distill-7B/sft/config_distill.yaml
 ```
 
 ### GRPO
