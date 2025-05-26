@@ -22,10 +22,10 @@ benchmarks:
 bf16: true
 do_eval: false
 eval_strategy: 'no'
-gradient_accumulation_steps: 8
+gradient_accumulation_steps: 4
 gradient_checkpointing: true
 gradient_checkpointing_kwargs:
-  use_reentrant: false
+  use_reentrant: true
 hub_model_id: open-r1/R1-Distill-Qwen3-8B
 hub_model_revision: v00.00
 hub_strategy: every_save
@@ -43,13 +43,13 @@ max_steps: -1
 num_train_epochs: 5
 output_dir: data/R1-Distill-Qwen3-8B
 overwrite_output_dir: true
-per_device_eval_batch_size: 1
-per_device_train_batch_size: 1
+per_device_eval_batch_size: 2
+per_device_train_batch_size: 2
 push_to_hub: true
 report_to:
 - wandb
 save_strategy: epoch
 save_total_limit: 1
 seed: 42
-use_liger: true
+use_liger_kernel: true
 warmup_ratio: 0.03
