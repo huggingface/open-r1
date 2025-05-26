@@ -96,6 +96,8 @@ def think_format_reward(completions: list[list[dict[str, str]]], **kwargs) -> li
     Reward function that checks if the reasoning process is enclosed within `"<think>"` and `"</think>"` tags. The
     function returns a reward of 1.0 if the format is correct, otherwise 0.0.
 
+    This version allows for at most two newlines at the beginning of the completion before the <think> tag.
+
     Args:
         completions (`list[list[dict[str, str]]]`):
             List of completions to be evaluated. Each completion must be a list of one message, i.e. a dictionary
@@ -113,16 +115,36 @@ def think_format_reward(completions: list[list[dict[str, str]]], **kwargs) -> li
     >>> from trl.rewards import think_format_reward
     >>> completions = [
     ...     [{"content": "<think>\nThis is my reasoning.\n</think>\nThis is my answer."}],
-    ...     [{"content": "<think>\nThis is my reasoning.\nThis is my answer."}],
+    ...     [{"content": "\n<think>\nThis is my reasoning.\n</think>\nThis is my answer."}],
+    ...     [{"content": "\n\n<think>\nThis is my reasoning.\n</think>\nThis is my answer."}],
+    ...     [{"content": "\n\n\n<think>\nThis is my reasoning.\n</think>\nThis is my answer."}],
     ... ]
     >>> think_format_reward(completions)
-    [1.0, 0.0]
+    [1.0, 1.0, 1.0, 0.0]
     ```
     """
-    pattern = r"^<think>(?!.*<think>)(.*?)</think>.*$"
+    pattern = r"^\n{0,2}<think>(?!.*<think>)(.*?)</think>.*$"
     completion_contents = [completion[0]["content"] for completion in completions]
     matches = [re.match(pattern, content, re.DOTALL | re.MULTILINE) for content in completion_contents]
     return [1.0 if match else 0.0 for match in matches]
+
+
+def soft_think_format_reward(completions: list[list[dict[str, str]]], **kwargs) -> list[float]:
+    """A soft version of the think format reward that checks if there is exactly one <think> </think> block, but relaxes the requirement for the <think> tag to be at the start of the completion."""
+    think_pattern = r"<think>.*?</think>"
+    completion_contents = [completion[0]["content"] for completion in completions]
+    rewards = []
+
+    for content in completion_contents:
+        think_matches = re.findall(think_pattern, content, re.DOTALL)
+
+        # Enforce exactly one block of <think> </think>
+        if len(think_matches) == 1:
+            rewards.append(1.0)
+            continue
+        rewards.append(0.0)
+
+    return rewards
 
 
 def think_accuracy_reward(
@@ -130,12 +152,18 @@ def think_accuracy_reward(
 ) -> list[Optional[float]]:
     """Reward function that checks if the answer after the closing </think> tag is the same as the ground truth."""
     contents = [completion[0]["content"] for completion in completions]
-    # Extract the content after the </think> tag. If the </think> tag is not present, we return an empty string.
-    think_pattern = r"</think>(.*)"
-    contents = [re.search(think_pattern, content, re.DOTALL) for content in contents]
-    contents = [match.group(1).strip() if match else "" for match in contents]
+    # Extract the content after the last </think> tag.
+    contents_after_think = []
+    for content in contents:
+        # Find the last occurrence of </think>
+        last_think_pos = content.rfind("</think>")
+        if last_think_pos != -1:
+            contents_after_think.append(content[last_think_pos + len("</think>") :].strip())
+        else:
+            contents_after_think.append("")
+
     rewards = []
-    for content, sol in zip(contents, solution):
+    for content, sol in zip(contents_after_think, solution):
         gold_parsed = parse(
             sol,
             extraction_mode="first_match",
@@ -734,6 +762,7 @@ def get_reward_funcs(script_args) -> list[Callable]:
         "accuracy": accuracy_reward,
         "format": format_reward,
         "think_format": think_format_reward,
+        "soft_think_format": soft_think_format_reward,
         "think_accuracy": think_accuracy_reward,
         "reasoning_steps": reasoning_steps_reward,
         "cosine": get_cosine_scaled_reward(
