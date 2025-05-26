@@ -96,7 +96,8 @@ def think_format_reward(completions: list[list[dict[str, str]]], **kwargs) -> li
     Reward function that checks if the reasoning process is enclosed within `"<think>"` and `"</think>"` tags. The
     function returns a reward of 1.0 if the format is correct, otherwise 0.0.
 
-    This version allows for at most two newlines at the beginning of the completion before the <think> tag.
+    This version allows for any number of spaces or newlines at the beginning of the completion before the <think> tag,
+    but no other characters.
 
     Args:
         completions (`list[list[dict[str, str]]]`):
@@ -116,14 +117,14 @@ def think_format_reward(completions: list[list[dict[str, str]]], **kwargs) -> li
     >>> completions = [
     ...     [{"content": "<think>\nThis is my reasoning.\n</think>\nThis is my answer."}],
     ...     [{"content": "\n<think>\nThis is my reasoning.\n</think>\nThis is my answer."}],
-    ...     [{"content": "\n\n<think>\nThis is my reasoning.\n</think>\nThis is my answer."}],
-    ...     [{"content": "\n\n\n<think>\nThis is my reasoning.\n</think>\nThis is my answer."}],
+    ...     [{"content": "  \n \n<think>\nThis is my reasoning.\n</think>\nThis is my answer."}],
+    ...     [{"content": "Some text <think>\nThis is my reasoning.\n</think>\nThis is my answer."}],
     ... ]
     >>> think_format_reward(completions)
     [1.0, 1.0, 1.0, 0.0]
     ```
     """
-    pattern = r"^\n{0,2}<think>(?!.*<think>)(.*?)</think>.*$"
+    pattern = r"^[\s\n]*<think>(?!.*<think>)(.*?)</think>.*$"
     completion_contents = [completion[0]["content"] for completion in completions]
     matches = [re.match(pattern, content, re.DOTALL | re.MULTILINE) for content in completion_contents]
     return [1.0 if match else 0.0 for match in matches]

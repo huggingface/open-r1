@@ -581,6 +581,8 @@ class TestThinkFormatReward(unittest.TestCase):
             ("\n<think> Thought </think> Solution",),
             ("<think> Thought </think> Solution",),
             ("\n\n<think> Thought </think> Solution",),
+            (" <think> Thought </think> Solution",),
+            ("\n <think> Thought </think> Solution",),
         ]
     )
     def test_correct_think_format(self, format_string):
@@ -592,8 +594,6 @@ class TestThinkFormatReward(unittest.TestCase):
     @parameterized.expand(
         [
             ("Preamble <think> Thought </think> Solution",),
-            ("\n <think> Thought </think> Solution",),
-            ("\n\n\n<think> Thought </think> Solution",),
             ("No tags at all",),
             ("<think> Missing closing thought",),
             ("<think> Thought 1 </think> <think> Thought 2 </think> Solution section",),
