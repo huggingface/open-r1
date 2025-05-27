@@ -101,7 +101,7 @@ def main(script_args, training_args, model_args):
     trainer = SFTTrainer(
         model=model,
         args=training_args,
-        train_dataset=dataset[script_args.dataset_train_split].select(range(100)),
+        train_dataset=dataset[script_args.dataset_train_split],
         eval_dataset=(dataset[script_args.dataset_test_split] if training_args.eval_strategy != "no" else None),
         processing_class=tokenizer,
         peft_config=get_peft_config(model_args),
