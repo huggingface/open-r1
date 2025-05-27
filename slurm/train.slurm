@@ -32,6 +32,10 @@ source openr1/bin/activate
 START_TIME=$(date +%s)
 echo "START TIME: $(date)"
 
+# Refresh Weka
+echo "Refreshing Weka filesystem..."
+find -L /fsx/h4/ -type f | xargs -d '\n' -r -n512 -P64 weka fs tier fetch
+
 # Default values
 MODEL=""
 TASK=""
