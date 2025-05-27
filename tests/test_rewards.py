@@ -27,7 +27,6 @@ from open_r1.rewards import (
     get_soft_overlong_punishment,
     len_reward,
     reasoning_steps_reward,
-    soft_think_format_reward,
     tag_count_reward,
     think_accuracy_reward,
     think_format_reward,
@@ -597,6 +596,7 @@ class TestThinkFormatReward(unittest.TestCase):
             ("No tags at all",),
             ("<think> Missing closing thought",),
             ("<think> Thought 1 </think> <think> Thought 2 </think> Solution section",),
+            (" <think> Thought 1 </think> Extra think tag </think> Solution")
         ]
     )
     def test_incorrect_think_format(self, format_string):
@@ -604,35 +604,6 @@ class TestThinkFormatReward(unittest.TestCase):
         completion = [[{"content": format_string}]]
         rewards = think_format_reward(completion)
         self.assertEqual(rewards[0], 0.0)
-
-
-class TestSoftThinkFormatReward(unittest.TestCase):
-    def test_correct_think_format(self):
-        """Test think_format_reward with correct think format."""
-        correct_formats = [
-            "\n<think>\n\nThought\n\n</think>\n\nSolution",
-            "<think>\nThought\n</think>\nSolution",
-            "<think>Thought</think>Solution",
-            "Preamble <think> Thought </think> Solution",
-        ]
-
-        for fmt in correct_formats:
-            completion = [[{"content": fmt}]]
-            rewards = think_format_reward(completion)
-            self.assertEqual(rewards[0], 1.0)
-
-    def test_incorrect_think_format(self):
-        """Test think_format_reward with incorrect think format."""
-        incorrect_formats = [
-            "No tags at all",
-            "<think> Missing closing thought",
-            "<think> Thought 1 </think> <think> Thought 2 </think> Solution section",
-        ]
-
-        for fmt in incorrect_formats:
-            completion = [[{"content": fmt}]]
-            rewards = think_format_reward(completion)
-            self.assertEqual(rewards[0], 0.0)
 
 
 class TestThinkAccuracyReward(unittest.TestCase):

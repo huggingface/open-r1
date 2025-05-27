@@ -23,7 +23,7 @@ do_eval: false
 eval_strategy: "no"
 use_vllm: true
 do_eval: false
-gradient_accumulation_steps: 64
+gradient_accumulation_steps: 16
 gradient_checkpointing: true
 gradient_checkpointing_kwargs:
   use_reentrant: false
@@ -55,7 +55,7 @@ reward_funcs:
 - think_format
 - think_accuracy
 reward_weights:
-- 0.25
+- 1.0
 - 1.0
 save_strategy: "steps"
 save_steps: 0.2

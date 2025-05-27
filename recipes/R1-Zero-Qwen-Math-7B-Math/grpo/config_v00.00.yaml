@@ -55,7 +55,7 @@ reward_funcs:
 - think_format
 - think_accuracy
 reward_weights:
-- 0.25
+- 1.0
 - 1.0
 save_strategy: "steps"
 save_steps: 0.2
@@ -64,4 +64,4 @@ seed: 42
 temperature: 1.0
 top_k: null
 use_liger_kernel: true
-warmup_ratio: 0.1
+warmup_ratio: 0.0

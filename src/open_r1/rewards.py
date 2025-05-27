@@ -96,8 +96,10 @@ def think_format_reward(completions: list[list[dict[str, str]]], **kwargs) -> li
     Reward function that checks if the reasoning process is enclosed within `"<think>"` and `"</think>"` tags. The
     function returns a reward of 1.0 if the format is correct, otherwise 0.0.
 
-    This version allows for any number of spaces or newlines at the beginning of the completion before the <think> tag,
-    but no other characters.
+    This version ensures:
+    1. The completion starts with optional whitespace followed by a <think> tag
+    2. There is exactly one <think> tag and exactly one </think> tag in the completion
+    3. No other characters appear before the <think> tag
 
     Args:
         completions (`list[list[dict[str, str]]]`):
@@ -119,32 +121,34 @@ def think_format_reward(completions: list[list[dict[str, str]]], **kwargs) -> li
     ...     [{"content": "\n<think>\nThis is my reasoning.\n</think>\nThis is my answer."}],
     ...     [{"content": "  \n \n<think>\nThis is my reasoning.\n</think>\nThis is my answer."}],
     ...     [{"content": "Some text <think>\nThis is my reasoning.\n</think>\nThis is my answer."}],
+    ...     [{"content": "<think>\nThis is my reasoning.\n</think> Extra </think>\nThis is my answer."}],
     ... ]
     >>> think_format_reward(completions)
-    [1.0, 1.0, 1.0, 0.0]
+    [1.0, 1.0, 1.0, 0.0, 0.0]
     ```
     """
-    pattern = r"^[\s\n]*<think>(?!.*<think>)(.*?)</think>.*$"
-    completion_contents = [completion[0]["content"] for completion in completions]
-    matches = [re.match(pattern, content, re.DOTALL | re.MULTILINE) for content in completion_contents]
-    return [1.0 if match else 0.0 for match in matches]
-
-
-def soft_think_format_reward(completions: list[list[dict[str, str]]], **kwargs) -> list[float]:
-    """A soft version of the think format reward that checks if there is exactly one <think> </think> block, but relaxes the requirement for the <think> tag to be at the start of the completion."""
-    think_pattern = r"<think>.*?</think>"
+    # Pattern to check the start of the completion
+    start_pattern = r"^[\s\n]*<think>"
+    
     completion_contents = [completion[0]["content"] for completion in completions]
     rewards = []
-
+    
     for content in completion_contents:
-        think_matches = re.findall(think_pattern, content, re.DOTALL)
-
-        # Enforce exactly one block of <think> </think>
-        if len(think_matches) == 1:
+        # Check if the completion starts correctly
+        start_match = re.match(start_pattern, content, re.DOTALL | re.MULTILINE)
+        
+        # Count the number of <think> and </think> tags
+        think_open_count = content.count("<think>")
+        think_close_count = content.count("</think>")
+        
+        # Give reward of 1.0 only if:
+        # 1. The completion starts with whitespace/newlines followed by <think>
+        # 2. There's exactly one <think> and one </think> tag
+        if start_match and think_open_count == 1 and think_close_count == 1:
             rewards.append(1.0)
-            continue
-        rewards.append(0.0)
-
+        else:
+            rewards.append(0.0)
+            
     return rewards
 
 
@@ -763,7 +767,6 @@ def get_reward_funcs(script_args) -> list[Callable]:
         "accuracy": accuracy_reward,
         "format": format_reward,
         "think_format": think_format_reward,
-        "soft_think_format": soft_think_format_reward,
         "think_accuracy": think_accuracy_reward,
         "reasoning_steps": reasoning_steps_reward,
         "cosine": get_cosine_scaled_reward(
