@@ -129,18 +129,18 @@ def think_format_reward(completions: list[list[dict[str, str]]], **kwargs) -> li
     """
     # Pattern to check the start of the completion
     start_pattern = r"^[\s\n]*<think>"
-    
+
     completion_contents = [completion[0]["content"] for completion in completions]
     rewards = []
-    
+
     for content in completion_contents:
         # Check if the completion starts correctly
         start_match = re.match(start_pattern, content, re.DOTALL | re.MULTILINE)
-        
+
         # Count the number of <think> and </think> tags
         think_open_count = content.count("<think>")
         think_close_count = content.count("</think>")
-        
+
         # Give reward of 1.0 only if:
         # 1. The completion starts with whitespace/newlines followed by <think>
         # 2. There's exactly one <think> and one </think> tag
@@ -148,7 +148,7 @@ def think_format_reward(completions: list[list[dict[str, str]]], **kwargs) -> li
             rewards.append(1.0)
         else:
             rewards.append(0.0)
-            
+
     return rewards
 
 

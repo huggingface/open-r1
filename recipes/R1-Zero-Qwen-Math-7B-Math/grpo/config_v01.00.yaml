@@ -6,7 +6,7 @@ torch_dtype: bfloat16
 attn_implementation: flash_attention_2
 
 # Data training arguments
-chat_template: "{%- if messages[0]['role'] == 'system' %}\n{{- messages[0]['content'] }}\n{%- else %}\n{{- 'A conversation between a User and Assistant. The User asks a question, and the Assistant solves it. The Assistant first thinks about the reasoning process in the mind and then provides the User with the answer. The reasoning process is enclosed within <think> and </think> tags, followed by the answer i.e., <think> Reasoning process here </think> Answer here.' }}\n{%- endif %}\n{%- for message in messages %}\n    {%- if message['role'] == 'user' %}\n        {{- '\\n\\nUser: ' + message['content'].strip() }}\n    {%- elif message['role'] == 'system' %}\n        {{- message['content'] }}\n    {%- elif message['role'] == 'assistant' %}\n        {{- '\\n\\nAssistant: '  + message['content'] }}\n    {%- endif %}\n{%- endfor %}\n{%- if add_generation_prompt %}\n    {{- '\\n\\nAssistant: ' }}\n{%- endif %}"
+chat_template: "{%- if messages[0]['role'] == 'system' %}\n{{- messages[0]['content'] }}\n{%- else %}\n{{- 'Below is a conversation between a user and an AI assistant. The user asks a question, and the assistant thoroughly explores it through a systematic thinking process before providing the final precise and accurate solution. The assistant structures its response into two main sections: Thought and Solution using the specified format: <think> Thought section </think> Solution section. In the Thought section, the assistant details its reasoning process in steps. Each step includes detailed considerations such as analysing questions, summarizing relevant findings, brainstorming new ideas, verifying the accuracy of the current steps, refining any errors, and revisiting previous steps. In the Solution section, based on various attempts, explorations, and reflections from the Thought section, the assistant systematically presents the final solution that it deems correct.' }}\n{%- endif %}\n{%- for message in messages %}\n    {%- if message['role'] == 'user' %}\n        {{- '\\n\\nUser: ' + message['content'].strip() }}\n    {%- elif message['role'] == 'system' %}\n        {{- message['content'] }}\n    {%- elif message['role'] == 'assistant' %}\n        {{- '\\n\\nAssistant: '  + message['content'] }}\n    {%- endif %}\n{%- endfor %}\n{%- if add_generation_prompt %}\n    {{- '\\n\\nAssistant: ' }}\n{%- endif %}"
 dataset_name: open-r1/DAPO-Math-17k-Processed
 dataset_config: all
 
@@ -28,7 +28,7 @@ gradient_checkpointing: true
 gradient_checkpointing_kwargs:
   use_reentrant: false
 hub_model_id: open-r1/R1-Zero-Qwen-Math-7B-Math
-hub_model_revision: v01.00
+hub_model_revision: v00.00
 hub_strategy: every_save
 learning_rate: 1.0e-06
 log_completions: true

@@ -596,7 +596,8 @@ class TestThinkFormatReward(unittest.TestCase):
             ("No tags at all",),
             ("<think> Missing closing thought",),
             ("<think> Thought 1 </think> <think> Thought 2 </think> Solution section",),
-            (" <think> Thought 1 </think> Extra think tag </think> Solution")
+            (" <think> Thought 1 </think> Extra think tag </think> Solution"),
+            (" <think> Thought 1 </think> Extra opening think tag <think> Solution"),
         ]
     )
     def test_incorrect_think_format(self, format_string):

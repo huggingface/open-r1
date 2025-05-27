@@ -21,10 +21,9 @@
 The goal of this repo is to build the missing pieces of the R1 pipeline such that everybody can reproduce and build on top of it. The project is simple by design and mostly consists of:
 
 
-- `src/open_r1`: contains the scripts to train and evaluate models as well as generate synthetic data:
+- `src/open_r1`: contains the scripts to train models as well as generate synthetic data:
     - `grpo.py`: trains a model with GRPO on a given dataset.
     - `sft.py`: performs a simple SFT of a model on a dataset.
-    - `evaluate.py`: evaluates a model on the R1 benchmarks.
     - `generate.py`: generates synthetic data from a model using [Distilabel](https://github.com/argilla-io/distilabel).
 - `Makefile`: contains easy-to-run commands for each step in the R1 pipeline leveraging the scripts above.
 
@@ -42,6 +41,7 @@ We will use the DeepSeek-R1 [tech report](https://github.com/deepseek-ai/DeepSee
 
 ## News 🗞️
 
+* **🧑‍🍳 [2025/05/26] (Step 1 completed!)** We release [**Mixture-of-Thoughts**](https://huggingface.co/datasets/open-r1/Mixture-of-Thoughts)--a curated reasoning dataset of 350k verified traces distilled from R1. The dataset spans tasks in mathematics, coding, and science, and is designed to teach language models to reason step-by-step. We also provide a recipe to train [OpenR1-Distill-7B](https://huggingface.co/open-r1/OpenR1-Distill-7B), which replicates the reasoning capabilities of [deepseek-ai/DeepSeek-R1-Distill-Qwen-7B](https://huggingface.co/deepseek-ai/DeepSeek-R1-Distill-Qwen-7B) and marks the completion of step 1 in the Open R1 project.
 * **⚡️ [2025/03/11] [(update #3)](https://huggingface.co/blog/open-r1/update-3):** We release the [**CodeForces-CoTs**](https://huggingface.co/datasets/open-r1/codeforces-cots) dataset of 10k competitive programming problems and 100k solutions distilled from R1. We also release IOI24: a new benchmark of _very_ hard problems from international olympiads. A 7B Qwen model trained on CodeForces-CoTs can outperform Claude 3.7 Sonnet on IOI24, while a 32B model can outperform R1 itself.
 * **∞ [2025/02/10] [(update #2)](https://huggingface.co/blog/open-r1/update-2):** We release the [**OpenR1-Math-220k**](https://huggingface.co/datasets/open-r1/OpenR1-Math-220k) dataset of 220k traces distilled from R1 on a new version of NuminaMath. Models trained on this dataset match the performance of DeepSeek's distilled ones.
 * **🔥 [2025/02/02] [(update #1)](https://huggingface.co/blog/open-r1/update-1):** We implement the first parts of the [training](https://github.com/huggingface/open-r1?tab=readme-ov-file#training-models), [inference](https://github.com/huggingface/open-r1?tab=readme-ov-file#data-generation), and [evaluation](https://github.com/huggingface/open-r1?tab=readme-ov-file#reproducing-deepseeks-evaluation-results) pipelines. Let's go!  
@@ -103,25 +103,27 @@ sudo apt-get install git-lfs
 > [!NOTE]
 > The training commands below are configured for a node of 8 x H100s (80GB). For different hardware and topologies, you may need to tune the batch size and number of gradient accumulation steps.
 
-We support training models with either DDP or DeepSpeed (ZeRO-2 and ZeRO-3). For example, to run SFT on a dataset distilled from DeepSeek-R1 with reasoning traces such as [open-r1/OpenR1-Math-220k](https://huggingface.co/datasets/open-r1/OpenR1-Math-220k), run:
+We support training models with either DDP or DeepSpeed (ZeRO-2 and ZeRO-3). For example, to perform SFT on a dataset distilled from DeepSeek-R1 with reasoning traces such as [open-r1/Mixture-of-Thoughts](https://huggingface.co/datasets/open-r1/Mixture-of-Thoughts), run:
 
 ```shell
 # Train via command line
 accelerate launch --config_file=recipes/accelerate_configs/zero3.yaml src/open_r1/sft.py \
-    --model_name_or_path Qwen/Qwen2.5-1.5B-Instruct \
-    --dataset_name open-r1/OpenR1-Math-220k \
-    --learning_rate 5.0e-5 \
-    --num_train_epochs 1 \
-    --max_seq_length 16384 \
-    --per_device_train_batch_size 16 \
+    --model_name_or_path open-r1/Qwen2.5-Math-7B-RoPE-300k \
+    --dataset_name open-r1/Mixture-of-Thoughts \
+    --dataset_config all \
+    --eos_token '<|im_end|>' \
+    --learning_rate 4.0e-5 \
+    --num_train_epochs 5 \
+    --max_seq_length 32768 \
+    --per_device_train_batch_size 2 \
     --gradient_checkpointing \
     --bf16 \
     --use_liger_kernel \
-    --output_dir data/Qwen2.5-1.5B-Open-R1-Distill
+    --output_dir data/OpenR1-Distill-7B
 
 # Train via YAML config
 accelerate launch --config_file recipes/accelerate_configs/zero3.yaml src/open_r1/sft.py \
-    --config recipes/Qwen2.5-1.5B-Instruct/sft/config_demo.yaml
+    --config recipes/OpenR1-Distill-7B/sft/config_distill.yaml
 ```
 
 Currently, the following tasks are supported:
@@ -135,17 +137,18 @@ Currently, the following tasks are supported:
 By default, these scripts will push each model to your Hugging Face Hub username, i.e. `{username}/{model_name}-{task}`. You can override the parameters in each YAML config by appending them to the command as follows: 
 
 ```shell
-# Change batch size, number of epochs etc
+# Change the base model to a smaller variant
 accelerate launch --config_file recipes/accelerate_configs/zero3.yaml src/open_r1/sft.py \
-    --config recipes/Qwen2.5-1.5B-Instruct/sft/config_demo.yaml
-    --per_device_train_batch_size=1 --num_train_epochs=5
+    --config recipes/OpenR1-Distill-7B/sft/config_distill.yaml \
+    --model_name_or_path Qwen/Qwen3-0.6-Base \
+    --hub_model_id OpenR1-Distill-0.6B
 ```
 
 If you also wish to override the Weights and Biases default settings, you can do so as follows:
 
 ```shell
 accelerate launch --config_file recipes/accelerate_configs/zero3.yaml src/open_r1/sft.py \
-    --config recipes/Qwen2.5-1.5B-Instruct/sft/config_demo.yaml
+    --config recipes/OpenR1-Distill-7B/sft/config_distill.yaml
     --wandb_entity huggingface --wandb_project open-r1 --run_name Qwen2.5-1.5B-GRPO
 ```
 
@@ -158,10 +161,11 @@ Most base models like `meta-llama/Llama-3.2-1B` do not have a chat template, so 
 accelerate launch --config_file=recipes/accelerate_configs/zero3.yaml src/open_r1/sft.py \
     --model_name_or_path Qwen/Qwen2.5-1.5B \
 +   --eos_token '<|im_end|>'
-    --dataset_name open-r1/OpenR1-Math-220k \
-    --learning_rate 5.0e-5 \
+    --dataset_name open-r1/Mixture-of-Thoughts \
+    --dataset_config all \
+    --learning_rate 4.0e-5 \
     --num_train_epochs 1 \
-    --max_seq_length 16384 \
+    --max_seq_length 32768 \
     --per_device_train_batch_size 16 \
     --gradient_checkpointing \
     --bf16 \
@@ -177,10 +181,11 @@ accelerate launch --config_file=recipes/accelerate_configs/zero3.yaml src/open_r
     --model_name_or_path meta-llama/Llama-3.2-1B \
 +   --chat_template "$(cat llama_chat_template.jinja)" \
 +   --eos_token '<|eot_id|>' \
-    --dataset_name open-r1/OpenR1-Math-220k \
-    --learning_rate 5.0e-5 \
+    --dataset_name open-r1/Mixture-of-Thoughts \
+    --dataset_config all \
+    --learning_rate 4.0e-5 \
     --num_train_epochs 1 \
-    --max_seq_length 16384 \
+    --max_seq_length 32768 \
     --per_device_train_batch_size 16 \
     --gradient_checkpointing \
     --bf16 \
@@ -188,15 +193,24 @@ accelerate launch --config_file=recipes/accelerate_configs/zero3.yaml src/open_r
     --output_dir data/Llama-3.2-1B-Open-R1-Distill
 ```
 
-### SFT
+### SFT distillation
 
-To run SFT on a dataset distilled from DeepSeek-R1 with reasoning traces such as [open-r1/OpenR1-Math-220k](https://huggingface.co/datasets/open-r1/OpenR1-Math-220k), run:
+We provide a recipe to reproduce the reasoning capabilities of [deepseek-ai/DeepSeek-R1-Distill-Qwen-7B](https://huggingface.co/deepseek-ai/DeepSeek-R1-Distill-Qwen-7B), starting from the same base model. To do so, run:
 
 ```shell
 ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/zero3.yaml \
     src/open_r1/sft.py \
-    --config recipes/Qwen2.5-1.5B-Instruct/sft/config_demo.yaml
+    --config recipes/OpenR1-Distill-7B/sft/config_distill.yaml
 ```
+
+The result will be a model like [open-r1/OpenR1-Distill-7B](https://huggingface.co/open-r1/OpenR1-Distill-7B), with the following downstream performance:
+
+| Model                       | AIME 2024 | MATH-500 | GPQA Diamond | LiveCodeBench v5 |
+|-----------------------------|-----------|----------|--------------|------------------|
+| OpenR1-Distill-7B           | 52.7      | 89.0     | 52.8         | 39.4             |
+| DeepSeek-R1-Distill-Qwen-7B | 51.3      | 93.5     | 52.4         | 37.4             |
+
+You can adjust the YAML config to train on a different base model or dataset.
 
 ### GRPO
 
@@ -411,7 +425,7 @@ sbatch --job-name=open_r1 --nodes=1 slurm/train.slurm --model {model_name} --tas
 Here `{model_name}` and `{task}` are defined as above, while `{config_suffix}` refers to the specific config and `{accelerator}` refers to the choice of 🤗 Accelerate config in `recipes/accelerate_configs`. If you wish to override the default config parameters, you can provide them by appending a space-separated string like `'--arg1=value1 --arg2=value2'`. Here's a concrete example to run SFT on 1 node of 8 GPUs:
 
 ```shell
-sbatch --job-name=open_r1 --nodes=1 slurm/train.slurm --model Qwen2.5-1.5B-Instruct --task sft --config demo --accelerator zero3
+sbatch --job-name=open_r1 --nodes=1 slurm/train.slurm --model OpenR1-Distill-7B --task sft --config distill --accelerator zero3
 ```
 
 You can scale the number of nodes by increasing the `--nodes` flag.
@@ -487,8 +501,9 @@ lighteval vllm $MODEL_ARGS "extended|lcb:codegeneration|0|0" \
 To increase throughput across multiple GPUs, use _data parallel_ as follows:
 
 ```shell
+export VLLM_WORKER_MULTIPROC_METHOD=spawn
 NUM_GPUS=8
-MODEL=deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B
+MODEL=deepseek-ai/DeepSeek-R1-Distill-Llama-8B
 MODEL_ARGS="model_name=$MODEL,dtype=bfloat16,data_parallel_size=$NUM_GPUS,max_model_length=32768,gpu_memory_utilization=0.8,generation_parameters={max_new_tokens:32768,temperature:0.6,top_p:0.95}"
 TASK=aime24
 OUTPUT_DIR=data/evals/$MODEL
