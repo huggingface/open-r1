@@ -6,17 +6,17 @@ torch_dtype: bfloat16
 attn_implementation: flash_attention_2
 
 # Data training arguments
-chat_template: "{%- if messages[0]['role'] == 'system' %}\n{{- messages[0]['content'] }}\n{%- else %}\n{{- 'Below is a conversation between a user and an AI assistant. The user asks a question, and the assistant solves it. The assistant first thinks about the reasoning process in the mind and then provides the user with the answer. The reasoning process is enclosed within <think> and </think> tags, followed by the answer i.e., <think> Reasoning process here </think> Answer here.' }}\n{%- endif %}\n{%- for message in messages %}\n    {%- if message['role'] == 'user' %}\n        {{- '\\n\\nUser: ' + message['content'].strip() }}\n    {%- elif message['role'] == 'system' %}\n        {{- message['content'] }}\n    {%- elif message['role'] == 'assistant' %}\n        {{- '\\n\\nAssistant: '  + message['content'] }}\n    {%- endif %}\n{%- endfor %}\n{%- if add_generation_prompt %}\n    {{- '\\n\\nAssistant: ' }}\n{%- endif %}"
+chat_template: "{%- if messages[0]['role'] == 'system' %}\n{{- messages[0]['content'] }}\n{%- else %}\n{{- 'Below is a conversation between a user and an AI assistant. The user asks a question, and the assistant solves it. The assistant first thinks about the reasoning process in the mind and then provides the user with the answer. The reasoning process and answer are structured into two main sections: Thought and Answer using the specified format: <think> Thought section </think> Answer section.' }}\n{%- endif %}\n{%- for message in messages %}\n    {%- if message['role'] == 'user' %}\n        {{- '\\n\\nUser: ' + message['content'].strip() }}\n    {%- elif message['role'] == 'system' %}\n        {{- message['content'] }}\n    {%- elif message['role'] == 'assistant' %}\n        {{- '\\n\\nAssistant: '  + message['content'] }}\n    {%- endif %}\n{%- endfor %}\n{%- if add_generation_prompt %}\n    {{- '\\n\\nAssistant: ' }}\n{%- endif %}"
 dataset_name: open-r1/DAPO-Math-17k-Processed
 dataset_config: all
 
 # GRPO trainer config
 callbacks:
 - push_to_hub_revision
-# benchmarks:
-# - aime24
-# - gpqa
-# - lcb_v4
+benchmarks:
+- aime24
+- gpqa
+- lcb_v4
 beta: 0.0
 bf16: true
 do_eval: false
