@@ -69,7 +69,7 @@ uv venv openr1 --python 3.11 && source openr1/bin/activate && uv pip install --u
 Next, install vLLM and FlashAttention:
 
 ```shell
-uv pip install vllm==0.8.4
+uv pip install vllm==0.8.5.post1
 uv pip install setuptools && uv pip install flash-attn --no-build-isolation
 ```
 
@@ -140,8 +140,9 @@ By default, these scripts will push each model to your Hugging Face Hub username
 # Change the base model to a smaller variant
 accelerate launch --config_file recipes/accelerate_configs/zero3.yaml src/open_r1/sft.py \
     --config recipes/OpenR1-Distill-7B/sft/config_distill.yaml \
-    --model_name_or_path Qwen/Qwen3-0.6-Base \
-    --hub_model_id OpenR1-Distill-0.6B
+    --model_name_or_path Qwen/Qwen3-0.6B-Base \
+    --hub_model_id OpenR1-Distill-0.6B \
+    --output_dir data/OpenR1-Distill-0.6B
 ```
 
 If you also wish to override the Weights and Biases default settings, you can do so as follows:
@@ -214,42 +215,17 @@ You can adjust the YAML config to train on a different base model or dataset.
 
 ### GRPO
 
-We use TRL's [vLLM backend](https://huggingface.co/docs/trl/speeding_up_training?vllm+examples=GRPO#vllm-for-fast-generation-in-online-methods) to scale training to large models across multiple nodes. For single-node training of smol models across 8 GPUs, first spin up the vLLM server to run on e.g. 1 GPU as follows:
+We use TRL's [vLLM backend](https://huggingface.co/docs/trl/speeding_up_training?vllm+examples=GRPO#vllm-for-fast-generation-in-online-methods) to scale training to large models across multiple nodes. For single-node training of smol models across 8 GPUs, use `vllm_mode="colocate"` to run vLLM in the same process as the training script:
 
 ```shell
-CUDA_VISIBLE_DEVICES=0 trl vllm-serve --model deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B
-```
-
-Once the server is up, run training on the remaining GPUs as follows:
-
-```shell
-CUDA_VISIBLE_DEVICES=1,2,3,4,5,6,7 ACCELERATE_LOG_LEVEL=info \
-    accelerate launch --config_file recipes/accelerate_configs/zero2.yaml --num_processes 7 \
-    src/open_r1/grpo.py --config recipes/DeepSeek-R1-Distill-Qwen-1.5B/grpo/config_demo.yaml
+ACCELERATE_LOG_LEVEL=info \
+    accelerate launch --config_file recipes/accelerate_configs/zero3.yaml \
+    src/open_r1/grpo.py --config recipes/DeepSeek-R1-Distill-Qwen-1.5B/grpo/config_demo.yaml \
+    --vllm_mode colocate
 ```
 
 > [!WARNING]
 > The chat template used in the distilled DeepSeek models omits the contents of the reasoning block within the `<think>` and `</think>` tags. It also prefills the assistant response with `<think>` which interferes with the format reward function. To handle that, it is important to override the chat template as done in e.g.  [recipes/DeepSeek-R1-Distill-Qwen-1.5B/grpo/config_demo.yaml](./recipes/DeepSeek-R1-Distill-Qwen-1.5B/grpo/config_demo.yaml).
-
-To increase the throughput with data parallel on e.g. 2 GPUs, run:
-
-```shell
-CUDA_VISIBLE_DEVICES=0,1 trl vllm-serve --model deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B --data_parallel_size 2
-```
-
-Then run training on the remaining GPUs as follows:
-
-```shell
-CUDA_VISIBLE_DEVICES=2,3,4,5,6,7 ACCELERATE_LOG_LEVEL=info \
-    accelerate launch --config_file recipes/accelerate_configs/zero2.yaml --num_processes 6 \
-    src/open_r1/grpo.py --config recipes/DeepSeek-R1-Distill-Qwen-1.5B/grpo/config_demo.yaml
-```
-
-For larger models, use tensor parallelism:
-
-```shell
-CUDA_VISIBLE_DEVICES=0,1 trl vllm-serve --model deepseek-ai/DeepSeek-R1-Distill-Qwen-14B --tensor_parallel_size 2
-``` 
 
 For multi-node training on N+1 nodes, with 1 node running the vLLM server and N nodes running training, we provide an example Slurm script. For example, to run the above example on 1+1 nodes with data parallelism, run:
 
