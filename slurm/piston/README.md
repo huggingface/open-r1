@@ -3,6 +3,7 @@
 We have built a [piston](https://github.com/engineer-man/piston) package to run IOI problems.
 
 To launch a fleet of piston workers on a slurm cluster, you can adapt the paths in `launch_piston_workers.sh` and `launch_single_piston.sh` and run:
+
 ```bash
 slurm/piston/launch_piston_workers.sh (number of workers to launch)
 ```
@@ -10,7 +11,9 @@ slurm/piston/launch_piston_workers.sh (number of workers to launch)
 This command will launch a slurm job for each worker, which will be called `piston-worker-<port>`, where `<port>` is the port where the worker will be listening.
 
 ## First time setup
+
 You will need to install the [IOI package](https://github.com/guipenedo/piston/tree/master/packages/cms_ioi/1.0.0) in the workers.
+
 1. Launch a single worker:
 ```bash
 slurm/piston/launch_piston_workers.sh 1
@@ -25,7 +28,7 @@ curl -X POST http://ip-10-53-86-146:1234/api/v2/packages -H "Content-Type: appli
 
 For CodeForces:
 ```bash
-curl -X POST http://ip-10-53-86-146:1234/api/v2/packages -H "Content-Type: application/json" -d '{"language": "codeforces", "version": "1.0.0"}'
+curl -X POST http://ip-10-53-93-192:7836/api/v2/packages -H "Content-Type: application/json" -d '{"language": "codeforces", "version": "1.0.0"}'
 ```
 
 3. You can now launch more workers and due to the shared mounted packages directory, they should already have the package installed.

@@ -27,6 +27,8 @@ fi
 module load cuda/12.4
 set -x -e
 
+export PISTON_ENDPOINTS=slurm
+
 source ~/.bashrc
 source openr1/bin/activate
 START_TIME=$(date +%s)
@@ -137,11 +139,11 @@ fi
 
 # force crashing on nccl issues like hanging broadcast
 export NCCL_ASYNC_ERROR_HANDLING=1
-# export NCCL_DEBUG=INFO
-# export NCCL_DEBUG_SUBSYS=COLL
+export NCCL_DEBUG=INFO
+export NCCL_DEBUG_SUBSYS=COLL
+export CUDA_LAUNCH_BLOCKING=1
 # export NCCL_SOCKET_NTHREADS=1
 # export NCCL_NSOCKS_PERTHREAD=1
-# export CUDA_LAUNCH_BLOCKING=1
 
 export CMD=" \
     src/open_r1/$TASK.py --config $CONFIG_FILE $OPTIONAL_ARGS

@@ -735,6 +735,59 @@ def get_code_format_reward(language: str = "python"):
 
     return code_format_reward
 
+def get_think_code_format_reward(language: str = "python"):
+    """Format reward function that checks for proper think tags AND code format.
+    
+    This function combines the logic from think_format_reward (proper <think> tag placement)
+    with code language checking after the closing </think> tag (no <answer> tags required).
+
+    Args:
+        language: Programming language supported by E2B https://e2b.dev/docs/code-interpreting/supported-languages
+    """
+
+    def think_code_format_reward(completions, **kwargs):
+        # if there is a language field, use it instead of the default language
+        languages = kwargs["language"] if "language" in kwargs else [language] * len(completions)
+        
+        completion_contents = [completion[0]["content"] for completion in completions]
+        rewards = []
+        
+        # Pattern to check the start of the completion (from think_format_reward)
+        start_pattern = r"^[\s\n]*<think>"
+        
+        for content, sample_language in zip(completion_contents, languages):
+            # Check if the completion starts correctly with <think>
+            start_match = re.match(start_pattern, content, re.DOTALL | re.MULTILINE)
+            
+            # Count the number of <think> and </think> tags
+            think_open_count = content.count("<think>")
+            think_close_count = content.count("</think>")
+            
+            # Check for proper think tag format
+            proper_think_format = (
+                start_match and 
+                think_open_count == 1 and 
+                think_close_count == 1
+            )
+            
+            if not proper_think_format:
+                rewards.append(0.0)
+                continue
+            
+            # Extract content after the closing </think> tag
+            last_think_pos = content.rfind("</think>")
+            content_after_think = content[last_think_pos + len("</think>"):] if last_think_pos != -1 else ""
+            
+            # Check if there's a code block with the specified language after </think>
+            code_pattern = rf"```{sample_language}.*?```"
+            code_match = re.search(code_pattern, content_after_think, re.DOTALL)
+            
+            rewards.append(1.0 if code_match else 0.0)
+        
+        return rewards
+
+    return think_code_format_reward
+
 
 def get_soft_overlong_punishment(max_completion_len, soft_punish_cache):
     """
@@ -816,6 +869,7 @@ def get_reward_funcs(script_args) -> list[Callable]:
             cf_code_reward,
         ),
         "code_format": get_code_format_reward(language=script_args.code_language),
+        "think_code_format": get_think_code_format_reward(language=script_args.code_language),
         "tag_count": tag_count_reward,
         "soft_overlong_punishment": get_soft_overlong_punishment(
             max_completion_len=script_args.max_completion_len,

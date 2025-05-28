@@ -1,0 +1,76 @@
+# Config for 1 + 1 nodes
+# Model arguments
+model_name_or_path: open-r1/Qwen2.5-Math-7B-RoPE-300k
+model_revision: main
+torch_dtype: bfloat16
+attn_implementation: flash_attention_2
+
+# Data training arguments
+chat_template: "{%- if messages[0]['role'] == 'system' %}\n{{- messages[0]['content'] }}\n{%- else %}\n{{- 'Below is a conversation between a user and an AI assistant. The user asks a question, and the assistant solves it. The assistant first thinks about the reasoning process in the mind and then provides the user with the answer. The reasoning process and answer are structured into two main sections: Thought and Answer using the specified format: <think> Thought section </think> Answer section.' }}\n{%- endif %}\n{%- for message in messages %}\n    {%- if message['role'] == 'user' %}\n        {{- '\\n\\nUser: ' + message['content'].strip() }}\n    {%- elif message['role'] == 'system' %}\n        {{- message['content'] }}\n    {%- elif message['role'] == 'assistant' %}\n        {{- '\\n\\nAssistant: '  + message['content'] }}\n    {%- endif %}\n{%- endfor %}\n{%- if add_generation_prompt %}\n    {{- '\\n\\nAssistant: ' }}\n{%- endif %}"
+dataset_name: open-r1/codeforces
+dataset_prompt_column: prompt
+dataset_config: verifiable-prompts
+dataset_test_split: test
+dataset_train_split: train
+
+# GRPO trainer config
+callbacks:
+- push_to_hub_revision
+benchmarks:
+- aime24
+- gpqa
+- lcb_v4
+beta: 0.0
+loss_type: dr_grpo
+scale_rewards: false
+bf16: true
+do_eval: false
+eval_strategy: "no"
+use_vllm: true
+do_eval: false
+gradient_accumulation_steps: 32
+gradient_checkpointing: true
+gradient_checkpointing_kwargs:
+  use_reentrant: false
+hub_model_id: open-r1/R1-Zero-Qwen-Math-7B-Code
+hub_model_revision: v00.00
+hub_strategy: every_save
+learning_rate: 1.0e-06
+log_completions: true
+log_level: info
+logging_first_step: true
+logging_steps: 1
+logging_strategy: steps
+lr_scheduler_type: constant_with_warmup
+mask_truncated_completions: true
+max_grad_norm: 0.2
+max_prompt_length: 2048
+max_completion_length: 8192
+max_steps: -1
+num_generations: 16
+num_iterations: 1
+num_train_epochs: 4 # About 1k optimization steps
+output_dir: data/R1-Zero-Qwen-Math-7B-Code-v00.00
+overwrite_output_dir: true
+per_device_train_batch_size: 4
+push_to_hub: true
+report_to:
+- wandb
+reward_funcs:
+- think_code_format
+- cf_code
+reward_weights:
+- 1.0
+- 1.0
+save_strategy: "steps"
+save_steps: 0.2
+save_total_limit: 1
+seed: 42
+temperature: 1.0
+top_k: null
+use_liger_kernel: true
+warmup_ratio: 0.0
+# for each generation, evaluate these many test cases in parallel, then check if any of them failed (0 score): if so stop evaluating
+# otherwise continue with the next batch of test cases. Useful to avoid overloading the eval server + save time on wrong solutions
+code_eval_test_batch_size: 30 # -1
+code_eval_scoring_mode: weighted_sum
