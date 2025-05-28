@@ -12,6 +12,10 @@
 # Be ye warned this may not work on other clusters!
 module load cuda/12.4
 
+# Refresh Weka on h4 cache
+echo "Refreshing Weka filesystem..."
+find -L /fsx/h4/ -type f | xargs -d '\n' -r -n512 -P64 weka fs tier fetch
+
 # Needed for vLLM
 export VLLM_WORKER_MULTIPROC_METHOD=spawn
 

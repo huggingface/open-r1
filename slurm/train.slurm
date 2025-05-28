@@ -32,6 +32,10 @@ source openr1/bin/activate
 START_TIME=$(date +%s)
 echo "START TIME: $(date)"
 
+# Refresh Weka on h4 cache
+echo "Refreshing Weka filesystem..."
+find -L /fsx/h4/ -type f | xargs -d '\n' -r -n512 -P64 weka fs tier fetch
+
 # Default values
 MODEL=""
 TASK=""
@@ -167,7 +171,7 @@ SRUN_ARGS=" \
     --ntasks=$NUM_NODES \
     --nodelist=$NODELIST
     "
-clear; srun $SRUN_ARGS bash -c "$LAUNCHER $CMD" 2>&1
+srun $SRUN_ARGS bash -c "$LAUNCHER $CMD" 2>&1
 
 END_TIME=$(date +%s)
 echo "END TIME: $(date)"
