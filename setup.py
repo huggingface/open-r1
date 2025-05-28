@@ -69,7 +69,7 @@ _deps = [
     "sentencepiece>=0.1.99",
     "torch==2.6.0",
     "transformers==4.52.3",
-    "trl[vllm] @ git+https://github.com/huggingface/trl.git@9ac614fb081e17805f7f62ab3f5f7036bdefe7b0",  # Support for activation offload: https://github.com/huggingface/trl/pull/2954
+    "trl[vllm]==0.18.0",
     "wandb>=0.19.1",
     "async-lru>=2.0.5",
     "aiofiles>=24.1.0",
