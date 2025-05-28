@@ -1,5 +1,13 @@
 # Post-training recipes
 
+## OpenR1 Distill 7B
+
+To train the OpenR1 Distill 7B model, run:
+
+```
+sbatch --nodes=1 slurm/train.slurm --model OpenR1-Distill-7B --task sft --config distill --accelerator zero3
+```
+
 ## OlympicCoder
 
 To train the OlympicCoder models, run:

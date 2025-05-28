@@ -19,20 +19,18 @@ Usage:
 
 # One 1 node of 8 x H100s
 accelerate launch --config_file=recipes/accelerate_configs/zero3.yaml src/open_r1/sft.py \
-    --model_name_or_path Qwen/Qwen2.5-1.5B-Instruct \
-    --dataset_name open-r1/OpenR1-Math-220k \
-    --learning_rate 2.0e-5 \
-    --num_train_epochs 1 \
-    --packing \
-    --max_seq_length 4096 \
+    --model_name_or_path open-r1/Qwen2.5-Math-7B-RoPE-300k \
+    --dataset_name open-r1/Mixture-of-Thoughts \
+    --dataset_config all \
+    --eos_token '<|im_end|>' \
+    --learning_rate 4.0e-5 \
+    --num_train_epochs 5 \
+    --max_seq_length 32768 \
     --per_device_train_batch_size 2 \
-    --gradient_accumulation_steps 8 \
     --gradient_checkpointing \
     --bf16 \
-    --logging_steps 5 \
-    --eval_strategy steps \
-    --eval_steps 100 \
-    --output_dir data/Qwen2.5-1.5B-Open-R1-Distill
+    --use_liger_kernel \
+    --output_dir data/OpenR1-Distill-7B
 """
 
 import logging
@@ -55,7 +53,6 @@ logger = logging.getLogger(__name__)
 
 
 def main(script_args, training_args, model_args):
-    # Set seed for reproducibility
     set_seed(training_args.seed)
 
     ###############
@@ -87,24 +84,15 @@ def main(script_args, training_args, model_args):
     if "wandb" in training_args.report_to:
         init_wandb_training(training_args)
 
-    ################
-    # Load datasets
-    ################
+    ######################################
+    # Load dataset, tokenizer, and model #
+    ######################################
     dataset = get_dataset(script_args)
-
-    ################
-    # Load tokenizer
-    ################
     tokenizer = get_tokenizer(model_args, training_args)
-
-    ###################
-    # Load model
-    ###################
-    logger.info("*** Loading model ***")
     model = get_model(model_args, training_args)
 
     if tokenizer.chat_template is None:
-        logger.info("No chat template provided, using ChatML.")
+        logger.info("No chat template provided, defaulting to ChatML.")
         model, tokenizer = setup_chat_format(model, tokenizer, format="chatml")
 
     ############################
@@ -140,6 +128,9 @@ def main(script_args, training_args, model_args):
     # Save model and create model card
     ##################################
     logger.info("*** Save model ***")
+    # Align the model's generation config with the tokenizer's eos token
+    # to avoid unbounded generation in the transformers `pipeline()` function
+    trainer.model.generation_config.eos_token_id = tokenizer.eos_token_id
     trainer.save_model(training_args.output_dir)
     logger.info(f"Model saved to {training_args.output_dir}")
 
