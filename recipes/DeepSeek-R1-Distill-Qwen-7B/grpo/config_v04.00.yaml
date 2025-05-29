@@ -1,0 +1,66 @@
+# Model arguments
+model_name_or_path: deepseek-ai/DeepSeek-R1-Distill-Qwen-7B
+model_revision: main
+torch_dtype: bfloat16
+attn_implementation: flash_attention_2
+# Data training arguments
+dataset_name: open-r1/verifiable-coding-problems-python_decontaminated-tested-shuffled
+dataset_prompt_column: problem
+
+# system_prompt: "You are a helpful AI Assistant that provides well-reasoned and detailed responses. You first think about the reasoning process as an internal monologue and then provide the user with the answer. Respond in the following format: <think>\n...\n</think>\n<answer>\n...\n</answer>"
+
+# GRPO trainer config
+callbacks:
+- push_to_hub_revision
+benchmarks:
+- lcb_v4
+beta: 0.000
+bf16: true
+do_eval: false
+eval_strategy: "no"
+use_vllm: true
+vllm_device: auto
+vllm_gpu_memory_utilization: 0.7
+do_eval: false
+gradient_accumulation_steps: 128
+gradient_checkpointing: true
+gradient_checkpointing_kwargs:
+  use_reentrant: false
+hub_model_id: open-r1/DeepSeek-R1-Distill-Qwen-7B-GRPO
+hub_model_revision: v04.00
+hub_strategy: every_save
+learning_rate: 1.0e-06
+log_completions: true
+log_level: info
+logging_first_step: true
+logging_steps: 1
+logging_strategy: steps
+lr_scheduler_type: constant_with_warmup
+max_grad_norm: 0.2
+max_prompt_length: 1024
+max_completion_length: 24000
+max_steps: -1
+num_generations: 8
+num_iterations: 1
+num_train_epochs: 1.0
+output_dir: data/DeepSeek-R1-Distill-Qwen-7B_v04.00
+overwrite_output_dir: true
+per_device_train_batch_size: 1
+push_to_hub: true
+report_to:
+- wandb
+reward_funcs:
+- binary_code
+e2b_router_url: ip-10-53-86-47:8000
+reward_weights:
+- 1.0
+save_strategy: "steps"
+save_steps: 0.05
+save_total_limit: 1
+seed: 42
+temperature: 0.7
+wandb_entity: huggingface 
+wandb_project: open-r1
+warmup_ratio: 0.1
+mask_truncated_completions: true
+loss_type: dr_grpo
