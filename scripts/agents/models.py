@@ -65,27 +65,44 @@ class ConversationData(BaseModel):
         return [conversation.to_chat_message() for conversation in self.conversations]
 
 class ConversationDataList(RootModel[List[ConversationData]]):
+
     @model_validator(mode="after")
     def validate_conversation(self):
-        max_conversations = 0
-        new_conversations: dict[str, ConversationData] = {}
+        new_conversations: dict[str, List[ConversationData]] = {}
 
-        for i in range(len(self.root) - 1):
-            for j in range(i + 1, len(self.root)):
-                if self.root[i].image == self.root[j].image:
-                    if [c1.model_dump() for c1 in self.root[i].conversations] == [c2.model_dump() for c2 in self.root[j].conversations]:
-                        raise ValueError(f"Conversation {self.root[i].conversations} already exists")
-
+        # merge image duplicates
         for conversation in self.root:
             if conversation.image not in new_conversations:
-                new_conversations[conversation.image] = conversation
+                new_conversations[conversation.image] = [conversation]
             else:
-                new_conversations[conversation.image].conversations.extend(conversation.conversations)
+                new_conversations[conversation.image].append(conversation)
 
-                if len(new_conversations[conversation.image].conversations) > max_conversations:
-                    max_conversations = len(new_conversations[conversation.image].conversations)
-        print(f"Max conversations by image: {max_conversations} conversations")
-        self.root = list(new_conversations.values())
+        # delete text duplicates
+        duplicates = 0
+        for data in new_conversations.values():
+            if isinstance(data, list):
+                index_to_pop = set()
+                for i in range(len(data) - 1):
+                    for j in range(i + 1, len(data)):
+                        if [c1.model_dump() for c1 in data[i].conversations] == [c2.model_dump() for c2 in data[j].conversations]:
+                            if j not in index_to_pop:
+                                duplicates += 1
+                            index_to_pop.add(j)
+                for index in sorted(index_to_pop, reverse=True):
+                    data.pop(index)
+
+        # delete text duplicates
+        new_data = []
+        for data in new_conversations.values():
+            for i in range(len(data)):
+                if i == 0:
+                    new_data.append(data[i])
+                else:
+                    new_data[-1].conversations.extend(data[i].conversations)
+
+
+        self.root = new_data
+
         return self
 
 class DataRow(BaseModel):

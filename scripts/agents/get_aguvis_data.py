@@ -402,7 +402,7 @@ def process_single_config(config: Dict[str, Any], dataset_path: str, smolagents_
         # Push to hub
         dataset_to_push.push_to_hub(
             smolagents_repo_id,
-            config_name=subset_name,  # This sets the subset name
+            # config_name=subset_name,  # This sets the subset name
             split="train",  # This should be "train" not the subset name
         )
 
@@ -450,7 +450,7 @@ def make_dataset_from_original_data(dataset_config: DatasetConfig, max_processes
     # Prepare arguments for multiprocessing
     process_args = [
         (config, dataset_path, converted_repo_id, reasoning) 
-        for config in dataset_configs if config["subset_name"]
+        for config in dataset_configs if config["subset_name"] if config["subset_name"] in ["guiact-web-single"]
     ]
     
     # Process configs in parallel with progress tracking
@@ -493,20 +493,27 @@ def make_dataset_from_original_data(dataset_config: DatasetConfig, max_processes
 
 
 if __name__ == "__main__":
-    dataset_config_1 = DatasetConfig(
-        huggingface_repo_id="xlangai/aguvis-stage1",
-        local_path="/fsx/amir_mahla/aguvis_raw_stage_1",
-        config_dict=config_dict_stage_1,
-        smolagents_repo_id="smolagents/aguvis-stage-1",
-        reasoning=False,
-    )
-    dataset_config_2 = DatasetConfig(
+    # dataset_config_1 = DatasetConfig(
+    #     huggingface_repo_id="xlangai/aguvis-stage1",
+    #     local_path="/fsx/amir_mahla/aguvis_raw_stage_1",
+    #     config_dict=config_dict_stage_1,
+    #     smolagents_repo_id="smolagents/aguvis-stage-1",
+    #     reasoning=False,
+    # )
+    # dataset_config_2 = DatasetConfig(
+    #     huggingface_repo_id="xlangai/aguvis-stage2",
+    #     local_path="/fsx/amir_mahla/aguvis_raw_stage_2",
+    #     config_dict=config_dict_stage_2,
+    #     smolagents_repo_id="smolagents/aguvis-stage-2",
+    #     reasoning=True,
+    # )
+    dataset_config_3 = DatasetConfig(
         huggingface_repo_id="xlangai/aguvis-stage2",
         local_path="/fsx/amir_mahla/aguvis_raw_stage_2",
         config_dict=config_dict_stage_2,
-        smolagents_repo_id="smolagents/aguvis-stage-2",
+        smolagents_repo_id="smolagents/guiact-web-single",
         reasoning=True,
     )
     # You can specify max_processes to limit the number of parallel processes
     # make_dataset_from_original_data(dataset_config_1, max_processes=4)
-    make_dataset_from_original_data(dataset_config_2, 3)
+    make_dataset_from_original_data(dataset_config_3, 1)

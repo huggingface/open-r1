@@ -120,7 +120,7 @@ def main(script_args, training_args, model_args):
         training_args.ddp_find_unused_parameters = True
 
         # Load processor and model for VLM
-        processor = get_processor(model_args, training_args)
+        processor = get_processor(model_args, training_args, script_args)
         model = get_model(
             model_args, training_args
         )  # This should return AutoModelForVision2Seq
@@ -183,6 +183,10 @@ def main(script_args, training_args, model_args):
     logger.info("*** Save model ***")
     trainer.save_model(training_args.output_dir)
     logger.info(f"Model saved to {training_args.output_dir}")
+    try:
+        processor.save_pretrained(training_args.output_dir)
+    except Exception as e:
+        logger.error(f"Error saving processor: {e}")
 
     # Save everything else on main process
     kwargs = {

@@ -1,0 +1,116 @@
+# Model arguments
+# You can download the model and manually change the rope to 300k/500k and max_position_embeddings to 32768
+model_name_or_path: HuggingFaceTB/SmolVLM2-2.2B-Instruct
+vision_model: true
+model_revision: main
+torch_dtype: bfloat16
+attn_implementation: sdpa
+
+# Data training arguments
+dataset_name: smolagents/aguvis-stage-2
+dataset_num_proc: 48
+
+#SFT hyperparam
+max_length: 4096
+optim: adamw_torch
+lr_scheduler_type: cosine_with_min_lr
+lr_scheduler_kwargs:
+  min_lr_rate: 0.1
+max_grad_norm: 0.2
+warmup_ratio: 0.03
+learning_rate: 2.0e-05
+gradient_accumulation_steps: 32
+per_device_eval_batch_size: 2
+per_device_train_batch_size: 2 # Change this depending on the context length of the model to keep a 500M GBS. 
+
+image_resize:
+  resolution_max_side: 764
+  to_pixel_coordinates: true
+
+# SFT trainer config
+max_steps: -1
+num_train_epochs: 1
+bf16: true
+do_eval: false
+eval_strategy: 'steps'
+eval_steps: 100
+gradient_checkpointing: true
+gradient_checkpointing_kwargs:
+  use_reentrant: false
+hub_model_id: smolagents/SmolVLM2-2.2B-Instruct-Agentic-GUI
+hub_model_revision: main
+hub_strategy: end
+push_to_hub: false
+log_level: info
+logging_steps: 5
+logging_strategy: steps
+output_dir: /fsx/amir_mahla/smolagents-SmolVLM2-2.2B-Instruct-Agentic-GUI-phase-1-max-size-764-pixel-coordinates
+overwrite_output_dir: true
+report_to:
+- wandb
+wandb_project: smolagents
+save_strategy: steps
+save_steps: 800
+save_total_limit: 1
+seed: 42
+
+dataset_mixture:
+  datasets:                     # List of datasets to include in the mixture
+    - id: smolagents/aguvis-stage-1  # Hub dataset ID
+      config: guienv     # Name of the dataset config
+      split: train            # Split to use from the dataset
+      columns:                  # Columns to keep
+        - images
+        - texts
+      weight: 1.
+    - id: smolagents/aguvis-stage-1
+      config: omniact
+      split: train
+      columns:
+        - images
+        - texts
+      weight: 1.
+    - id: smolagents/aguvis-stage-1
+      config: ricoig16k
+      split: train
+      columns:
+        - images
+        - texts
+      weight: 1.
+    - id: smolagents/aguvis-stage-1
+      config: ricosca
+      split: train
+      columns:
+        - images
+        - texts
+      weight: 1.
+    - id: smolagents/aguvis-stage-1
+      config: seeclick
+      split: train
+      columns:
+        - images
+        - texts
+      weight: 1.
+    - id: smolagents/aguvis-stage-1
+      config: ui_refexp
+      split: train
+      columns:
+        - images
+        - texts
+      weight: 1.
+    - id: smolagents/aguvis-stage-1
+      config: webui350k
+      split: train
+      columns:
+        - images
+        - texts
+      weight: 1.
+    - id: smolagents/aguvis-stage-1
+      config: widget_captioning
+      split: train
+      columns:
+        - images
+        - texts
+      weight: 1.
+  seed: 42                      # Seed for shuffling the combined dataset
+  test_split_size: 0.007
