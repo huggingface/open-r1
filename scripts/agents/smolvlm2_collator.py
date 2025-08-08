@@ -62,16 +62,16 @@ def transform_messages(
                             function_call.parameters["y"] * new_image.height
                         )
                     elif function_call.function_name in ["swipe", "drag"]:
-                        function_call.parameters["x"] = (
-                            int(function_call.parameters["x"][0] * new_image.width),
+                        function_call.parameters["from_coord"] = (
+                            int(function_call.parameters["from_coord"][0] * new_image.width),
                             int(
-                                function_call.parameters["x"][1] * new_image.height
+                                function_call.parameters["from_coord"][1] * new_image.height
                             ),
                         )
-                        function_call.parameters["y"] = (
-                            int(function_call.parameters["y"][0] * new_image.width),
+                        function_call.parameters["to_coord"] = (
+                            int(function_call.parameters["to_coord"][0] * new_image.width),
                             int(
-                                function_call.parameters["y"][1] * new_image.height
+                                function_call.parameters["to_coord"][1] * new_image.height
                             ),
                         )
                     messages[i]["content"][0]["text"] = messages[i]["content"][0][
