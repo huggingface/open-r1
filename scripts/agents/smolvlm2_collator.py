@@ -81,7 +81,7 @@ def transform_messages(
     return all_image_inputs
 
 
-def create_vlm_collate_fn(processor, script_args):
+def create_vlm_collate_fn(processor, training_args, script_args):
     """Optimized collate function for VLM training that masks system prompt tokens."""
 
     def collate_fn(examples: list[dict[str, list | str | Image.Image]]):
@@ -152,6 +152,8 @@ def create_vlm_collate_fn(processor, script_args):
         batch = processor(
             text=texts,
             images=all_image_inputs if all_image_inputs else None,
+            max_length=training_args.max_length,
+            truncation=True,
             padding=True,
             return_tensors="pt",
         )
@@ -206,12 +208,17 @@ if __name__ == "__main__":
     )
     processor.image_processor.size = {"longest_edge": 384}
     collate_fn = create_vlm_collate_fn(processor, script_args=ScriptArguments)
-    max_length = 0
-    for dataset_name in ['omniact', 'ricoig16k', 'webui350k', 'widget_captioning', 'seeclick', 'ui_refexp', 'ricosca', 'guienv']:
+    max_length = []
+    for dataset_name in ['ricosca']:
+        dataset_max_length = 0
         data = load_dataset("smolagents/aguvis-stage-1", dataset_name, split="train")
         print("processing", dataset_name)
         for example in data:
             batch = collate_fn([example])
-            max_length = max(max_length, batch["input_ids"].shape[1])
-    print("max_length", max_length)
-    open("max_length_384_phase_1.txt", "w").write(str(max_length))
+            dataset_max_length = max(dataset_max_length, batch["input_ids"].shape[1])
+        print("dataset_max_length", dataset_name, dataset_max_length)
+        max_length.append(dataset_max_length)
+
+    print(max_length)
+    print("max_length", max(max_length))
+    open("max_length_384_phase_1.txt", "a").write(str(max(max_length)))

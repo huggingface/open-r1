@@ -124,7 +124,7 @@ def main(script_args, training_args, model_args):
         model = get_model(
             model_args, training_args
         )  # This should return AutoModelForVision2Seq
-        data_collator = create_vlm_collate_fn(processor, script_args)
+        data_collator = create_vlm_collate_fn(processor, training_args, script_args)
         processing_class = processor.tokenizer
         model_tags = ["open-r1", "vision-language", "vlm"]
 
