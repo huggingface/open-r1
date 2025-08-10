@@ -46,6 +46,9 @@ def get_processor(
         processor.image_processor.size = {
             "longest_edge": script_args.image_resize["resolution_max_side"]
         }
+    if hasattr(processor, "tokenizer"):
+        processor.tokenizer.truncation_side = "right"
+        processor.tokenizer.padding_side = "right"
 
     if training_args.chat_template is not None:
         processor.chat_template = training_args.chat_template
