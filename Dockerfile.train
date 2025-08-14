@@ -1,0 +1,61 @@
+# Build
+# docker build --build-arg GIT_COMMIT=$(git rev-parse HEAD) --build-arg WANDB_KEY=<wandb> --build-arg HF_TOKEN=<hf> -f Dockerfile.train -t aluno_bryan-openr1_train:latest .
+# Run (local)
+# sudo docker run --gpus '"device=0"' -v ~/.cache/huggingface:/root/.cache/huggingface -v ./data:/app/data -e RECIPE="recipes/accelerate_configs/zero2_nobf16.yaml" -e CONFIG="recipes/Qwen2.5-0.5B-Instruct/config_simple_rl.yaml" -e NUM_PROCESSES=1 aluno_bryan-openr1_train:latest
+# Run (dgx)
+# docker run --gpus '"device=5"' -d --rm -v /raid/bryan/huggingface:/root/.cache/huggingface -v /raid/bryan/openr1/data:/app/data -e RECIPE="recipes/accelerate_configs/zero2_nobf16.yaml" -e CONFIG="recipes/Qwen2.5-0.5B-Instruct/config_simple_rl.yaml" -e NUM_PROCESSES=1 aluno_bryan-openr1_train:latest
+
+# Use CUDA 12.4 base image
+FROM nvidia/cuda:12.4.0-devel-ubuntu22.04
+
+# Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    git-lfs \
+    python3.11 \
+    python3.11-dev \
+    python3-pip \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install uv
+ADD https://astral.sh/uv/install.sh /uv-installer.sh
+RUN sh /uv-installer.sh && rm /uv-installer.sh
+ENV PATH="/root/.local/bin/:$PATH"
+
+# Create and activate virtual environment
+RUN uv venv /opt/venv --python python3.11.11
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Install dependencies
+RUN uv pip install --upgrade pip --link-mode=copy && \
+    uv pip install vllm==0.7.2 wandb setuptools wheel --link-mode=copy
+
+# Copy dependency files first
+WORKDIR /app
+
+# Install project
+COPY . .
+RUN GIT_LFS_SKIP_SMUDGE=1 uv pip install -e ".[dev]" --link-mode=copy --no-build-isolation
+
+RUN pip install -U peft
+
+# Add build arguments
+ARG GIT_COMMIT
+ARG WANDB_KEY
+ARG HF_TOKEN
+# Default environment variables for training
+ENV GIT_COMMIT=$GIT_COMMIT
+ENV WANDB_API_KEY=$WANDB_KEY
+ENV HUGGING_FACE_HUB_TOKEN=$HF_TOKEN
+ENV RECIPE="recipes/accelerate_configs/zero2.yaml"
+ENV CONFIG="recipes/Llama-3.1-8B-Instruct/grpo/config_demo.yaml"
+ENV NUM_PROCESSES=1
+ENV EXTRA=""
+
+# Entrypoint that launches GRPO training
+ENTRYPOINT ["sh", "-c", "ACCELERATE_LOG_LEVEL=info accelerate launch --config_file ${RECIPE} --num_processes=${NUM_PROCESSES} src/open_r1/grpo.py --config ${CONFIG} ${EXTRA}"]
