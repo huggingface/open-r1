@@ -1,0 +1,75 @@
+cache_dir: outputs/cache
+dataset:
+  dataset_config: all
+  dataset_name: open-r1/Mixture-of-Thoughts
+  filter_duplicates: true
+  max_length: null
+  max_seq_length: 2048
+  min_length: null
+  padding: true
+  split: train
+  target_column: null
+  text_column: text
+  truncation: true
+  validation_split: 0.1
+  validation_split_seed: 42
+description: Template configuration for SFT training
+evaluation:
+  benchmark_configs: {}
+  do_sample: true
+  eval_batch_size: 4
+  eval_datasets: []
+  max_eval_samples: null
+  max_new_tokens: 512
+  metrics:
+  - accuracy
+  - f1
+  temperature: 0.7
+  top_p: 0.9
+experiment_name: default
+log_dir: outputs/logs
+model:
+  device_map: null
+  load_in_4bit: false
+  load_in_8bit: false
+  model_name_or_path: Qwen/Qwen2.5-1.5B
+  model_type: qwen
+  torch_dtype: float32
+  trust_remote_code: true
+output_dir: outputs
+system:
+  deterministic: true
+  distributed_backend: nccl
+  gpu_memory_fraction: 0.9
+  local_rank: -1
+  max_memory: {}
+  mixed_precision: bf16
+  num_gpus: 1
+  offload_folder: null
+  seed: 42
+  world_size: 1
+tags: []
+training:
+  bf16: false
+  dataloader_pin_memory: false
+  eval_steps: 500
+  evaluation_strategy: steps
+  fp16: false
+  gradient_accumulation_steps: 4
+  gradient_checkpointing: true
+  greater_is_better: false
+  learning_rate: 4.0e-05
+  logging_steps: 10
+  lr_scheduler_type: cosine
+  max_grad_norm: 1.0
+  metric_for_best_model: eval_loss
+  num_train_epochs: 3
+  per_device_eval_batch_size: 4
+  per_device_train_batch_size: 4
+  save_steps: 500
+  save_total_limit: 3
+  warmup_steps: 100
+  weight_decay: 0.01
+wandb_entity: null
+wandb_project: open-r1
+wandb_run_name: null
