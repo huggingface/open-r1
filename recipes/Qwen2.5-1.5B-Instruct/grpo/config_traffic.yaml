@@ -1,0 +1,50 @@
+# Model arguments
+model_name_or_path: "~/tr/model_weights/Qwen2.5-3B-Instruct"
+model_revision: main
+torch_dtype: bfloat16
+attn_implementation: flash_attention_2
+
+# Data training arguments
+dataset_name: json
+dataset_config:
+  data_files: "~/tr/training-data/grpo/grpo_training_data_3k.json"
+dataset_prompt_column: prompt
+system_prompt: "You are a helpful traffic control agent."
+
+# GRPO trainer config
+bf16: true
+use_vllm: true
+do_eval: false
+gradient_accumulation_steps: 4
+gradient_checkpointing: true
+gradient_checkpointing_kwargs:
+  use_reentrant: false
+learning_rate: 2.0e-05
+log_completions: true
+log_level: info
+logging_first_step: true
+logging_steps: 1
+logging_strategy: steps
+lr_scheduler_type: cosine
+max_prompt_length: 1024
+max_completion_length: 1024
+max_steps: -1
+num_generations: 16
+num_train_epochs: 1
+output_dir: ~/tr/model_weights/qwen253-grpo
+overwrite_output_dir: true
+per_device_eval_batch_size: 16
+per_device_train_batch_size: 8
+push_to_hub: false
+report_to:
+- wandb
+reward_funcs:
+- accuracy
+- format
+reward_weights:
+- 1.0
+- 1.0
+save_strategy: "epoch"
+save_total_limit: 1
+seed: 42
+warmup_ratio: 0.1
