@@ -237,7 +237,7 @@ See the [Launching jobs on a Slurm cluster](#launching-jobs-on-a-slurm-cluster) 
 
 #### GRPO dataset filtering
 
-We provide support to filter datasets by generating and computing pass rate on veriable tasks, see this [README](scripts/pass_rate_filtering/README.md)
+We provide support to filter datasets by generating and computing pass rate on verifiable tasks, see this [README](scripts/pass_rate_filtering/README.md)
 
 #### 👨‍💻 Training with a code interpreter
 
