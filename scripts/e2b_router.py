@@ -15,13 +15,10 @@
 
 import argparse
 import asyncio
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from pydantic import BaseModel, ConfigDict
 from typing import  Optional
-from fastapi import FastAPI, Request
 import argparse
-import asyncio
-from fastapi import FastAPI
 import uvicorn
 from e2b_code_interpreter.models import Execution
 from dotenv import load_dotenv
