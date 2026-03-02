@@ -122,27 +122,31 @@ def main(script_args, training_args, model_args):
     column_names = list(dataset.values())[0].column_names
     dataset = dataset.map(make_conversation, batched=True, remove_columns=column_names)
 
-    # Filter out examples whose longest possible prompt exceeds the limit
+    # Remove individual solutions whose prompt exceeds max_prompt_length,
+    # and filter out examples only when all solutions are removed.
     if training_args.max_prompt_length is not None:
-        def filter_fn(example):
-            question = example["prompt_question"]
-            solutions = example["solutions"]
-            longest_sol = max(
-                (sol["solve_func"] for sol in solutions),
-                key=len,
-                default="",
-            )
+        def _prompt_length(question, solve_func):
             prompt = []
             if training_args.system_prompt is not None:
                 prompt.append({"role": "system", "content": SYSTEM_PROMPT})
             prompt.append({
                 "role": "user",
-                "content": USER_PROMPT.format(question=question, code_solution=longest_sol),
+                "content": USER_PROMPT.format(question=question, code_solution=solve_func),
             })
             tokens = tokenizer.apply_chat_template(prompt, tokenize=True, add_generation_prompt=True)
-            return len(tokens) <= training_args.max_prompt_length
+            return len(tokens)
 
-        dataset = dataset.filter(filter_fn)
+        def trim_solutions(example):
+            question = example["prompt_question"]
+            kept = [
+                sol for sol in example["solutions"]
+                if _prompt_length(question, sol["solve_func"]) <= training_args.max_prompt_length
+            ]
+            example["solutions"] = kept
+            return example
+
+        dataset = dataset.map(trim_solutions)
+        dataset = dataset.filter(lambda example: len(example["solutions"]) > 0)
 
     for split in dataset:
         if "messages" in dataset[split].column_names:
