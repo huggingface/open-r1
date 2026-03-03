@@ -673,108 +673,58 @@ if __name__ == '__main__':
     return rewards
 
 
-def _extract_semantic_test_functions(test_code: str) -> list[str]:
+def _run_unittest_with_per_test_metrics(
+    test_code: str,
+    sol_code: str,
+    timeout: int = 5,
+) -> dict[str, int]:
     """
-    Extract individual test methods from unittest test code using AST parsing.
-    Each `def test_xxx` method is treated as one semantic test function f_k.
-    Returns a list of complete, runnable test code strings, each containing
-    exactly one test method along with necessary preamble and setup methods.
-    """
-    try:
-        tree = ast.parse(test_code)
-    except SyntaxError:
-        return [test_code]
+    Execute the full unittest suite once and return a per-test pass/fail map.
 
-    lines = test_code.splitlines()
-
-    # Identify the test class and preamble
-    test_class = None
-    preamble_nodes = []
-    for node in ast.iter_child_nodes(tree):
-        if isinstance(node, ast.ClassDef) and test_class is None:
-            # Take the first class as the test class
-            test_class = node
-        else:
-            preamble_nodes.append(node)
-
-    if test_class is None:
-        return [test_code]
-
-    # Extract preamble text (imports, helpers, etc.)
-    preamble_parts = []
-    for node in preamble_nodes:
-        start = node.lineno - 1
-        end = node.end_lineno
-        preamble_parts.append("\n".join(lines[start:end]))
-    preamble = "\n".join(preamble_parts)
-
-    # Get class definition line
-    class_def_line = lines[test_class.lineno - 1]
-
-    # Separate test methods from setup/helper methods in the class
-    setup_parts = []
-    test_methods = []
-    for item in test_class.body:
-        if isinstance(item, ast.FunctionDef) and item.name.startswith("test"):
-            test_methods.append(item)
-        else:
-            # setUp, setUpClass, helper methods, class variables, etc.
-            start = item.lineno - 1
-            end = item.end_lineno
-            setup_parts.append("\n".join(lines[start:end]))
-
-    if not test_methods:
-        return [test_code]
-
-    setup_code = "\n".join(setup_parts)
-
-    # For each test method, build a complete runnable test file
-    results = []
-    for method in test_methods:
-        method_start = method.lineno - 1
-        method_end = method.end_lineno
-        method_code = "\n".join(lines[method_start:method_end])
-
-        parts = []
-        if preamble.strip():
-            parts.append(preamble)
-        parts.append(class_def_line)
-        if setup_code.strip():
-            parts.append(setup_code)
-        parts.append(method_code)
-
-        results.append("\n".join(parts))
-
-    return results
-
-
-def _run_tests(test_code: str, sol_code: str, timeout: int = 5) -> float:
-    """
-    Run unit test code against a solution. Returns passed/total as a float.
-    If execution fails or no tests are found, returns 0.0.
+    The returned dict maps each test id (e.g. '__main__.Test.test1') to:
+      1 if the test passed,
+      0 if the test failed or errored.
     """
     if not test_code.strip() or not sol_code.strip():
-        return 0.0
+        return {}
 
     script_content = f"""
 import unittest
 import sys
 from typing import *
+
 # Solution Code
 {sol_code}
+
 # Test Code
 {test_code}
+
+def _flatten_suite(suite: unittest.TestSuite):
+    for item in suite:
+        if isinstance(item, unittest.TestSuite):
+            yield from _flatten_suite(item)
+        else:
+            yield item
+
 if __name__ == '__main__':
     loader = unittest.TestLoader()
     suite = loader.loadTestsFromModule(sys.modules[__name__])
+    all_tests = list(_flatten_suite(suite))
     runner = unittest.TextTestRunner(verbosity=0, stream=sys.stdout)
     result = runner.run(suite)
-    passed = result.testsRun - len(result.errors) - len(result.failures)
-    print(f"METRICS:{{passed}}:{{result.testsRun}}")
+    fail_ids = {{case.id() for case, _ in result.failures}}
+    error_ids = {{case.id() for case, _ in result.errors}}
+
+    print("METRICS_START")
+    for t in all_tests:
+        tid = t.id()
+        status = 0 if (tid in fail_ids or tid in error_ids) else 1
+        print(f"{{tid}}:{{status}}")
+    print("METRICS_END")
 """
     script_path = None
     try:
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
             f.write(script_content)
             script_path = f.name
 
@@ -785,15 +735,27 @@ if __name__ == '__main__':
             timeout=timeout,
         )
 
-        output = result.stdout
-        match = re.search(r"METRICS:(\d+):(\d+)", output)
-        if match:
-            passed = int(match.group(1))
-            total = int(match.group(2))
-            return float(passed) / float(total) if total > 0 else 0.0
-        return 0.0
+        metrics: dict[str, int] = {}
+        in_block = False
+        for line in result.stdout.splitlines():
+            stripped = line.strip()
+            if stripped == "METRICS_START":
+                in_block = True
+                continue
+            if stripped == "METRICS_END":
+                break
+            if not in_block:
+                continue
+            # Line format: "<test_id>:<0-or-1>"
+            try:
+                test_id, status_str = stripped.rsplit(":", 1)
+                metrics[test_id.strip()] = int(status_str)
+            except Exception:
+                continue
+
+        return metrics
     except Exception:
-        return 0.0
+        return {}
     finally:
         if script_path and os.path.exists(script_path):
             os.remove(script_path)
@@ -840,35 +802,48 @@ def cross_solution_unittest_reward(
     if not test_code.strip():
         return 0.0
 
-    # Extract individual semantic test functions f_1 ... f_K
-    semantic_funcs = _extract_semantic_test_functions(test_code)
-    if not semantic_funcs:
+    # Prepare index mapping for correct / wrong solutions
+    correct_indices = [i for i, s in enumerate(solutions) if s["is_correct"]]
+    wrong_indices = [i for i, s in enumerate(solutions) if not s["is_correct"]]
+    M_plus = len(correct_indices)
+    M_minus = len(wrong_indices)
+
+    if M_plus + M_minus == 0:
         return 0.0
 
-    K = len(semantic_funcs)
+    # Run full unittest suite once per solution and collect per-test metrics
+    per_solution_metrics: list[dict[str, int]] = []
+    canonical_test_ids: list[str] = []
 
-    # Separate correct and wrong solutions
-    correct_solutions = [s for s in solutions if s["is_correct"]]
-    wrong_solutions = [s for s in solutions if not s["is_correct"]]
-    M_plus = len(correct_solutions)
-    M_minus = len(wrong_solutions)
+    for sol in solutions:
+        sol_code = sol["solve_func"]
+        metrics = _run_unittest_with_per_test_metrics(test_code, sol_code, timeout=timeout)
+        per_solution_metrics.append(metrics)
+        # Use the first non-empty metrics dict to fix the order of semantic tests f_k
+        if not canonical_test_ids and metrics:
+            canonical_test_ids = list(metrics.keys())
 
-    R_fk_scores = []
-    B_matrix = []  # B_matrix[k] = B_correct_k + B_wrong_k
-    R_details = []  # (R1, R_minus, R_fk) per f_k
+    if not canonical_test_ids:
+        return 0.0
 
-    for func_code in semantic_funcs:
-        # Compute B_ik for correct solutions
-        B_correct = []
-        for sol in correct_solutions:
-            result = _run_tests(func_code, sol["solve_func"], timeout=timeout)
-            B_correct.append(1.0 if result >= 1.0 else 0.0)
+    K = len(canonical_test_ids)
 
-        # Compute B_ik for wrong solutions
-        B_wrong = []
-        for sol in wrong_solutions:
-            result = _run_tests(func_code, sol["solve_func"], timeout=timeout)
-            B_wrong.append(1.0 if result >= 1.0 else 0.0)
+    R_fk_scores: list[float] = []
+    B_matrix: list[list[float]] = []  # B_matrix[k] = B_correct_k + B_wrong_k
+    R_details: list[tuple[float, float, float]] = []  # (R1, R_minus, R_fk) per f_k
+
+    for k, test_id in enumerate(canonical_test_ids):
+        # Compute B_ik for correct solutions for this semantic test f_k
+        B_correct: list[float] = []
+        for idx in correct_indices:
+            status = per_solution_metrics[idx].get(test_id, 0)
+            B_correct.append(float(status))
+
+        # Compute B_ik for wrong solutions for this semantic test f_k
+        B_wrong: list[float] = []
+        for idx in wrong_indices:
+            status = per_solution_metrics[idx].get(test_id, 0)
+            B_wrong.append(float(status))
 
         B_matrix.append(B_correct + B_wrong)
 
