@@ -833,9 +833,10 @@ class GRPOTrainer(Trainer):
 
     # Get the per-token log probabilities for the completions for the model and the reference model
     @profiling_decorator
-    def _get_per_token_logps(self, model, input_ids, attention_mask, logits_to_keep, batch_size=None) -> torch.Tensor:
+    def _get_per_token_logps(self, model, input_ids, attention_mask, logits_to_keep, batch_size=None, return_entropy=False):
         batch_size = batch_size or input_ids.size(0)  # Chunk inputs into smaller batches to reduce memory peak
         all_logps = []
+        all_entropies = [] if return_entropy else None
         for i in range(0, input_ids.size(0), batch_size):
             input_ids_batch = input_ids[i : i + batch_size]
             attention_mask_batch = attention_mask[i : i + batch_size]
@@ -854,7 +855,18 @@ class GRPOTrainer(Trainer):
             logits = logits / self.temperature
             logps = selective_log_softmax(logits, input_ids_batch)  # compute logprobs for the input tokens
             all_logps.append(logps)
-        return torch.cat(all_logps, dim=0)
+
+            if return_entropy:
+                # Compute per-token entropy: H = -sum(p * log(p))
+                log_probs = logits.log_softmax(dim=-1)  # (B, L, V)
+                probs = log_probs.exp()
+                entropy = -(probs * log_probs).sum(dim=-1)  # (B, L)
+                all_entropies.append(entropy)
+
+        logps = torch.cat(all_logps, dim=0)
+        if return_entropy:
+            return logps, torch.cat(all_entropies, dim=0)
+        return logps
 
     def _sync_fsdp_params_to_vllm(self, module: nn.Module, prefix: str = "", visited=None):
         """Memory-efficient post-order traversal of FSDP modules to extract full parameters and sync with vLLM."""
@@ -1329,7 +1341,9 @@ class GRPOTrainer(Trainer):
         attention_mask = torch.cat([prompt_mask, completion_mask], dim=1)
         logits_to_keep = completion_ids.size(1)  # we only need to compute the logits for the completion tokens
 
-        per_token_logps = self._get_per_token_logps(model, input_ids, attention_mask, logits_to_keep)
+        per_token_logps, per_token_entropy = self._get_per_token_logps(
+            model, input_ids, attention_mask, logits_to_keep, return_entropy=True
+        )
 
         # Compute the KL divergence between the model and the reference model
         if self.beta != 0.0:
@@ -1383,6 +1397,10 @@ class GRPOTrainer(Trainer):
         if self.beta != 0.0:
             mean_kl = (per_token_kl * completion_mask).sum() / completion_mask.sum()
             self._metrics[mode]["kl"].append(self.accelerator.gather(mean_kl).nanmean().item())
+
+        # Log entropy
+        mean_entropy = (per_token_entropy * completion_mask).sum() / completion_mask.sum()
+        self._metrics[mode]["entropy"].append(self.accelerator.gather(mean_entropy).nanmean().item())
 
         # Compute the clipped probability ratios
         is_low_clipped = (coef_1 < 1 - self.epsilon_low) & (advantages.unsqueeze(1) < 0)
