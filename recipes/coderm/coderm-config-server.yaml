@@ -39,10 +39,10 @@ report_to:
 
 reward_funcs:
 - format
-# - cross_solution_unittest
+- cross_solution_unittest
 reward_weights:
 - 1.0
-# - 1.0
+- 1.0
 
 save_strategy: "steps"
 save_steps: 50

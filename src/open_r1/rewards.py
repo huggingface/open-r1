@@ -15,6 +15,7 @@
 
 """Reward functions for GRPO training."""
 
+import ast
 import asyncio
 import json
 import math
@@ -672,6 +673,81 @@ if __name__ == '__main__':
     return rewards
 
 
+def _extract_semantic_test_functions(test_code: str) -> list[str]:
+    """
+    Extract individual test methods from unittest test code using AST parsing.
+    Each `def test_xxx` method is treated as one semantic test function f_k.
+    Returns a list of complete, runnable test code strings, each containing
+    exactly one test method along with necessary preamble and setup methods.
+    """
+    try:
+        tree = ast.parse(test_code)
+    except SyntaxError:
+        return [test_code]
+
+    lines = test_code.splitlines()
+
+    # Identify the test class and preamble
+    test_class = None
+    preamble_nodes = []
+    for node in ast.iter_child_nodes(tree):
+        if isinstance(node, ast.ClassDef) and test_class is None:
+            # Take the first class as the test class
+            test_class = node
+        else:
+            preamble_nodes.append(node)
+
+    if test_class is None:
+        return [test_code]
+
+    # Extract preamble text (imports, helpers, etc.)
+    preamble_parts = []
+    for node in preamble_nodes:
+        start = node.lineno - 1
+        end = node.end_lineno
+        preamble_parts.append("\n".join(lines[start:end]))
+    preamble = "\n".join(preamble_parts)
+
+    # Get class definition line
+    class_def_line = lines[test_class.lineno - 1]
+
+    # Separate test methods from setup/helper methods in the class
+    setup_parts = []
+    test_methods = []
+    for item in test_class.body:
+        if isinstance(item, ast.FunctionDef) and item.name.startswith("test"):
+            test_methods.append(item)
+        else:
+            # setUp, setUpClass, helper methods, class variables, etc.
+            start = item.lineno - 1
+            end = item.end_lineno
+            setup_parts.append("\n".join(lines[start:end]))
+
+    if not test_methods:
+        return [test_code]
+
+    setup_code = "\n".join(setup_parts)
+
+    # For each test method, build a complete runnable test file
+    results = []
+    for method in test_methods:
+        method_start = method.lineno - 1
+        method_end = method.end_lineno
+        method_code = "\n".join(lines[method_start:method_end])
+
+        parts = []
+        if preamble.strip():
+            parts.append(preamble)
+        parts.append(class_def_line)
+        if setup_code.strip():
+            parts.append(setup_code)
+        parts.append(method_code)
+
+        results.append("\n".join(parts))
+
+    return results
+
+
 def _run_tests(test_code: str, sol_code: str, timeout: int = 5) -> float:
     """
     Run unit test code against a solution. Returns passed/total as a float.
@@ -726,12 +802,36 @@ if __name__ == '__main__':
 def cross_solution_unittest_reward(
     completion_text: str,
     solutions: list[dict],
+    lambda_1: float = 0.1,
+    lambda_2: float = 0.1,
+    lambda_t: float = 0.5,
     timeout: int = 5,
 ) -> float:
     """
-    Run unit tests extracted from a single completion against all provided solutions.
-    For correct solutions, score = pass_rate. For wrong solutions, score = 1 - pass_rate.
-    Returns the mean score across all solutions.
+    Compute reward for generated unit tests using Equation 10 formulation.
+
+    Each semantic test function f_k (individual test_xxx method) is evaluated
+    against all solutions. The reward combines:
+      R^1_{f_k} (validity):       encourages f_k to pass all correct solutions
+      R^-_{f_k} (discrimination): encourages f_k to fail at least one wrong solution
+
+    Formulas (Equation 10):
+      R^1_{f_k} = prod(B_ik, i in correct) + (lambda_1 / M+) * sum(B_ik, i in correct)
+      R^-_{f_k} = prod(B_ik, i in correct) * (1 - prod(B_ik, i in wrong))
+                  - (lambda_2 / M-) * sum(B_ik, i in wrong)
+      R_{f_k}   = lambda_t * R^1 + (1 - lambda_t) * R^-
+      R         = mean(R_{f_k}) over all k
+
+    Args:
+        completion_text: Model completion containing unittest code with test methods.
+        solutions: List of dicts with keys "solve_func" (str) and "is_correct" (bool).
+        lambda_1: Soft validity coefficient (default 0.1).
+        lambda_2: Soft discrimination penalty coefficient (default 0.1).
+        lambda_t: Weight between validity and discrimination (default 0.5).
+        timeout: Timeout in seconds for each test execution.
+
+    Returns:
+        Float reward in roughly [-lambda_2, 1 + lambda_1].
     """
     test_code = extract_code(completion_text)
     if not test_code and ("def " in completion_text or "class " in completion_text):
@@ -740,15 +840,75 @@ def cross_solution_unittest_reward(
     if not test_code.strip():
         return 0.0
 
-    scores = []
-    for sol_info in solutions:
-        sol_code = sol_info["solve_func"]
-        is_correct = sol_info["is_correct"]
-        pass_rate = _run_tests(test_code, sol_code, timeout=timeout)
-        score = pass_rate if is_correct else (1.0 - pass_rate)
-        scores.append(score)
+    # Extract individual semantic test functions f_1 ... f_K
+    semantic_funcs = _extract_semantic_test_functions(test_code)
+    if not semantic_funcs:
+        return 0.0
 
-    return sum(scores) / len(scores) if scores else 0.0
+    K = len(semantic_funcs)
+
+    # Separate correct and wrong solutions
+    correct_solutions = [s for s in solutions if s["is_correct"]]
+    wrong_solutions = [s for s in solutions if not s["is_correct"]]
+    M_plus = len(correct_solutions)
+    M_minus = len(wrong_solutions)
+
+    R_fk_scores = []
+    B_matrix = []  # B_matrix[k] = B_correct_k + B_wrong_k
+    R_details = []  # (R1, R_minus, R_fk) per f_k
+
+    for func_code in semantic_funcs:
+        # Compute B_ik for correct solutions
+        B_correct = []
+        for sol in correct_solutions:
+            result = _run_tests(func_code, sol["solve_func"], timeout=timeout)
+            B_correct.append(1.0 if result >= 1.0 else 0.0)
+
+        # Compute B_ik for wrong solutions
+        B_wrong = []
+        for sol in wrong_solutions:
+            result = _run_tests(func_code, sol["solve_func"], timeout=timeout)
+            B_wrong.append(1.0 if result >= 1.0 else 0.0)
+
+        B_matrix.append(B_correct + B_wrong)
+
+        # R^1_{f_k} (validity)
+        prod_correct = 1.0
+        for b in B_correct:
+            prod_correct *= b
+        sum_correct = sum(B_correct)
+        R1 = prod_correct + (lambda_1 / M_plus * sum_correct if M_plus > 0 else 0.0)
+
+        # R^-_{f_k} (discrimination)
+        prod_wrong = 1.0
+        for b in B_wrong:
+            prod_wrong *= b
+        sum_wrong = sum(B_wrong)
+        R_minus = prod_correct * (1.0 - prod_wrong) - (
+            lambda_2 / M_minus * sum_wrong if M_minus > 0 else 0.0
+        )
+
+        # R_{f_k} = lambda_t * R^1 + (1 - lambda_t) * R^-
+        R_fk = lambda_t * R1 + (1.0 - lambda_t) * R_minus
+        R_fk_scores.append(R_fk)
+        R_details.append((R1, R_minus, R_fk))
+
+    # ── Print B_ik matrix and per-f_k reward breakdown ──
+    header = "B_ik matrix (rows=f_k, cols=solutions [correct | wrong]):"
+    col_labels = [f"s+{i}" for i in range(M_plus)] + [f"s-{i}" for i in range(M_minus)]
+    col_header = "        " + "  ".join(f"{c:>4}" for c in col_labels)
+    print(header)
+    print(col_header)
+    for k, row in enumerate(B_matrix):
+        vals = "  ".join(f"{int(v):>4}" for v in row)
+        print(f"  f_{k+1:>2}:  {vals}")
+    print("Per-f_k rewards:")
+    for k, (r1, rm, rfk) in enumerate(R_details):
+        print(f"  f_{k+1:>2}: R^1={r1:.4f}, R^-={rm:.4f}, R_fk={rfk:.4f}")
+    final_reward = sum(R_fk_scores) / K
+    print(f"Final reward = {final_reward:.4f} (K={K})")
+
+    return final_reward
 
 
 def get_code_format_reward(language: str = "python"):
