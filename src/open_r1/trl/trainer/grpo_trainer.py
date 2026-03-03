@@ -850,15 +850,17 @@ class GRPOTrainer(Trainer):
             # For transformers<=4.48, logits_to_keep argument isn't supported, so here we drop logits ourselves.
             # See https://github.com/huggingface/trl/issues/2770
             logits = logits[:, -logits_to_keep:]
-            # Divide logits by sampling temperature.
+            entropy_logits = logits
+            # Divide logits by sampling temperature for policy logprobs.
             # See https://huggingface.co/blog/the_n_implementation_details_of_rlhf_with_ppo#policy-training-implementation-details
             logits = logits / self.temperature
             logps = selective_log_softmax(logits, input_ids_batch)  # compute logprobs for the input tokens
             all_logps.append(logps)
 
             if return_entropy:
-                # Compute per-token entropy: H = -sum(p * log(p))
-                log_probs = logits.log_softmax(dim=-1)  # (B, L, V)
+                # Compute per-token entropy from raw logits (without temperature scaling):
+                # H = -sum(p * log(p))
+                log_probs = entropy_logits.log_softmax(dim=-1)  # (B, L, V)
                 probs = log_probs.exp()
                 entropy = -(probs * log_probs).sum(dim=-1)  # (B, L)
                 all_entropies.append(entropy)

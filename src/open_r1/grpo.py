@@ -146,7 +146,14 @@ def main(script_args, training_args, model_args):
             return example
 
         dataset = dataset.map(trim_solutions)
-        dataset = dataset.filter(lambda example: len(example["solutions"]) > 0)
+        dataset = dataset.filter(
+            lambda example: {
+                solution.get("is_correct")
+                for solution in example["solutions"]
+                if solution.get("is_correct") in (True, False)
+            }
+            == {True, False}
+        )
 
     for split in dataset:
         if "messages" in dataset[split].column_names:
