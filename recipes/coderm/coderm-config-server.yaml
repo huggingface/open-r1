@@ -5,7 +5,7 @@ torch_dtype: bfloat16
 attn_implementation: flash_attention_2
 
 # Data training arguments
-dataset_name: zzzzit/taco2
+dataset_name: zzzzit/taco3
 dataset_prompt_column: problem
 system_prompt: "You are a helpful AI Assistant that provides well-reasoned and detailed responses. You first think about the reasoning process as an internal monologue and then provide the user with the answer. Respond in the following format: <think>\n...\n</think>\n<answer>\n...\n</answer>"
 
@@ -31,8 +31,8 @@ max_steps: -1
 num_train_epochs: 1
 output_dir: data/coderm-8b
 overwrite_output_dir: true
-per_device_eval_batch_size: 1
-per_device_train_batch_size: 1
+per_device_eval_batch_size: 2
+per_device_train_batch_size: 2
 push_to_hub: true
 report_to:
 - wandb
@@ -45,22 +45,20 @@ reward_weights:
 - 1.0
 
 save_strategy: "steps"
-save_steps: 50
-save_total_limit: 15
+save_steps: 25
+save_total_limit: 5
 seed: 42
 warmup_ratio: 0.1
 temperature: 0.7
-#adv config
-adv_alpha: 1.0
-enable_lambda_reward: true
+
 
 #memory config
-gradient_accumulation_steps: 16
+gradient_accumulation_steps: 32
 max_prompt_length: 1024
 max_completion_length: 3584
-num_generations: 4
-num_sampled_solutions: 2
-num_completions_per_solution: 2
+num_generations: 32
+num_sampled_solutions: 8
+num_completions_per_solution: 4
 
 #===== vllm config =====
 use_vllm: true
