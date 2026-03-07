@@ -9,7 +9,6 @@ from accelerate.utils import broadcast_object_list, gather, gather_object
 from torch import nn
 from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
 
-from open_r1.rewards import cross_solution_unittest_reward
 from open_r1.trl.data_utils import is_conversational, maybe_apply_chat_template
 from open_r1.trl.extras.profiling import profiling_context, profiling_decorator
 from open_r1.trl.import_utils import is_vllm_available
@@ -57,34 +56,6 @@ class GroupedSolGRPOTrainer(GRPOTrainer):
                 f"must equal num_generations ({self.num_generations}), got {self.m * self.n}"
             )
 
-        # # Check if cross_solution_unittest_reward is in reward_funcs and remove it
-        # # because it is handled specifically in _generate_and_score_completions
-        # cross_sol_weight = 1.0
-        # if cross_solution_unittest_reward in self.reward_funcs:
-        #     idx = self.reward_funcs.index(cross_solution_unittest_reward)
-        #     # Extract weight
-        #     if self.reward_weights is not None:
-        #         cross_sol_weight = self.reward_weights[idx].item()
-        #         # Remove from weights
-        #         self.reward_weights = torch.cat([self.reward_weights[:idx], self.reward_weights[idx+1:]])
-            
-        #     # Remove from funcs and names
-        #     self.reward_funcs.pop(idx)
-        #     self.reward_func_names.pop(idx)
-        #     if self.reward_processing_classes is not None:
-        #         self.reward_processing_classes.pop(idx)
-
-        # self._all_reward_func_names = ["cross_solution_unittest"] + list(self.reward_func_names)
-        # self._all_reward_weights = torch.cat([
-        #     torch.tensor([cross_sol_weight], dtype=torch.float32),
-        #     self.reward_weights,
-        # ])
-        self._all_reward_func_names = ["cross_solution_unittest"] + list(self.reward_func_names)
-        self._all_reward_weights = torch.cat([
-            torch.ones(1, dtype=torch.float32),
-            self.reward_weights,
-        ])
-
     def _set_signature_columns_if_needed(self):
         if self._signature_columns is None:
             self._signature_columns = ["prompt_question", "solutions"]
@@ -125,7 +96,6 @@ class GroupedSolGRPOTrainer(GRPOTrainer):
         # Phase 1: Sample solutions and construct prompts
         # ------------------------------------------------------------------
         num_groups = len(inputs) // self.num_generations
-        group_sampled_solutions: list[list[dict]] = []
 
         transformed_inputs: list[dict] = []
         for g in range(num_groups):
@@ -134,12 +104,14 @@ class GroupedSolGRPOTrainer(GRPOTrainer):
             solutions = example["solutions"]
 
             sampled_sols = self._sample_solutions(solutions)
-            group_sampled_solutions.append(sampled_sols)
 
             for sol in sampled_sols:
                 prompt = self._build_prompt(question, sol["solve_func"])
                 for _ in range(self.n):
-                    transformed_inputs.append({"prompt": list(prompt)})
+                    transformed_inputs.append({
+                        "prompt": list(prompt),
+                        "sampled_solutions": sampled_sols,
+                    })
 
         inputs = transformed_inputs
 
@@ -317,23 +289,9 @@ class GroupedSolGRPOTrainer(GRPOTrainer):
         # ------------------------------------------------------------------
         # Phase 5: Compute rewards
         # ------------------------------------------------------------------
-        # Column 0: cross-solution unittest reward
-        # Columns 1..N: any other registered reward functions
-        num_rf = 1 + len(self.reward_funcs)
+        num_rf = len(self.reward_funcs)
         rewards_per_func = torch.zeros(len(prompts), num_rf, device=device)
 
-        # Cross-solution unittest reward
-        cross_sol_rewards = []
-        for idx in range(len(completions_text)):
-            group_idx = idx // self.num_generations
-            sols = group_sampled_solutions[group_idx]
-            r = cross_solution_unittest_reward(completions_text[idx], sols)
-            cross_sol_rewards.append(r)
-        rewards_per_func[:, 0] = torch.tensor(
-            cross_sol_rewards, dtype=torch.float32, device=device,
-        )
-
-        # Other registered reward functions
         keys = [
             key for key in inputs[0]
             if key not in ["prompt", "completion", "completion_ids"]
@@ -360,7 +318,7 @@ class GroupedSolGRPOTrainer(GRPOTrainer):
                     )
                     reward_inputs = super(GRPOTrainer, self)._prepare_inputs(reward_inputs)
                     with torch.inference_mode():
-                        rewards_per_func[:, i + 1] = reward_func(**reward_inputs).logits[:, 0]
+                        rewards_per_func[:, i] = reward_func(**reward_inputs).logits[:, 0]
                 else:
                     output_reward_func = reward_func(
                         prompts=prompts, completions=completions,
@@ -369,7 +327,7 @@ class GroupedSolGRPOTrainer(GRPOTrainer):
                     output_reward_func = [
                         r if r is not None else torch.nan for r in output_reward_func
                     ]
-                    rewards_per_func[:, i + 1] = torch.tensor(
+                    rewards_per_func[:, i] = torch.tensor(
                         output_reward_func, dtype=torch.float32, device=device,
                     )
 
@@ -385,7 +343,7 @@ class GroupedSolGRPOTrainer(GRPOTrainer):
         # ------------------------------------------------------------------
         rewards_per_func = gather(rewards_per_func)
 
-        rewards = (rewards_per_func * self._all_reward_weights.to(device).unsqueeze(0)).nansum(dim=1)
+        rewards = (rewards_per_func * self.reward_weights.to(device).unsqueeze(0)).nansum(dim=1)
 
         mean_grouped_rewards = rewards.view(-1, self.num_generations).mean(dim=1)
         std_grouped_rewards = rewards.view(-1, self.num_generations).std(dim=1)
@@ -440,7 +398,7 @@ class GroupedSolGRPOTrainer(GRPOTrainer):
             term_completion_lengths.float().max().item()
         )
 
-        for i, reward_func_name in enumerate(self._all_reward_func_names):
+        for i, reward_func_name in enumerate(self.reward_func_names):
             mean_rewards = torch.nanmean(rewards_per_func[:, i]).item()
             self._metrics[mode][f"rewards/{reward_func_name}/mean"].append(mean_rewards)
             std_rewards = nanstd(rewards_per_func[:, i]).item()
@@ -451,7 +409,7 @@ class GroupedSolGRPOTrainer(GRPOTrainer):
 
         self._textual_logs["prompt"].extend(gather_object(prompts_text))
         self._textual_logs["completion"].extend(gather_object(completions_text))
-        for i, name in enumerate(self._all_reward_func_names):
+        for i, name in enumerate(self.reward_func_names):
             self._textual_logs["rewards"][name].extend(rewards_per_func[:, i].tolist())
         self._textual_logs["advantages"].extend(all_process_advantages.tolist())
 

@@ -17,6 +17,7 @@
 
 import ast
 import asyncio
+import inspect
 import json
 import math
 import os
@@ -916,6 +917,87 @@ def cross_solution_unittest_reward(
     return final_reward
 
 
+def cross_solution_unittest_batch_reward(
+    completions,
+    sampled_solutions: list[list[dict]],
+    **kwargs,
+) -> list[float]:
+    """
+    Batch wrapper for grouped-solution training.
+
+    Expects one sampled solution set per completion. This adapter allows
+    `cross_solution_unittest_reward` to be used via the standard reward registry.
+    """
+    rewards: list[float] = []
+    for completion, solutions in zip(completions, sampled_solutions):
+        if isinstance(completion, list):
+            completion_text = completion[-1]["content"] if completion else ""
+        else:
+            completion_text = completion
+        rewards.append(cross_solution_unittest_reward(completion_text, solutions))
+    return rewards
+
+
+def _make_cross_solution_batch_reward(single_reward_func: Callable) -> Callable:
+    """
+    Adapt a single-sample cross-solution reward into GRPO batch reward interface.
+
+    The input function must have signature:
+      single_reward_func(completion_text: str, solutions: list[dict], ...)
+    """
+
+    def _batch_reward(
+        completions,
+        sampled_solutions: list[list[dict]],
+        **kwargs,
+    ) -> list[float]:
+        rewards: list[float] = []
+        for completion, solutions in zip(completions, sampled_solutions):
+            if isinstance(completion, list):
+                completion_text = completion[-1]["content"] if completion else ""
+            else:
+                completion_text = completion
+            rewards.append(single_reward_func(completion_text, solutions))
+        return rewards
+
+    return update_wrapper(_batch_reward, single_reward_func)
+
+
+def _resolve_cross_solution_reward_from_name(func_name: str) -> Optional[Callable]:
+    """
+    Resolve grouped-solution reward names to batch-callable reward functions.
+
+    Supported forms:
+      - cross_solution_unittest -> cross_solution_unittest_reward
+      - cross_solution_unittest_v2 -> cross_solution_unittest_reward_v2
+      - cross_solution_unittest_vN -> cross_solution_unittest_reward_vN (preferred)
+      - cross_solution_unittest_reward_vN (backward-compatible)
+    """
+    alias_to_single = {
+        "cross_solution_unittest": "cross_solution_unittest_reward",
+    }
+    if func_name.startswith("cross_solution_unittest_v"):
+        suffix = func_name[len("cross_solution_unittest_") :]
+        alias_to_single[func_name] = f"cross_solution_unittest_reward_{suffix}"
+
+    single_name = alias_to_single.get(func_name, func_name)
+    if not single_name.startswith("cross_solution_unittest_reward"):
+        return None
+
+    single_func = globals().get(single_name)
+    if not callable(single_func):
+        return None
+
+    # Validate expected inputs to fail fast on misnamed functions.
+    sig = inspect.signature(single_func)
+    if not {"completion_text", "solutions"}.issubset(set(sig.parameters.keys())):
+        raise ValueError(
+            f"Reward function '{single_name}' must accept parameters "
+            "'completion_text' and 'solutions'."
+        )
+    return _make_cross_solution_batch_reward(single_func)
+
+
 def cross_solution_unittest_reward_v2(
     completion_text: str,
     solutions: list[dict],
@@ -1108,8 +1190,26 @@ def get_reward_funcs(script_args) -> list[Callable]:
             soft_punish_cache=script_args.soft_punish_cache,
         ),
         "unittest": unittest_reward,
-        # "cross_solution_unittest": cross_solution_unittest_reward,
+        "cross_solution_unittest": cross_solution_unittest_batch_reward,
     }
-    reward_funcs = [REWARD_FUNCS_REGISTRY[func] for func in script_args.reward_funcs]
+    reward_funcs: list[Callable] = []
+    for func_name in script_args.reward_funcs:
+        if func_name in REWARD_FUNCS_REGISTRY:
+            reward_funcs.append(REWARD_FUNCS_REGISTRY[func_name])
+            continue
+
+        dynamic_cross_solution_reward = _resolve_cross_solution_reward_from_name(func_name)
+        if dynamic_cross_solution_reward is not None:
+            reward_funcs.append(dynamic_cross_solution_reward)
+            continue
+
+        available = ", ".join(sorted(REWARD_FUNCS_REGISTRY.keys()))
+        raise ValueError(
+            f"Unknown reward function '{func_name}'. "
+            f"Available registry rewards: {available}. "
+            "For grouped-solution rewards, you can also use names like "
+            "'cross_solution_unittest_v3' if the matching "
+            "'cross_solution_unittest_reward_v3' function exists."
+        )
 
     return reward_funcs

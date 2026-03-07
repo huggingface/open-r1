@@ -39,7 +39,7 @@ report_to:
 
 reward_funcs:
 - format
-- cross_solution_unittest
+- cross_solution_unittest_v2
 reward_weights:
 - 1.0
 - 1.0
