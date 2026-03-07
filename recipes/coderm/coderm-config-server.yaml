@@ -57,8 +57,8 @@ gradient_accumulation_steps: 32
 max_prompt_length: 1024
 max_completion_length: 3584
 num_generations: 32
-num_sampled_solutions: 8
-num_completions_per_solution: 4
+num_sampled_solutions: 4
+num_completions_per_solution: 8
 
 #===== vllm config =====
 use_vllm: true

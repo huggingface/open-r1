@@ -761,6 +761,51 @@ if __name__ == '__main__':
             os.remove(script_path)
 
 
+def _compute_bik_matrices(
+    test_code: str,
+    solutions: list[dict],
+    timeout: int = 5,
+) -> tuple[list[str], list[list[float]], list[list[float]]]:
+    """
+    Compute B_ik values grouped by semantic test f_k.
+
+    Returns:
+        canonical_test_ids: Ordered semantic test ids (f_k).
+        B_correct_matrix: K x M+ matrix; row k contains B_ik over correct solutions.
+        B_wrong_matrix: K x M- matrix; row k contains B_ik over wrong solutions.
+    """
+    if not test_code.strip() or not solutions:
+        return [], [], []
+
+    correct_indices = [i for i, s in enumerate(solutions) if s["is_correct"]]
+    wrong_indices = [i for i, s in enumerate(solutions) if not s["is_correct"]]
+
+    per_solution_metrics: list[dict[str, int]] = []
+    canonical_test_ids: list[str] = []
+
+    for sol in solutions:
+        sol_code = sol["solve_func"]
+        metrics = _run_unittest_with_per_test_metrics(test_code, sol_code, timeout=timeout)
+        per_solution_metrics.append(metrics)
+        # Use the first non-empty metrics dict to fix semantic-test order.
+        if not canonical_test_ids and metrics:
+            canonical_test_ids = list(metrics.keys())
+
+    if not canonical_test_ids:
+        return [], [], []
+
+    B_correct_matrix: list[list[float]] = []
+    B_wrong_matrix: list[list[float]] = []
+
+    for test_id in canonical_test_ids:
+        B_correct_row = [float(per_solution_metrics[idx].get(test_id, 0)) for idx in correct_indices]
+        B_wrong_row = [float(per_solution_metrics[idx].get(test_id, 0)) for idx in wrong_indices]
+        B_correct_matrix.append(B_correct_row)
+        B_wrong_matrix.append(B_wrong_row)
+
+    return canonical_test_ids, B_correct_matrix, B_wrong_matrix
+
+
 def cross_solution_unittest_reward(
     completion_text: str,
     solutions: list[dict],
@@ -811,17 +856,11 @@ def cross_solution_unittest_reward(
     if M_plus + M_minus == 0:
         return 0.0
 
-    # Run full unittest suite once per solution and collect per-test metrics
-    per_solution_metrics: list[dict[str, int]] = []
-    canonical_test_ids: list[str] = []
-
-    for sol in solutions:
-        sol_code = sol["solve_func"]
-        metrics = _run_unittest_with_per_test_metrics(test_code, sol_code, timeout=timeout)
-        per_solution_metrics.append(metrics)
-        # Use the first non-empty metrics dict to fix the order of semantic tests f_k
-        if not canonical_test_ids and metrics:
-            canonical_test_ids = list(metrics.keys())
+    canonical_test_ids, B_correct_matrix, B_wrong_matrix = _compute_bik_matrices(
+        test_code=test_code,
+        solutions=solutions,
+        timeout=timeout,
+    )
 
     if not canonical_test_ids:
         return 0.0
@@ -832,18 +871,9 @@ def cross_solution_unittest_reward(
     B_matrix: list[list[float]] = []  # B_matrix[k] = B_correct_k + B_wrong_k
     R_details: list[tuple[float, float, float]] = []  # (R1, R_minus, R_fk) per f_k
 
-    for k, test_id in enumerate(canonical_test_ids):
-        # Compute B_ik for correct solutions for this semantic test f_k
-        B_correct: list[float] = []
-        for idx in correct_indices:
-            status = per_solution_metrics[idx].get(test_id, 0)
-            B_correct.append(float(status))
-
-        # Compute B_ik for wrong solutions for this semantic test f_k
-        B_wrong: list[float] = []
-        for idx in wrong_indices:
-            status = per_solution_metrics[idx].get(test_id, 0)
-            B_wrong.append(float(status))
+    for k, _ in enumerate(canonical_test_ids):
+        B_correct = B_correct_matrix[k]
+        B_wrong = B_wrong_matrix[k]
 
         B_matrix.append(B_correct + B_wrong)
 
@@ -882,6 +912,89 @@ def cross_solution_unittest_reward(
         print(f"  f_{k+1:>2}: R^1={r1:.4f}, R^-={rm:.4f}, R_fk={rfk:.4f}")
     final_reward = sum(R_fk_scores) / K
     print(f"Final reward = {final_reward:.4f} (K={K})")
+
+    return final_reward
+
+
+def cross_solution_unittest_reward_v2(
+    completion_text: str,
+    solutions: list[dict],
+    timeout: int = 5,
+) -> float:
+    """
+    Compute reward for generated unit tests (v2).
+
+    Changes vs v1:
+      - Remove lambda_1 soft-validity term from R^1.
+      - Remove lambda_2 soft-discrimination penalty from R^-.
+      - Combine as direct sum: R_{f_k} = R^1 + R^- (no lambda_t weighting).
+
+    Formulas:
+      R^1_{f_k} = prod(B_ik, i in correct)
+      R^-_{f_k} = prod(B_ik, i in correct) * (1 - prod(B_ik, i in wrong))
+      R_{f_k}   = R^1 + R^-
+      R         = mean(R_{f_k}) over all k
+    """
+    test_code = extract_code(completion_text)
+    if not test_code and ("def " in completion_text or "class " in completion_text):
+        test_code = completion_text
+
+    if not test_code.strip():
+        return 0.0
+
+    correct_indices = [i for i, s in enumerate(solutions) if s["is_correct"]]
+    wrong_indices = [i for i, s in enumerate(solutions) if not s["is_correct"]]
+    M_plus = len(correct_indices)
+    M_minus = len(wrong_indices)
+
+    if M_plus + M_minus == 0:
+        return 0.0
+
+    canonical_test_ids, B_correct_matrix, B_wrong_matrix = _compute_bik_matrices(
+        test_code=test_code,
+        solutions=solutions,
+        timeout=timeout,
+    )
+    if not canonical_test_ids:
+        return 0.0
+
+    K = len(canonical_test_ids)
+    R_fk_scores: list[float] = []
+    B_matrix: list[list[float]] = []  # B_matrix[k] = B_correct_k + B_wrong_k
+    R_details: list[tuple[float, float, float]] = []  # (R1, R_minus, R_fk) per f_k
+
+    for k, _ in enumerate(canonical_test_ids):
+        B_correct = B_correct_matrix[k]
+        B_wrong = B_wrong_matrix[k]
+        B_matrix.append(B_correct + B_wrong)
+
+        prod_correct = 1.0
+        for b in B_correct:
+            prod_correct *= b
+        R1 = prod_correct
+
+        prod_wrong = 1.0
+        for b in B_wrong:
+            prod_wrong *= b
+        R_minus = prod_correct * (1.0 - prod_wrong)
+
+        R_fk = R1 + R_minus
+        R_fk_scores.append(R_fk)
+        R_details.append((R1, R_minus, R_fk))
+
+    header = "B_ik matrix (rows=f_k, cols=solutions [correct | wrong]):"
+    col_labels = [f"s+{i}" for i in range(M_plus)] + [f"s-{i}" for i in range(M_minus)]
+    col_header = "        " + "  ".join(f"{c:>4}" for c in col_labels)
+    print(header)
+    print(col_header)
+    for k, row in enumerate(B_matrix):
+        vals = "  ".join(f"{int(v):>4}" for v in row)
+        print(f"  f_{k+1:>2}:  {vals}")
+    print("Per-f_k rewards (v2):")
+    for k, (r1, rm, rfk) in enumerate(R_details):
+        print(f"  f_{k+1:>2}: R^1={r1:.4f}, R^-={rm:.4f}, R_fk={rfk:.4f}")
+    final_reward = sum(R_fk_scores) / K
+    print(f"Final reward v2 = {final_reward:.4f} (K={K})")
 
     return final_reward
 
