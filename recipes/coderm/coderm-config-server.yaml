@@ -28,7 +28,7 @@ logging_strategy: steps
 lr_scheduler_type: cosine
 
 max_steps: -1
-num_train_epochs: 1
+num_train_epochs: 2
 output_dir: data/coderm-8b
 overwrite_output_dir: true
 per_device_eval_batch_size: 2

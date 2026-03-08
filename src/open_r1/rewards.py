@@ -952,12 +952,15 @@ def _make_cross_solution_batch_reward(single_reward_func: Callable) -> Callable:
         **kwargs,
     ) -> list[float]:
         rewards: list[float] = []
+        details: list[str] = []
         for completion, solutions in zip(completions, sampled_solutions):
             if isinstance(completion, list):
                 completion_text = completion[-1]["content"] if completion else ""
             else:
                 completion_text = completion
             rewards.append(single_reward_func(completion_text, solutions))
+            details.append(getattr(single_reward_func, "_last_diagnostic", ""))
+        _batch_reward._last_diagnostics = details
         return rewards
 
     return update_wrapper(_batch_reward, single_reward_func)
@@ -1022,6 +1025,7 @@ def cross_solution_unittest_reward_v2(
         test_code = completion_text
 
     if not test_code.strip():
+        cross_solution_unittest_reward_v2._last_diagnostic = ""
         return 0.0
 
     correct_indices = [i for i, s in enumerate(solutions) if s["is_correct"]]
@@ -1030,6 +1034,7 @@ def cross_solution_unittest_reward_v2(
     M_minus = len(wrong_indices)
 
     if M_plus + M_minus == 0:
+        cross_solution_unittest_reward_v2._last_diagnostic = ""
         return 0.0
 
     canonical_test_ids, B_correct_matrix, B_wrong_matrix = _compute_bik_matrices(
@@ -1038,6 +1043,7 @@ def cross_solution_unittest_reward_v2(
         timeout=timeout,
     )
     if not canonical_test_ids:
+        cross_solution_unittest_reward_v2._last_diagnostic = ""
         return 0.0
 
     K = len(canonical_test_ids)
@@ -1064,6 +1070,19 @@ def cross_solution_unittest_reward_v2(
         R_fk_scores.append(R_fk)
         R_details.append((R1, R_minus, R_fk))
 
+    diagnostic_rows = []
+    for k, test_id in enumerate(canonical_test_ids):
+        failed_correct = [idx for idx, b in enumerate(B_correct_matrix[k]) if b == 0]
+        passed_wrong = [idx for idx, b in enumerate(B_wrong_matrix[k]) if b == 1]
+        if failed_correct or passed_wrong:
+            diagnostic_rows.append(
+                {
+                    "test_id": test_id,
+                    "failed_correct": failed_correct,
+                    "passed_wrong": passed_wrong,
+                }
+            )
+
     header = "B_ik matrix (rows=f_k, cols=solutions [correct | wrong]):"
     col_labels = [f"s+{i}" for i in range(M_plus)] + [f"s-{i}" for i in range(M_minus)]
     col_header = "        " + "  ".join(f"{c:>4}" for c in col_labels)
@@ -1077,6 +1096,10 @@ def cross_solution_unittest_reward_v2(
         print(f"  f_{k+1:>2}: R^1={r1:.4f}, R^-={rm:.4f}, R_fk={rfk:.4f}")
     final_reward = sum(R_fk_scores) / K
     print(f"Final reward v2 = {final_reward:.4f} (K={K})")
+
+    cross_solution_unittest_reward_v2._last_diagnostic = json.dumps(
+        diagnostic_rows, ensure_ascii=False
+    )
 
     return final_reward
 

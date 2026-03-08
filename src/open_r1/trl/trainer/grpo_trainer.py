@@ -602,6 +602,7 @@ class GRPOTrainer(Trainer):
             "prompt": deque(maxlen=maxlen),
             "completion": deque(maxlen=maxlen),
             "rewards": defaultdict(lambda: deque(maxlen=maxlen)),
+            "reward_diagnostics": defaultdict(lambda: deque(maxlen=maxlen)),
             "advantages": deque(maxlen=maxlen),
         }
 
@@ -1161,6 +1162,9 @@ class GRPOTrainer(Trainer):
             completions = completions_text
 
         rewards_per_func = torch.zeros(len(prompts), len(self.reward_funcs), device=device)
+        reward_diagnostics_local: dict[str, list[str]] = {
+            name: [""] * len(prompts) for name in self.reward_func_names
+        }
 
         # Repeat all input columns (but "prompt", "completion", and "completion_ids") to match the num of generations
         keys = [key for key in inputs[0] if key not in ["prompt", "completion", "completion_ids"]]
@@ -1186,6 +1190,9 @@ class GRPOTrainer(Trainer):
                     output_reward_func = reward_func(
                         prompts=prompts, completions=completions, completion_ids=completion_ids_list, **reward_kwargs
                     )
+                    diagnostics = getattr(reward_func, "_last_diagnostics", None)
+                    if isinstance(diagnostics, list) and len(diagnostics) == len(prompts):
+                        reward_diagnostics_local[reward_func_name] = [str(d or "") for d in diagnostics]
                     # Convert None values to NaN
                     output_reward_func = [reward if reward is not None else torch.nan for reward in output_reward_func]
 
@@ -1262,10 +1269,15 @@ class GRPOTrainer(Trainer):
         self._metrics[mode]["frac_reward_zero_std"].append(is_std_zero.float().mean().item())
 
         # Log prompt and completion texts
-        self._textual_logs["prompt"].extend(gather_object(prompts_text))
-        self._textual_logs["completion"].extend(gather_object(completions_text))
+        gathered_prompts_text = gather_object(prompts_text)
+        gathered_completions_text = gather_object(completions_text)
+        self._textual_logs["prompt"].extend(gathered_prompts_text)
+        self._textual_logs["completion"].extend(gathered_completions_text)
+        num_logged = len(gathered_prompts_text)
         for i, name in enumerate(self.reward_func_names):
             self._textual_logs["rewards"][name].extend(rewards_per_func[:, i].tolist())
+            gathered_diagnostics = gather_object(reward_diagnostics_local[name])
+            self._textual_logs["reward_diagnostics"][name].extend(gathered_diagnostics)
         self._textual_logs["advantages"].extend(all_process_advantages.tolist())
 
         return {
@@ -1466,6 +1478,7 @@ class GRPOTrainer(Trainer):
                     "prompt": self._textual_logs["prompt"],
                     "completion": self._textual_logs["completion"],
                     **self._textual_logs["rewards"],
+                    **{f"{k}_diag": v for k, v in self._textual_logs["reward_diagnostics"].items()},
                     "advantage": self._textual_logs["advantages"],
                 }
                 df = pd.DataFrame(table)
@@ -1481,6 +1494,7 @@ class GRPOTrainer(Trainer):
                     "prompt": self._textual_logs["prompt"],
                     "completion": self._textual_logs["completion"],
                     **self._textual_logs["rewards"],
+                    **{f"{k}_diag": v for k, v in self._textual_logs["reward_diagnostics"].items()},
                     "advantage": self._textual_logs["advantages"],
                 }
                 df = pd.DataFrame(table)
