@@ -1,0 +1,96 @@
+#Model arguments
+model_name_or_path: KAKA22/CodeRM-8B
+model_revision: main
+torch_dtype: bfloat16
+attn_implementation: flash_attention_2
+
+# Data training arguments
+dataset_name: zzzzit/taco3
+dataset_prompt_column: problem
+system_prompt: "You are a helpful AI Assistant that provides well-reasoned and detailed responses. You first think about the reasoning process as an internal monologue and then provide the user with the answer. Respond in the following format: <think>\n...\n</think>\n<answer>\n...\n</answer>"
+
+
+# GRPO trainer config
+bf16: true
+do_eval: false
+gradient_checkpointing: true
+gradient_checkpointing_kwargs:
+  use_reentrant: true
+hub_model_id: coderm-8b
+hub_strategy: every_save
+push_to_hub_revision: true
+learning_rate: 2.0e-05
+log_completions: true
+log_level: info
+logging_first_step: true
+logging_steps: 1
+logging_strategy: steps
+lr_scheduler_type: cosine
+
+max_steps: -1
+num_train_epochs: 1
+output_dir: data/coderm-8b
+overwrite_output_dir: true
+per_device_eval_batch_size: 2
+per_device_train_batch_size: 2
+push_to_hub: true
+report_to:
+- wandb
+
+reward_funcs:
+- format
+- cross_solution_unittest_v2
+reward_weights:
+- 1.0
+- 1.0
+
+save_strategy: "steps"
+save_steps: 25
+save_total_limit: 5
+seed: 42
+temperature: 0.7
+
+
+#memory config
+gradient_accumulation_steps: 32
+max_prompt_length: 1024
+max_completion_length: 3584
+num_generations: 32
+num_sampled_solutions: 4
+num_completions_per_solution: 8
+
+#===== vllm config =====
+use_vllm: true
+vllm_mode: server
+vllm_server_host: localhost
+vllm_server_port: 8000
+vllm_server_timeout: 600.0
+
+
+use_peft: true
+lora_r: 16
+lora_alpha: 32
+lora_dropout: 0.05
+lora_target_modules: ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
+lora_modules_to_save: null
+lora_task_type: "CAUSAL_LM"
+use_rslora: false
+use_dora: false
+
+# Custom reward aggregation for cross_solution_unittest_reward
+# This expression implements Equation 10 from the paper using numpy.
+# Available variables in scope:
+#   B (np.ndarray): binary matrix, B[i, k] == 1 if solution i passes test k. Shape (num_solutions, K).
+#   correct_mask (np.ndarray): boolean mask for correct solutions. Shape (num_solutions,).
+#   M_plus (int): number of correct solutions.
+#   M_minus (int): number of wrong solutions.
+#   K (int): number of test functions.
+#   np: the numpy module.
+#   math: the standard math module.
+#   Common builtins: sum, len, min, max, range, zip, enumerate, all, any, abs, float, int.
+unittest_reward_aggregation: >
+  float(np.mean(
+    0.5 * (np.prod(B[correct_mask], axis=0) + 0.1 / max(M_plus, 1) * np.sum(B[correct_mask], axis=0))
+    + 0.5 * (np.prod(B[correct_mask], axis=0) * (1.0 - np.prod(B[~correct_mask], axis=0))
+    - 0.1 / max(M_minus, 1) * np.sum(B[~correct_mask], axis=0))
+  ))

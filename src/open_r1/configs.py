@@ -338,3 +338,14 @@ class GRPOScriptArguments(ScriptArguments):
         default=4,
         metadata={"help": "Number of completions to generate per sampled solution (n). Must satisfy m * n = num_generations."},
     )
+
+    unittest_reward_aggregation: Optional[str] = field(
+        default=None,
+        metadata={
+            "help": "Python eval-able expression to aggregate the B_ik binary matrix into a scalar reward in "
+            "cross_solution_unittest_reward. Available variables: B (np.ndarray of shape (num_solutions, K), "
+            "B[i,k]==1 if solution i passes test k), correct_mask (np.ndarray bool), M_plus (int), M_minus (int), "
+            "K (int), np (numpy module), math module, and common builtins (sum, len, min, max, range, zip, "
+            "enumerate, all, any, abs, float, int). If None (default), uses the built-in Equation 10 aggregation."
+        },
+    )
