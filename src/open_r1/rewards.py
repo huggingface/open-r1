@@ -82,9 +82,47 @@ def accuracy_reward(completions: list[list[dict[str, str]]], solution: list[str]
     return rewards
 
 
+def traffic_accuracy_reward(
+    completions: list[list[dict[str, str]]], solution: list[str], **kwargs
+) -> list[Optional[float]]:
+    """Reward function that checks if the completion is the same as the ground truth."""
+    contents = [completion[0]["content"] for completion in completions]
+    rewards = []
+
+    def parse_response(response: str) -> str:
+        start = response.find(r"\boxed{")
+        if start == -1:
+            return "Error: No boxed content found."
+        start += len(r"\boxed{")
+        end = response.find("}", start)
+        if end == -1:
+            return "Error: No closing brace found."
+        action = response[start:end]
+        return action.strip().replace("\\text{", "")
+
+    for content, sol in zip(contents, solution):
+        gold_parsed = parse_response(content)
+        if gold_parsed:
+            reward = float(gold_parsed == sol)
+        else:
+            # If the gold solution is not parseable, we assign `None` to skip this example
+            reward = None
+            print("Failed to parse gold solution: ", sol)
+        rewards.append(reward)
+    return rewards
+
+
 def format_reward(completions, **kwargs):
     """Reward function that checks if the reasoning process is enclosed within <think> and </think> tags, while the final answer is enclosed within <answer> and </answer> tags."""
     pattern = r"^<think>\n.*?\n</think>\n<answer>\n.*?\n</answer>$"
+    completion_contents = [completion[0]["content"] for completion in completions]
+    matches = [re.match(pattern, content, re.DOTALL | re.MULTILINE) for content in completion_contents]
+    return [1.0 if match else 0.0 for match in matches]
+
+
+def traffic_format_reward(completions, **kwargs):
+    """Reward function that checks if the reasoning process is enclosed within <think> and </think> tags"""
+    pattern = r"^<think>\n.*?\n</think>\n.*?$"
     completion_contents = [completion[0]["content"] for completion in completions]
     matches = [re.match(pattern, content, re.DOTALL | re.MULTILINE) for content in completion_contents]
     return [1.0 if match else 0.0 for match in matches]
@@ -436,9 +474,11 @@ def cf_code_reward(
     languages = kwargs["language"] if "language" in kwargs else [None] * len(completions)
     code_snippets = [
         # note: grading is automatically skipped if a problem has no tests
-        cf_patch_code(extract_code(completion[-1]["content"], language), language)
-        if patch_code
-        else extract_code(completion[-1]["content"], language)
+        (
+            cf_patch_code(extract_code(completion[-1]["content"], language), language)
+            if patch_code
+            else extract_code(completion[-1]["content"], language)
+        )
         for completion, language in zip(completions, languages)
     ]
 
@@ -645,8 +685,8 @@ def get_soft_overlong_punishment(max_completion_len, soft_punish_cache):
 
 def get_reward_funcs(script_args) -> list[Callable]:
     REWARD_FUNCS_REGISTRY = {
-        "accuracy": accuracy_reward,
-        "format": format_reward,
+        "accuracy": traffic_accuracy_reward,
+        "format": traffic_format_reward,
         "reasoning_steps": reasoning_steps_reward,
         "cosine": get_cosine_scaled_reward(
             min_value_wrong=script_args.cosine_min_value_wrong,
