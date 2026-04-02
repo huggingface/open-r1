@@ -91,6 +91,16 @@ def main(script_args, training_args, model_args):
     tokenizer = get_tokenizer(model_args, training_args)
     model = get_model(model_args, training_args)
 
+    # Qwen MoE: set ZeRO-3 leaf modules (lazy import; no effect for non-Qwen)
+    if getattr(getattr(model, "config", {}), "model_type", "") == "qwen3_moe":
+        try:
+            from transformers.models.qwen3_moe.modeling_qwen3_moe import Qwen3MoeSparseMoeBlock as _QwenSparseMoeBlock
+            import deepspeed
+            deepspeed.utils.set_z3_leaf_modules(model, [_QwenSparseMoeBlock])
+            logger.info("[MoE] ZeRO-3 leaf module setup for Qwen MoE model completed.")
+        except Exception as e:
+            logger.warning(f"[MoE] Skipped ZeRO-3 leaf module setup: {e}")
+
     if tokenizer.chat_template is None:
         logger.info("No chat template provided, defaulting to ChatML.")
         model, tokenizer = setup_chat_format(model, tokenizer, format="chatml")
