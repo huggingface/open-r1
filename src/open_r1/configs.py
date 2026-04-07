@@ -229,6 +229,8 @@ class GRPOScriptArguments(ScriptArguments):
             Maximum number of tokens in completion.
         soft_punish_cache (`int`):
             Minimum number of tokens in completion.
+        txt_language (`str`):
+            Language for lang_consistency reward.
     """
 
     reward_funcs: list[str] = field(
@@ -328,4 +330,11 @@ class GRPOScriptArguments(ScriptArguments):
     soft_punish_cache: int = field(
         default=4096,
         metadata={"help": "Minimum number of characters in completion."},
+    )
+
+    txt_language: str = field(
+        default="en",
+        metadata={
+            "help": "Language for lang_consistency reward. Based on langdetect supported languages https://pypi.org/project/langdetect/"
+        },
     )
