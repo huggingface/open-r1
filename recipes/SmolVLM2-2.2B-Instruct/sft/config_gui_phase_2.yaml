@@ -1,0 +1,137 @@
+# Model arguments
+# You can download the model and manually change the rope to 300k/500k and max_position_embeddings to 32768
+model_name_or_path: HuggingFaceTB/SmolVLM2-2.2B-Instruct
+vision_model: true
+model_revision: main
+torch_dtype: bfloat16
+attn_implementation: sdpa
+
+# Data training arguments
+dataset_name: smolagents/aguvis-stage-2
+dataset_num_proc: 48
+
+#SFT hyperparam
+max_length: 4096
+optim: adamw_torch
+lr_scheduler_type: cosine_with_min_lr
+lr_scheduler_kwargs:
+  min_lr_rate: 0.1
+max_grad_norm: 0.2
+warmup_ratio: 0.03
+learning_rate: 2.0e-05
+gradient_accumulation_steps: 16
+per_device_eval_batch_size: 4
+per_device_train_batch_size: 4 # Change this depending on the context length of the model to keep a 500M GBS. 
+
+# SFT trainer config
+max_steps: -1
+num_train_epochs: 1
+bf16: true
+do_eval: true
+eval_strategy: 'steps'
+eval_steps: 100
+gradient_checkpointing: true
+gradient_checkpointing_kwargs:
+  use_reentrant: false
+hub_model_id: smolagents/SmolVLM2-2.2B-Instruct-Agentic-GUI
+hub_model_revision: max-resolution-1152-without-system
+hub_strategy: end
+push_to_hub: true
+log_level: info
+logging_steps: 5
+logging_strategy: steps
+output_dir: /fsx/amir_mahla/smolagents-SmolVLM2-2.2B-Instruct-Agentic-GUI-max-resolution-1152-without-system
+overwrite_output_dir: true
+report_to:
+- wandb
+wandb_project: smolagents
+save_strategy: "epoch"
+save_steps: 1
+save_total_limit: 1
+seed: 42
+
+dataset_mixture:
+  datasets:                     # List of datasets to include in the mixture
+    - id: smolagents/aguvis-stage-2  # Hub dataset ID
+      config: mind2web     # Name of the dataset config
+      split: train            # Split to use from the dataset
+      columns:                  # Columns to keep
+        - system
+        - user
+        - assistant
+        - image
+      weight: 1.
+    - id: smolagents/aguvis-stage-2
+      config: guiact-web-single
+      split: train
+      columns:
+        - system
+        - user
+        - assistant
+        - image
+      weight: 1.
+    - id: smolagents/aguvis-stage-2
+      config: guiact-web-multi
+      split: train
+      columns:
+        - system
+        - user
+        - assistant
+        - image
+      weight: 1.
+    - id: smolagents/aguvis-stage-2
+      config: miniwob
+      split: train
+      columns:
+        - system
+        - user
+        - assistant
+        - image
+      weight: 1.
+    - id: smolagents/aguvis-stage-2
+      config: coat
+      split: train
+      columns:
+        - system
+        - user
+        - assistant
+        - image
+      weight: 1.
+    - id: smolagents/aguvis-stage-2
+      config: android_control
+      split: train
+      columns:
+        - system
+        - user
+        - assistant
+        - image
+      weight: 1.
+    - id: smolagents/aguvis-stage-2
+      config: gui-odyssey
+      split: train
+      columns:
+        - system
+        - user
+        - assistant
+        - image
+      weight: 1.
+    - id: smolagents/aguvis-stage-2
+      config: amex
+      split: train
+      columns:
+        - system
+        - user
+        - assistant
+        - image
+      weight: 1.
+    - id: smolagents/aguvis-stage-2
+      config: aitw
+      split: train
+      columns:
+        - system
+        - user
+        - assistant
+        - image
+      weight: 1.
+  seed: 42                      # Seed for shuffling the combined dataset
+  test_split_size: 0.01

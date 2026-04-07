@@ -13,18 +13,18 @@
 # limitations under the License.
 
 """
-Supervised fine-tuning script for decoder language models.
+Supervised fine-tuning script for decoder language models and vision-language models.
 
 Usage:
 
 # One 1 node of 8 x H100s
 accelerate launch --config_file=recipes/accelerate_configs/zero3.yaml src/open_r1/sft.py \
-    --model_name_or_path open-r1/Qwen2.5-Math-7B-RoPE-300k \
-    --dataset_name open-r1/Mixture-of-Thoughts \
+    --model_name_or_path Qwen/Qwen2.5-1.5B-Instruct \
+    --dataset_name smolagents/gaia-traces \
+    --num_train_epochs 1 \
     --dataset_config all \
     --eos_token '<|im_end|>' \
     --learning_rate 4.0e-5 \
-    --num_train_epochs 5 \
     --max_seq_length 32768 \
     --per_device_train_batch_size 2 \
     --gradient_checkpointing \
@@ -39,20 +39,41 @@ import sys
 
 import datasets
 import transformers
-from transformers import set_seed
+from transformers import (
+    set_seed,
+    AutoModelForVision2Seq,
+    AutoProcessor,
+    LlavaForConditionalGeneration,
+)
 from transformers.trainer_utils import get_last_checkpoint
-
-from open_r1.configs import ScriptArguments, SFTConfig
-from open_r1.utils import get_dataset, get_model, get_tokenizer
-from open_r1.utils.callbacks import get_callbacks
-from open_r1.utils.wandb_logging import init_wandb_training
 from trl import ModelConfig, SFTTrainer, TrlParser, get_peft_config, setup_chat_format
 
+from open_r1.configs import ScriptArguments, SFTConfig
+from open_r1.utils import get_dataset, get_model, get_tokenizer, get_processor
+from open_r1.utils.callbacks import get_callbacks
+from open_r1.utils.wandb_logging import init_wandb_training
+from PIL import Image
+from transformers import Qwen2VLProcessor
+from typing import Any
+from scripts.agents.function_parser import parse_function_call
+from scripts.agents.smolvlm2_collator import create_vlm_collate_fn
 
 logger = logging.getLogger(__name__)
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 
 def main(script_args, training_args, model_args):
+    # Force single GPU mode if requested
+    # if hasattr(script_args, 'single_gpu') and script_args.single_gpu:
+    #     logger.info("Single GPU mode requested - setting CUDA_VISIBLE_DEVICES=0")
+    #     # Disable distributed training
+    # os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    # training_args.local_rank = -1
+    # training_args.ddp_backend = None
+
     set_seed(training_args.seed)
 
     ###############
@@ -85,15 +106,42 @@ def main(script_args, training_args, model_args):
         init_wandb_training(training_args)
 
     ######################################
-    # Load dataset, tokenizer, and model #
+    # Load dataset, processor/tokenizer, and model #
     ######################################
     dataset = get_dataset(script_args)
-    tokenizer = get_tokenizer(model_args, training_args)
-    model = get_model(model_args, training_args)
 
-    if tokenizer.chat_template is None:
-        logger.info("No chat template provided, defaulting to ChatML.")
-        model, tokenizer = setup_chat_format(model, tokenizer, format="chatml")
+    if training_args.vision_model:
+        logger.info("Setting up vision-language model training")
+
+        # Set VLM-specific training arguments (following TRL reference)
+        training_args.gradient_checkpointing_kwargs = dict(use_reentrant=False)
+        training_args.remove_unused_columns = False
+        training_args.dataset_kwargs = {"skip_prepare_dataset": True}
+        training_args.ddp_find_unused_parameters = True
+
+        # Load processor and model for VLM
+        processor = get_processor(model_args, training_args, script_args)
+        model = get_model(
+            model_args, training_args
+        )  # This should return AutoModelForVision2Seq
+        data_collator = create_vlm_collate_fn(processor, training_args, script_args)
+        processing_class = processor.tokenizer
+        model_tags = ["open-r1", "vision-language", "vlm"]
+
+    else:
+        logger.info("Setting up text-only model training")
+
+        # Load tokenizer and model for text-only
+        tokenizer = get_tokenizer(model_args, training_args)
+        model = get_model(model_args, training_args)
+
+        if tokenizer.chat_template is None:
+            logger.info("No chat template provided, defaulting to ChatML.")
+            model, tokenizer = setup_chat_format(model, tokenizer, format="chatml")
+
+        data_collator = None  # Use default
+        processing_class = tokenizer
+        model_tags = ["open-r1"]
 
     ############################
     # Initialize the SFT Trainer
@@ -101,9 +149,14 @@ def main(script_args, training_args, model_args):
     trainer = SFTTrainer(
         model=model,
         args=training_args,
+        data_collator=data_collator,
         train_dataset=dataset[script_args.dataset_train_split],
-        eval_dataset=(dataset[script_args.dataset_test_split] if training_args.eval_strategy != "no" else None),
-        processing_class=tokenizer,
+        eval_dataset=(
+            dataset[script_args.dataset_test_split]
+            if training_args.eval_strategy != "no"
+            else None
+        ),
+        processing_class=processing_class,
         peft_config=get_peft_config(model_args),
         callbacks=get_callbacks(training_args, model_args),
     )
@@ -128,16 +181,17 @@ def main(script_args, training_args, model_args):
     # Save model and create model card
     ##################################
     logger.info("*** Save model ***")
-    # Align the model's generation config with the tokenizer's eos token
-    # to avoid unbounded generation in the transformers `pipeline()` function
-    trainer.model.generation_config.eos_token_id = tokenizer.eos_token_id
     trainer.save_model(training_args.output_dir)
     logger.info(f"Model saved to {training_args.output_dir}")
+    try:
+        processor.save_pretrained(training_args.output_dir)
+    except Exception as e:
+        logger.error(f"Error saving processor: {e}")
 
     # Save everything else on main process
     kwargs = {
         "dataset_name": script_args.dataset_name,
-        "tags": ["open-r1"],
+        "tags": model_tags,
     }
     if trainer.accelerator.is_main_process:
         trainer.create_model_card(**kwargs)
@@ -160,7 +214,10 @@ def main(script_args, training_args, model_args):
     #############
     if training_args.push_to_hub:
         logger.info("Pushing to hub...")
-        trainer.push_to_hub(**kwargs)
+        trainer.push_to_hub(**kwargs, token=os.getenv("HF_TOKEN"))
+        # Also push processor for VLM models
+        if training_args.vision_model and trainer.accelerator.is_main_process:
+            processor.push_to_hub(training_args.hub_model_id)
 
 
 if __name__ == "__main__":

@@ -74,6 +74,8 @@ _deps = [
     "async-lru>=2.0.5",
     "aiofiles>=24.1.0",
     "pandas>=2.2.3",
+    "qwen-vl-utils>=0.1.0",
+    "setuptools>=80.9.0",
 ]
 
 # this is a lookup table with items like:

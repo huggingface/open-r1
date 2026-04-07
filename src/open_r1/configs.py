@@ -68,19 +68,51 @@ class ScriptArguments(trl.ScriptArguments):
 
     # Override the dataset_name to make it optional
     dataset_name: Optional[str] = field(
-        default=None, metadata={"help": "Dataset name. Can be omitted if using dataset_mixture."}
+        default=None,
+        metadata={"help": "Dataset name. Can be omitted if using dataset_mixture."},
     )
     dataset_mixture: Optional[dict[str, Any]] = field(
         default=None,
-        metadata={"help": "Configuration for creating dataset mixtures with advanced options like shuffling."},
+        metadata={
+            "help": "Configuration for creating dataset mixtures with advanced options like shuffling."
+        },
+    )
+    single_gpu: bool = field(
+        default=False,
+        metadata={
+            "help": "Force training on single GPU only, disabling distributed training."
+        },
+    )
+
+    image_resize: Optional[dict[str, int]] = field(
+        default=None,
+        metadata={"help": "Resize the image to the given minimum and maximum pixels."},
     )
 
     def __post_init__(self):
         if self.dataset_name is None and self.dataset_mixture is None:
-            raise ValueError("Either `dataset_name` or `dataset_mixture` must be provided")
+            raise ValueError(
+                "Either `dataset_name` or `dataset_mixture` must be provided"
+            )
+
+        if self.image_resize is not None:
+            if (
+                not isinstance(self.image_resize, dict)
+                # or "min_pixels" not in self.image_resize
+                # or "max_pixels" not in self.image_resize
+                # or "factor" not in self.image_resize
+                or "to_pixel_coordinates" not in self.image_resize
+                or "resolution_max_side" not in self.image_resize
+            ):
+                raise ValueError(
+                    f"image_resize must be a dictionary with a 'min_pixels', 'max_pixels' and 'factor' key. {self.image_resize}"
+                )
 
         if self.dataset_mixture is not None:
-            if not isinstance(self.dataset_mixture, dict) or "datasets" not in self.dataset_mixture:
+            if (
+                not isinstance(self.dataset_mixture, dict)
+                or "datasets" not in self.dataset_mixture
+            ):
                 raise ValueError(
                     "dataset_mixture must be a dictionary with a 'datasets' key. "
                     "Expected format: {'datasets': [...], 'seed': int}"
@@ -110,7 +142,11 @@ class ScriptArguments(trl.ScriptArguments):
             )
 
             # Check that column names are consistent across all dataset configs
-            columns_sets = [set(dataset.columns) for dataset in datasets_list if dataset.columns is not None]
+            columns_sets = [
+                set(dataset.columns)
+                for dataset in datasets_list
+                if dataset.columns is not None
+            ]
             if columns_sets:
                 first_columns = columns_sets[0]
                 if not all(columns == first_columns for columns in columns_sets):
@@ -135,13 +171,21 @@ class GRPOConfig(trl.GRPOConfig):
         default_factory=lambda: [],
         metadata={"help": "The callbacks to run during training."},
     )
-    chat_template: Optional[str] = field(default=None, metadata={"help": "The chat template to use."})
+    chat_template: Optional[str] = field(
+        default=None, metadata={"help": "The chat template to use."}
+    )
     hub_model_revision: Optional[str] = field(
         default="main", metadata={"help": "The Hub model branch to push the model to."}
     )
-    num_completions_to_print: int = field(default=0, metadata={"help": "Number of completions to print."})
-    overwrite_hub_revision: bool = field(default=False, metadata={"help": "Whether to overwrite the Hub revision."})
-    push_to_hub_revision: bool = field(default=False, metadata={"help": "Whether to push to a Hub revision/branch."})
+    num_completions_to_print: int = field(
+        default=0, metadata={"help": "Number of completions to print."}
+    )
+    overwrite_hub_revision: bool = field(
+        default=False, metadata={"help": "Whether to overwrite the Hub revision."}
+    )
+    push_to_hub_revision: bool = field(
+        default=False, metadata={"help": "Whether to push to a Hub revision/branch."}
+    )
     system_prompt: Optional[str] = field(
         default=None,
         metadata={"help": "The optional system prompt to use."},
@@ -149,7 +193,9 @@ class GRPOConfig(trl.GRPOConfig):
     wandb_log_unique_prompts: bool = field(
         default=True,
         metadata={
-            "help": ("Whether to log the unique prompts to wandb. This will create a new run for each unique prompt.")
+            "help": (
+                "Whether to log the unique prompts to wandb. This will create a new run for each unique prompt."
+            )
         },
     )
     wandb_entity: Optional[str] = field(
@@ -180,17 +226,27 @@ class SFTConfig(trl.SFTConfig):
         default_factory=lambda: [],
         metadata={"help": "The callbacks to run during training."},
     )
-    chat_template: Optional[str] = field(default=None, metadata={"help": "The chat template to use."})
+    chat_template: Optional[str] = field(
+        default=None, metadata={"help": "The chat template to use."}
+    )
     system_prompt: Optional[str] = field(
         default=None,
         metadata={"help": "The optional system prompt to use for benchmarking."},
+    )
+    vision_model: bool = field(
+        default=False,
+        metadata={"help": "Whether this is a vision-language model training."},
     )
     hub_model_revision: Optional[str] = field(
         default="main",
         metadata={"help": "The Hub model branch to push the model to."},
     )
-    overwrite_hub_revision: bool = field(default=False, metadata={"help": "Whether to overwrite the Hub revision."})
-    push_to_hub_revision: bool = field(default=False, metadata={"help": "Whether to push to a Hub revision/branch."})
+    overwrite_hub_revision: bool = field(
+        default=False, metadata={"help": "Whether to overwrite the Hub revision."}
+    )
+    push_to_hub_revision: bool = field(
+        default=False, metadata={"help": "Whether to push to a Hub revision/branch."}
+    )
     wandb_entity: Optional[str] = field(
         default=None,
         metadata={"help": ("The entity to store runs under.")},
@@ -263,7 +319,9 @@ class GRPOScriptArguments(ScriptArguments):
     )
     repetition_max_penalty: float = field(
         default=-1.0,
-        metadata={"help": "Maximum (negative) penalty for for repetition penalty reward"},
+        metadata={
+            "help": "Maximum (negative) penalty for for repetition penalty reward"
+        },
     )
     code_language: str = field(
         default="python",
@@ -281,7 +339,9 @@ class GRPOScriptArguments(ScriptArguments):
     )
     code_eval_scoring_mode: Literal["pass_fail", "partial", "weighted_sum"] = field(
         default="weighted_sum",
-        metadata={"help": "use fraction of passed test cases as reward. If false, use 0/1 scoring."},
+        metadata={
+            "help": "use fraction of passed test cases as reward. If false, use 0/1 scoring."
+        },
     )
     parallel_code_exec_per_proc: int = field(
         default=2,
