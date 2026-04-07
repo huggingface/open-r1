@@ -264,13 +264,13 @@ class MorphProvider(CodeExecutionProvider):
 
         semaphore = asyncio.Semaphore(num_parallel)
 
-        tasks = [self._run_script(script, languages, semaphore) for script in scripts]
+        tasks = [self._run_script(script, language, semaphore) for script, language in zip(scripts, languages)]
 
         results = await asyncio.gather(*tasks)
 
         return list(results)
 
-    async def _run_script(self, script: str, languages: List[str], semaphore: asyncio.Semaphore) -> float:
+    async def _run_script(self, script: str, language: str, semaphore: asyncio.Semaphore) -> float:
         """Execute a single script in a MorphCloud Sandbox.
 
         Args:
@@ -293,7 +293,7 @@ class MorphProvider(CodeExecutionProvider):
                     asyncio.to_thread(
                         sandbox.run_code,
                         script,
-                        languages=languages,
+                        language=language,
                         timeout=SANDBOX_TIMEOUT,
                     ),
                     timeout=ASYNCIO_TIMEOUT,
