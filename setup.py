@@ -21,7 +21,6 @@ from pathlib import Path
 
 from setuptools import find_packages, setup
 
-
 # Remove stale open_r1.egg-info directory to avoid https://github.com/pypa/pip/issues/5466
 stale_egg_info = Path(__file__).parent / "open_r1.egg-info"
 if stale_egg_info.exists():
@@ -42,7 +41,7 @@ if stale_egg_info.exists():
 #   * If a dependency is fast-moving (e.g. trl), pin to the exact version
 _deps = [
     "accelerate==1.4.0",
-    "bitsandbytes>=0.43.0",
+    "bitsandbytes>=0.42.0",
     "datasets>=3.2.0",
     "deepspeed==0.16.8",
     "distilabel[vllm,ray,openai]>=1.5.2",
@@ -54,8 +53,8 @@ _deps = [
     "isort>=5.12.0",
     "jieba",  # Needed for Chinese language support
     "langdetect",  # Needed for LightEval's extended tasks
-    "latex2sympy2_extended>=1.0.6",
-    "liger-kernel>=0.5.10",
+    # "latex2sympy2_extended>=1.0.6",
+    # "liger-kernel>=0.5.10",
     "lighteval @ git+https://github.com/huggingface/lighteval.git@d3da6b9bbf38104c8b5e1acc86f83541f9a502d1",  # Critical bug fix for tokenizer revisions: https://github.com/huggingface/lighteval/pull/721
     "math-verify==0.5.2",  # Used for math verification in grpo
     "morphcloud==0.1.67",
@@ -82,7 +81,13 @@ _deps = [
 # packaging: "packaging"
 #
 # some of the values are versioned whereas others aren't.
-deps = {b: a for a, b in (re.findall(r"^(([^!=<>~ \[\]]+)(?:\[[^\]]+\])?(?:[!=<>~ ].*)?$)", x)[0] for x in _deps)}
+deps = {
+    b: a
+    for a, b in (
+        re.findall(r"^(([^!=<>~ \[\]]+)(?:\[[^\]]+\])?(?:[!=<>~ ].*)?$)", x)[0]
+        for x in _deps
+    )
+}
 
 
 def deps_list(*pkgs):
@@ -93,7 +98,9 @@ extras = {}
 extras["tests"] = deps_list("pytest", "parameterized", "math-verify", "jieba")
 extras["torch"] = deps_list("torch")
 extras["quality"] = deps_list("ruff", "isort", "flake8")
-extras["code"] = deps_list("e2b-code-interpreter", "python-dotenv", "morphcloud", "jieba", "pandas", "aiofiles")
+extras["code"] = deps_list(
+    "e2b-code-interpreter", "python-dotenv", "morphcloud", "jieba", "pandas", "aiofiles"
+)
 extras["eval"] = deps_list("lighteval", "math-verify")
 extras["dev"] = extras["quality"] + extras["tests"] + extras["eval"] + extras["code"]
 
@@ -107,9 +114,9 @@ install_requires = [
     deps["hf_transfer"],
     deps["huggingface-hub"],
     deps["langdetect"],
-    deps["latex2sympy2_extended"],
+    # deps["latex2sympy2_extended"],
     deps["math-verify"],
-    deps["liger-kernel"],
+    # deps["liger-kernel"],
     deps["packaging"],  # utilities from PyPA to e.g., compare versions
     deps["safetensors"],
     deps["sentencepiece"],

@@ -74,6 +74,10 @@ class ScriptArguments(trl.ScriptArguments):
         default=None,
         metadata={"help": "Configuration for creating dataset mixtures with advanced options like shuffling."},
     )
+    single_gpu: bool = field(
+        default=False,
+        metadata={"help": "Force training on single GPU only, disabling distributed training."},
+    )
 
     def __post_init__(self):
         if self.dataset_name is None and self.dataset_mixture is None:
@@ -184,6 +188,10 @@ class SFTConfig(trl.SFTConfig):
     system_prompt: Optional[str] = field(
         default=None,
         metadata={"help": "The optional system prompt to use for benchmarking."},
+    )
+    vision_model: bool = field(
+        default=False,
+        metadata={"help": "Whether this is a vision-language model training."},
     )
     hub_model_revision: Optional[str] = field(
         default="main",

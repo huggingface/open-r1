@@ -25,6 +25,19 @@ from typing import Callable, Dict, Literal, Optional
 from latex2sympy2_extended import NormalizationConfig
 from math_verify import LatexExtractionConfig, parse, verify
 
+<<<<<<< HEAD
+from .utils import is_e2b_available
+from .utils.ioi import SubtaskResult, add_includes, get_piston_client_from_env, score_subtask
+
+
+if is_e2b_available():
+    from dotenv import load_dotenv
+    from e2b_code_interpreter import AsyncSandbox, Sandbox
+
+    load_dotenv()
+else:
+    AsyncSandbox = None
+=======
 from .utils.code_providers import get_provider
 from .utils.competitive_programming import (
     SubtaskResult,
@@ -35,6 +48,7 @@ from .utils.competitive_programming import (
 from .utils.competitive_programming import patch_code as cf_patch_code
 from .utils.competitive_programming import score_submission as cf_score_submission
 from .utils.competitive_programming import score_subtask
+>>>>>>> main
 
 
 def accuracy_reward(completions: list[list[dict[str, str]]], solution: list[str], **kwargs) -> list[Optional[float]]:
@@ -592,6 +606,70 @@ def code_reward(
     return execution_provider.execute_scripts(scripts, ["python"] * len(scripts))
 
 
+def run_tests(completions, **kwargs) -> list[float]:
+    """Reward function that evaluates code snippets using the E2B code interpreter.
+
+    Assumes the dataset contains a `verification_info` column with test cases.
+    """
+    if not is_e2b_available():
+        raise ImportError(
+            "E2B is not available and required for this reward function. Please install E2B with "
+            "`pip install e2b-code-interpreter` and add an API key to a `.env` file."
+        )
+
+    evaluation_script_template = """
+    import subprocess
+    import json
+
+    def evaluate_code(code, test_cases):
+        passed = 0
+        total = len(test_cases)
+        exec_timeout = 20
+
+        for case in test_cases:
+            process = subprocess.run(
+                ["python3", "-c", code],
+                input=case["input"],
+                text=True,
+                capture_output=True,
+                timeout=exec_timeout
+            )
+
+            if process.returncode != 0:
+                error_msg = "Process exited with code" + process.returncode
+                if process.stderr:
+                    error_msg += ": Error: " + process.stderr
+                if process.stdout:
+                    error_msg += ": Output: " + process.stdout
+                raise Exception(error_msg)
+
+            output = process.stdout.strip()
+
+            # TODO: implement a proper validator to compare against ground truth. For now we just check for exact string match on each line of stdout.
+            for line1, line2 in zip(output.split('\\n'), str(case['output']).split('\\n')):
+                if not line1.strip() == line2.strip():
+                    raise Exception("Function output did not match gold truth for test case "+ case['input'] + " : Got " + str(line1.strip()) + " instead of " + str(line2.strip()))
+
+    code_snippet = {code}
+    test_cases = json.loads({test_cases})
+
+    evaluate_code(code_snippet, test_cases)
+    """
+    code_snippets = [extract_code(completion[-1]["content"]) for completion in completions]
+    verification_info = kwargs["verification_info"]
+    scripts = [
+        evaluation_script_template.format(code=json.dumps(code), test_cases=json.dumps(json.dumps(info["test_cases"])))
+        for code, info in zip(code_snippets, verification_info)
+    ]
+
+    language = verification_info[0]["language"]
+
+    if not all(v["language"] == language for v in verification_info):
+        raise ValueError("All verification_info must have the same language", verification_info)
+
+    return [run_script_test(script, language) for script in scripts]
+
+
 def get_code_format_reward(language: str = "python"):
     """Format reward function specifically for code responses.
 
@@ -641,6 +719,14 @@ def get_soft_overlong_punishment(max_completion_len, soft_punish_cache):
         return rewards
 
     return soft_overlong_punishment_reward
+
+
+def run_script_test(script: str, language: str) -> float:
+    sandbox = Sandbox(timeout=30, request_timeout=30)
+    execution = sandbox.run_code(script, language=language)
+    if execution.error:
+        raise Exception(f"{execution.logs}\n{execution.error.name}: {execution.error.value}")
+
 
 
 def get_reward_funcs(script_args) -> list[Callable]:

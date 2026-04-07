@@ -13,18 +13,18 @@
 # limitations under the License.
 
 """
-Supervised fine-tuning script for decoder language models.
+Supervised fine-tuning script for decoder language models and vision-language models.
 
 Usage:
 
 # One 1 node of 8 x H100s
 accelerate launch --config_file=recipes/accelerate_configs/zero3.yaml src/open_r1/sft.py \
-    --model_name_or_path open-r1/Qwen2.5-Math-7B-RoPE-300k \
-    --dataset_name open-r1/Mixture-of-Thoughts \
+    --model_name_or_path Qwen/Qwen2.5-1.5B-Instruct \
+    --dataset_name smolagents/gaia-traces \
+    --num_train_epochs 1 \
     --dataset_config all \
     --eos_token '<|im_end|>' \
     --learning_rate 4.0e-5 \
-    --num_train_epochs 5 \
     --max_seq_length 32768 \
     --per_device_train_batch_size 2 \
     --gradient_checkpointing \
@@ -39,20 +39,100 @@ import sys
 
 import datasets
 import transformers
-from transformers import set_seed
+from transformers import set_seed, AutoModelForVision2Seq, AutoProcessor, LlavaForConditionalGeneration
 from transformers.trainer_utils import get_last_checkpoint
-
-from open_r1.configs import ScriptArguments, SFTConfig
-from open_r1.utils import get_dataset, get_model, get_tokenizer
-from open_r1.utils.callbacks import get_callbacks
-from open_r1.utils.wandb_logging import init_wandb_training
 from trl import ModelConfig, SFTTrainer, TrlParser, get_peft_config, setup_chat_format
 
+from open_r1.configs import ScriptArguments, SFTConfig
+from open_r1.utils import get_dataset, get_model, get_tokenizer, get_processor
+from open_r1.utils.callbacks import get_callbacks
+from open_r1.utils.wandb_logging import init_wandb_training
+from transformers import Qwen2VLProcessor
 
 logger = logging.getLogger(__name__)
 
+from dotenv import load_dotenv
+load_dotenv()
+
+def create_vlm_collate_fn(processor):
+    """Create a data collator for VLM training that handles images and text."""
+    from qwen_vl_utils import process_vision_info
+
+    def collate_fn(examples):
+        # Convert dataset format to Qwen2.5-VL message format
+        batch_messages = []
+        
+        for example in examples:
+            example_texts = example["texts"]
+            example_images = example["images"]
+            
+            # Convert to Qwen2.5-VL structured message format
+            messages = []
+            for i, msg in enumerate(example_texts):
+                if msg["role"] == "user" and i == 0 and example_images:
+                    # First user message - add images
+                    content = []
+                    # Add images first
+                    for img in example_images:
+                        content.append({"type": "image", "image": img})
+                    # Then add text
+                    content.append({"type": "text", "text": msg["content"]})
+                    messages.append({"role": "user", "content": content})
+                else:
+                    # Regular text message
+                    messages.append({"role": msg["role"], "content": msg["content"]})
+            
+            batch_messages.append(messages)
+
+        # Process each example
+        texts = []
+        all_image_inputs = []
+        all_video_inputs = []
+        
+        for messages in batch_messages:
+            # Apply chat template
+            text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=False)
+            texts.append(text)
+            
+            # Extract vision info
+            image_inputs, _ = process_vision_info(messages)
+            all_image_inputs.extend(image_inputs if image_inputs else [])
+
+        # Process the batch
+        batch = processor(
+            text=texts,
+            images=all_image_inputs if all_image_inputs else None,
+            padding=True,
+            return_tensors="pt"
+        )
+
+        # The labels are the input_ids, and we mask the padding tokens in the loss computation
+        labels = batch["input_ids"].clone()
+        labels[labels == processor.tokenizer.pad_token_id] = -100  #
+
+        # Ignore the image token index in the loss computation (model specific)
+        if isinstance(processor, Qwen2VLProcessor):
+            logger.info("DETECTED PROCESSOR")
+            image_tokens = [151652,151653,151655]
+        else: 
+            image_tokens = [processor.tokenizer.convert_tokens_to_ids(processor.image_token)]
+        for image_token_id in image_tokens:
+            labels[labels == image_token_id] = -100
+        batch["labels"] = labels
+
+        return batch
+
+    return collate_fn
 
 def main(script_args, training_args, model_args):
+    # Force single GPU mode if requested
+    # if hasattr(script_args, 'single_gpu') and script_args.single_gpu:
+    #     logger.info("Single GPU mode requested - setting CUDA_VISIBLE_DEVICES=0")
+    #     # Disable distributed training
+    # os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    # training_args.local_rank = -1
+    # training_args.ddp_backend = None
+
     set_seed(training_args.seed)
 
     ###############
@@ -85,15 +165,40 @@ def main(script_args, training_args, model_args):
         init_wandb_training(training_args)
 
     ######################################
-    # Load dataset, tokenizer, and model #
+    # Load dataset, processor/tokenizer, and model #
     ######################################
     dataset = get_dataset(script_args)
-    tokenizer = get_tokenizer(model_args, training_args)
-    model = get_model(model_args, training_args)
 
-    if tokenizer.chat_template is None:
-        logger.info("No chat template provided, defaulting to ChatML.")
-        model, tokenizer = setup_chat_format(model, tokenizer, format="chatml")
+    if training_args.vision_model:
+        logger.info("Setting up vision-language model training")
+        
+        # Set VLM-specific training arguments (following TRL reference)
+        training_args.gradient_checkpointing_kwargs = dict(use_reentrant=False)
+        training_args.remove_unused_columns = False
+        training_args.dataset_kwargs = {"skip_prepare_dataset": True}
+        training_args.ddp_find_unused_parameters = True
+
+        # Load processor and model for VLM
+        processor = get_processor(model_args, training_args)
+        model = get_model(model_args, training_args)  # This should return AutoModelForVision2Seq
+        data_collator = create_vlm_collate_fn(processor)
+        processing_class = processor.tokenizer
+        model_tags = ["open-r1", "vision-language", "vlm"]
+        
+    else:
+        logger.info("Setting up text-only model training")
+        
+        # Load tokenizer and model for text-only
+        tokenizer = get_tokenizer(model_args, training_args)
+        model = get_model(model_args, training_args)
+        
+        if tokenizer.chat_template is None:
+            logger.info("No chat template provided, defaulting to ChatML.")
+            model, tokenizer = setup_chat_format(model, tokenizer, format="chatml")
+            
+        data_collator = None  # Use default
+        processing_class = tokenizer
+        model_tags = ["open-r1"]
 
     ############################
     # Initialize the SFT Trainer
@@ -101,9 +206,14 @@ def main(script_args, training_args, model_args):
     trainer = SFTTrainer(
         model=model,
         args=training_args,
+        data_collator=data_collator,
         train_dataset=dataset[script_args.dataset_train_split],
-        eval_dataset=(dataset[script_args.dataset_test_split] if training_args.eval_strategy != "no" else None),
-        processing_class=tokenizer,
+        eval_dataset=(
+            dataset[script_args.dataset_test_split]
+            if training_args.eval_strategy != "no"
+            else None
+        ),
+        processing_class=processing_class,
         peft_config=get_peft_config(model_args),
         callbacks=get_callbacks(training_args, model_args),
     )
@@ -128,16 +238,13 @@ def main(script_args, training_args, model_args):
     # Save model and create model card
     ##################################
     logger.info("*** Save model ***")
-    # Align the model's generation config with the tokenizer's eos token
-    # to avoid unbounded generation in the transformers `pipeline()` function
-    trainer.model.generation_config.eos_token_id = tokenizer.eos_token_id
     trainer.save_model(training_args.output_dir)
     logger.info(f"Model saved to {training_args.output_dir}")
 
     # Save everything else on main process
     kwargs = {
         "dataset_name": script_args.dataset_name,
-        "tags": ["open-r1"],
+        "tags": model_tags,
     }
     if trainer.accelerator.is_main_process:
         trainer.create_model_card(**kwargs)
@@ -160,7 +267,10 @@ def main(script_args, training_args, model_args):
     #############
     if training_args.push_to_hub:
         logger.info("Pushing to hub...")
-        trainer.push_to_hub(**kwargs)
+        trainer.push_to_hub(**kwargs, token=os.getenv("HF_TOKEN"))
+        # Also push processor for VLM models
+        if training_args.vision_model and trainer.accelerator.is_main_process:
+            processor.push_to_hub(training_args.hub_model_id)
 
 
 if __name__ == "__main__":

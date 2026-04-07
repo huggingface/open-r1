@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=open_r1
+#SBATCH --job-name=agent-sft
 #SBATCH --ntasks-per-node=1
-#SBATCH --exclusive
+#SBATCH --qos=high
 #SBATCH --gres=gpu:8
 #SBATCH --partition=hopper-prod  # Adjust this for your cluster
 #SBATCH --output=./logs/%x-%j.out
@@ -23,6 +23,7 @@ if [[ "$*" == *"--help"* ]]; then
   exit 0
 fi
 
+
 # Specific configuration optimized for the Hugging Face Compute Cluster
 module load cuda/12.4
 set -x -e
@@ -32,9 +33,9 @@ source openr1/bin/activate
 START_TIME=$(date +%s)
 echo "START TIME: $(date)"
 
-# Refresh Weka on h4 cache
-echo "Refreshing Weka filesystem..."
-find -L /fsx/h4/ -type f | xargs -d '\n' -r -n512 -P64 weka fs tier fetch
+# Refresh Weka on cache
+# echo "Refreshing Weka filesystem..."
+# find -L /fsx/aymeric/ -type f | xargs -d '\n' -r -n512 -P64 weka fs tier fetch
 
 # Default values
 MODEL=""
@@ -44,6 +45,7 @@ ACCELERATOR=""
 DP=1
 TP=1
 OPTIONAL_ARGS=""
+
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -84,6 +86,9 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+export HF_HOME="/fsx/aymeric/.cache/"
+HF_HOME="/fsx/aymeric/.cache/"
+
 # Validate required arguments
 if [[ -z "$MODEL" || -z "$TASK" || -z "$CONFIG_SUFFIX" || -z "$ACCELERATOR" ]]; then
   echo "Error: Missing required arguments"
@@ -105,8 +110,6 @@ for arg in "${ARGS[@]}"; do
         break  # Exit the loop once we find the desired argument
     fi
 done
-
-echo "Gradient accumulation steps: $GRAD_ACC_STEPS"
 
 MODEL=$(grep 'model_name_or_path:' $CONFIG_FILE | awk '{print $2}')
 REVISION=$(grep 'model_revision:' $CONFIG_FILE | head -n 1 | awk '{print $2}')
@@ -136,8 +139,8 @@ if [[ "$USE_VLLM" == "true" ]]; then
 fi
 
 # force crashing on nccl issues like hanging broadcast
-export NCCL_ASYNC_ERROR_HANDLING=1
-# export NCCL_DEBUG=INFO
+export TORCH_NCCL_ASYNC_ERROR_HANDLING=1
+export NCCL_DEBUG=INFO
 # export NCCL_DEBUG_SUBSYS=COLL
 # export NCCL_SOCKET_NTHREADS=1
 # export NCCL_NSOCKS_PERTHREAD=1
