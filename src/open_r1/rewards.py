@@ -83,8 +83,12 @@ def accuracy_reward(completions: list[list[dict[str, str]]], solution: list[str]
 
 
 def format_reward(completions, **kwargs):
-    """Reward function that checks if the reasoning process is enclosed within <think> and </think> tags, while the final answer is enclosed within <answer> and </answer> tags."""
-    pattern = r"^<think>\n.*?\n</think>\n<answer>\n.*?\n</answer>$"
+    """Reward function that checks if the reasoning process is enclosed within <think> and </think> tags, while the final answer is enclosed within <answer> and </answer> tags.
+
+    Be tolerant to whitespace and line breaks so both inline and multi-line formats are accepted.
+    """
+    # Accept either inline or multi-line blocks with arbitrary surrounding whitespace
+    pattern = r"^<think>\s*[\s\S]*?\s*</think>\s*<answer>\s*[\s\S]*?\s*</answer>\s*$"
     completion_contents = [completion[0]["content"] for completion in completions]
     matches = [re.match(pattern, content, re.DOTALL | re.MULTILINE) for content in completion_contents]
     return [1.0 if match else 0.0 for match in matches]

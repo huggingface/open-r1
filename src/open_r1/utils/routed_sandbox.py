@@ -75,29 +75,46 @@ class RoutedSandbox:
             "request_timeout": request_timeout,
         }
 
-        # Send the request to the E2B Router
-        response = requests.post(f"http://{self.router_url}/execute_batch", json=payload)
-        if not response.ok:
-            print(f"Request failed with status code: {response.status_code}")
+        try:
+            # Send the request to the E2B Router
+            response = requests.post(f"http://{self.router_url}/execute_batch", json=payload, timeout=request_timeout)
+            if not response.ok:
+                print(f"Request failed with status code: {response.status_code}")
+                # Return empty Executions for each script to avoid hard failures
+                return [Execution() for _ in scripts]
 
-        # Parse the response and construct Execution objects
-        results = response.json()
-        output = []
-        for result in results:
-            if result["execution"] is None:
-                # If execution is None, create an empty Execution object
-                # This can happen when a script times out or fails to execute
-                execution = Execution()
-            else:
-                execution = Execution(
-                    results=[Result(**r) for r in result["execution"]["results"]],
-                    logs=result["execution"]["logs"],
-                    error=(ExecutionError(**result["execution"]["error"]) if result["execution"]["error"] else None),
-                    execution_count=result["execution"]["execution_count"],
-                )
-            output.append(execution)
+            # Parse the response and construct Execution objects
+            try:
+                results = response.json()
+            except Exception as e:
+                print(f"Failed to parse router JSON response: {e}")
+                return [Execution() for _ in scripts]
 
-        return output
+            output = []
+            for result in results if isinstance(results, list) else []:
+                try:
+                    exec_payload = result.get("execution") if isinstance(result, dict) else None
+                    if not exec_payload:
+                        execution = Execution()
+                    else:
+                        execution = Execution(
+                            results=[Result(**r) for r in exec_payload.get("results", [])],
+                            logs=exec_payload.get("logs"),
+                            error=(ExecutionError(**exec_payload["error"]) if exec_payload.get("error") else None),
+                            execution_count=exec_payload.get("execution_count"),
+                        )
+                except Exception as e:
+                    print(f"Failed to build Execution from router item: {e}")
+                    execution = Execution()
+                output.append(execution)
+
+            # Fallback if router returned unexpected structure
+            if not output:
+                return [Execution() for _ in scripts]
+            return output
+        except Exception as e:
+            print(f"Error communicating with E2B router: {e}")
+            return [Execution() for _ in scripts]
 
 
 if __name__ == "__main__":
