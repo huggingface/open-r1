@@ -25,6 +25,13 @@ from typing import Callable, Dict, Literal, Optional
 from latex2sympy2_extended import NormalizationConfig
 from math_verify import LatexExtractionConfig, parse, verify
 
+from .grounded_rewards import (
+    answer_faithfulness_reward,
+    chunk_routing_reward,
+    grounded_format_reward,
+    quote_grounding_reward,
+    reasoning_quality_reward,
+)
 from .utils.code_providers import get_provider
 from .utils.competitive_programming import (
     SubtaskResult,
@@ -700,6 +707,13 @@ def get_reward_funcs(script_args) -> list[Callable]:
             max_completion_len=script_args.max_completion_len,
             soft_punish_cache=script_args.soft_punish_cache,
         ),
+        # --- Grounded-R1 rewards (v0) ---
+        "grounded_format": grounded_format_reward,
+        "quote_grounding": quote_grounding_reward,
+        "answer_faithfulness": answer_faithfulness_reward,
+        "reasoning_quality": reasoning_quality_reward,
+        # --- Grounded-R1 rewards (v1 multi-chunk) ---
+        "chunk_routing": chunk_routing_reward,
     }
     reward_funcs = [REWARD_FUNCS_REGISTRY[func] for func in script_args.reward_funcs]
 
