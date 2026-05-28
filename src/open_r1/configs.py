@@ -120,12 +120,9 @@ class ScriptArguments(trl.ScriptArguments):
                     )
 
 
-# TODO: add the shared options with a mixin to reduce code duplication
 @dataclass
-class GRPOConfig(trl.GRPOConfig):
-    """
-    args for callbacks, benchmarks etc
-    """
+class SharedTrainingConfig:
+    """Mixin containing shared configuration options for training configs."""
 
     benchmarks: list[str] = field(
         default_factory=lambda: [],
@@ -139,18 +136,11 @@ class GRPOConfig(trl.GRPOConfig):
     hub_model_revision: Optional[str] = field(
         default="main", metadata={"help": "The Hub model branch to push the model to."}
     )
-    num_completions_to_print: int = field(default=0, metadata={"help": "Number of completions to print."})
     overwrite_hub_revision: bool = field(default=False, metadata={"help": "Whether to overwrite the Hub revision."})
     push_to_hub_revision: bool = field(default=False, metadata={"help": "Whether to push to a Hub revision/branch."})
     system_prompt: Optional[str] = field(
         default=None,
         metadata={"help": "The optional system prompt to use."},
-    )
-    wandb_log_unique_prompts: bool = field(
-        default=True,
-        metadata={
-            "help": ("Whether to log the unique prompts to wandb. This will create a new run for each unique prompt.")
-        },
     )
     wandb_entity: Optional[str] = field(
         default=None,
@@ -167,42 +157,23 @@ class GRPOConfig(trl.GRPOConfig):
 
 
 @dataclass
-class SFTConfig(trl.SFTConfig):
-    """
-    args for callbacks, benchmarks etc
-    """
+class GRPOConfig(SharedTrainingConfig, trl.GRPOConfig):
+    """Configuration for GRPO training with shared training options and GRPO-specific settings."""
 
-    benchmarks: list[str] = field(
-        default_factory=lambda: [],
-        metadata={"help": "The benchmarks to run after training."},
+    num_completions_to_print: int = field(default=0, metadata={"help": "Number of completions to print."})
+    wandb_log_unique_prompts: bool = field(
+        default=True,
+        metadata={
+            "help": ("Whether to log the unique prompts to wandb. This will create a new run for each unique prompt.")
+        },
     )
-    callbacks: list[str] = field(
-        default_factory=lambda: [],
-        metadata={"help": "The callbacks to run during training."},
-    )
-    chat_template: Optional[str] = field(default=None, metadata={"help": "The chat template to use."})
-    system_prompt: Optional[str] = field(
-        default=None,
-        metadata={"help": "The optional system prompt to use for benchmarking."},
-    )
-    hub_model_revision: Optional[str] = field(
-        default="main",
-        metadata={"help": "The Hub model branch to push the model to."},
-    )
-    overwrite_hub_revision: bool = field(default=False, metadata={"help": "Whether to overwrite the Hub revision."})
-    push_to_hub_revision: bool = field(default=False, metadata={"help": "Whether to push to a Hub revision/branch."})
-    wandb_entity: Optional[str] = field(
-        default=None,
-        metadata={"help": ("The entity to store runs under.")},
-    )
-    wandb_project: Optional[str] = field(
-        default=None,
-        metadata={"help": ("The project to store runs under.")},
-    )
-    wandb_run_group: Optional[str] = field(
-        default=None,
-        metadata={"help": ("The group to store runs under.")},
-    )
+
+
+@dataclass
+class SFTConfig(SharedTrainingConfig, trl.SFTConfig):
+    """Configuration for SFT training with shared training options and SFT-specific settings."""
+
+    pass
 
 
 @dataclass
