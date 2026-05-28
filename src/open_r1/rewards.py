@@ -530,6 +530,40 @@ def code_reward(
     import subprocess
     import json
 
+    def compare_outputs(output, expected, tolerance=1e-6):
+        \"\"\"Compare actual output against expected output with flexible matching.
+
+        Tries numeric comparison first (for floating-point outputs), then falls back
+        to string comparison. Handles different line counts gracefully.
+        \"\"\"
+        output_lines = output.split('\\n')
+        expected_lines = expected.split('\\n')
+
+        # Check if line counts match
+        if len(output_lines) != len(expected_lines):
+            return False
+
+        for out_line, exp_line in zip(output_lines, expected_lines):
+            out_line = out_line.strip()
+            exp_line = exp_line.strip()
+
+            # Skip comparison of empty lines
+            if not out_line and not exp_line:
+                continue
+
+            # Try numeric comparison if both lines contain numbers
+            try:
+                out_float = float(out_line)
+                exp_float = float(exp_line)
+                if abs(out_float - exp_float) > tolerance:
+                    return False
+            except (ValueError, TypeError):
+                # Fall back to string comparison
+                if out_line != exp_line:
+                    return False
+
+        return True
+
     def evaluate_code(code, test_cases):
         passed = 0
         total = len(test_cases)
@@ -549,12 +583,7 @@ def code_reward(
 
             output = process.stdout.strip()
 
-            # TODO: implement a proper validator to compare against ground truth. For now we just check for exact string match on each line of stdout.
-            all_correct = True
-            for line1, line2 in zip(output.split('\\n'), case['output'].split('\\n')):
-                all_correct = all_correct and line1.strip() == line2.strip()
-
-            if all_correct:
+            if compare_outputs(output, case['output']):
                 passed += 1
 
         success_rate = (passed / total)

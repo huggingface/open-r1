@@ -55,7 +55,10 @@ async def score_single_test_case(
     return result
 
 
-@alru_cache(maxsize=32)  # TODO make this configurable
+_CF_CACHE_SIZE = int(os.environ.get("CF_CACHE_SIZE", "32"))
+
+
+@alru_cache(maxsize=_CF_CACHE_SIZE)
 async def get_generated_contest_tests(contest_id: str) -> list[dict]:
     import pandas as pd
 
