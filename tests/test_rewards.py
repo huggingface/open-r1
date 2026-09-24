@@ -197,6 +197,29 @@ class TestRewards(unittest.TestCase):
             rewards = get_cosine_scaled_reward(**test_params)(completion, [solution])
             self.assertAlmostEqual(rewards[0], expected_reward, places=2)
 
+    def test_cosine_scaled_reward_unparseable_solution(self):
+        """Test cosine_scaled_reward skips examples whose gold solution cannot be parsed."""
+        completions = [
+            [{"content": r"\boxed{answer}"}],
+            [{"content": r"\boxed{answer} " + "x" * 10}],
+        ]
+        solutions = ["unparseable_latex", "unparseable_latex"]
+
+        rewards = get_cosine_scaled_reward()(completions, solutions)
+        self.assertEqual(rewards, [None, None])  # None skips the example, as in accuracy_reward
+
+    def test_cosine_scaled_reward_mixed_parseable_and_unparseable_solutions(self):
+        """Test cosine_scaled_reward only skips the examples whose gold solution cannot be parsed."""
+        completions = [
+            [{"content": r"\boxed{\frac{63}{400}}"}],
+            [{"content": r"\boxed{\frac{63}{400}}"}],
+        ]
+        solutions = [r"\frac{63}{400}", "unparseable_latex"]
+
+        rewards = get_cosine_scaled_reward(max_len=100)(completions, solutions)
+        self.assertIsNotNone(rewards[0])
+        self.assertIsNone(rewards[1])
+
     def test_format_reward_specific_multiline(self):
         """Test format_reward with a specific multiline input."""
         inputs = "<think>\nI will count each distinct object in the image:\n1. Purple scooter\n2. Red bicycle\n3. Green motorcycle\n4. Gray sedan\n5. Yellow school bus\n6. Small green double-decker bus\n7. Small red car\n8. Small purple car\n9. Small gray dirt bike\n\nThere are 9 distinct objects in total.\n</think>\n<answer>\n9\n</answer>"
