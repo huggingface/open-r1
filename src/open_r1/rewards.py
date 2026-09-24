@@ -209,7 +209,7 @@ def get_cosine_scaled_reward(
     max_value_correct: float = 1.0,
     max_len: int = 1000,
 ):
-    def cosine_scaled_reward(completions, solution, **kwargs):
+    def cosine_scaled_reward(completions, solution, **kwargs) -> list[Optional[float]]:
         """Reward function that scales based on completion length using a cosine schedule.
 
         Shorter correct solutions are rewarded more than longer ones.
@@ -236,7 +236,7 @@ def get_cosine_scaled_reward(
                 extraction_config=[LatexExtractionConfig()],
             )
             if len(gold_parsed) == 0:
-                rewards.append(1.0)  # Skip unparseable examples
+                rewards.append(None)  # Skip unparseable examples
                 print("Failed to parse gold solution: ", sol)
                 continue
 
