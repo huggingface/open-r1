@@ -1,6 +1,10 @@
 # Open R1
 
-*A fully open reproduction of DeepSeek-R1. This repo is a work in progress, let's build it together!*
+> [!IMPORTANT]
+> **This project is no longer maintained.** Everything it shipped (datasets, models and write-ups) is still available in the [open-r1 collections](https://huggingface.co/collections/open-r1) and the [blog updates](https://huggingface.co/blog/open-r1/update-1).
+> For GRPO, SFT and distillation today, use [TRL](https://github.com/huggingface/trl): that's where the training side of Open-R1 lives on, now extended to agents with [OpenEnv](https://huggingface.co/docs/trl/openenv).
+
+*A fully open reproduction of DeepSeek-R1.*
 
 **Table of Contents**  
 1. [Overview](#overview)  
