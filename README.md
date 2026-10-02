@@ -1,7 +1,7 @@
 # Open R1
 
 > [!IMPORTANT]
-> **This project is no longer maintained.** Everything it shipped (datasets, models and write-ups) is still available in the [open-r1 collections](https://huggingface.co/collections/open-r1) and the [blog updates](https://huggingface.co/blog/open-r1/update-1).
+> **This project is no longer maintained,** and new issues and PRs won't be reviewed. Everything it shipped (datasets, models and write-ups) is still available in the [open-r1 collections](https://huggingface.co/collections/open-r1) and the [blog updates](https://huggingface.co/blog/open-r1/update-1).
 > For GRPO, SFT and distillation today, use [TRL](https://github.com/huggingface/trl): that's where the training side of Open-R1 lives on.
 
 *A fully open reproduction of DeepSeek-R1.*
