@@ -9,9 +9,13 @@ on:
     branches:
       - main
 
+permissions: {}
+
 jobs:
 
   tests:
+    permissions:
+      contents: read
     name: Run tests and quality checks
     runs-on: ubuntu-latest
     steps:
